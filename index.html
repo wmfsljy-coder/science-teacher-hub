@@ -107,6 +107,31 @@
   }
   .no-result { color: var(--mist); font-size: 13px; padding: 20px 4px; display: none; }
 
+  .results { max-width: 1100px; margin: 26px auto 0; padding: 0 30px; display: none; }
+  .results-count { color: var(--mist); font-size: 12.5px; margin-bottom: 14px; }
+  .results-count b { color: var(--teal); }
+  .result-list { display: flex; flex-direction: column; gap: 10px; }
+  .result-card {
+    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 20px; text-decoration: none; color: inherit; transition: border-color .15s, transform .15s;
+  }
+  .result-card:hover { border-color: var(--teal-dim); transform: translateY(-1px); }
+  .result-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .result-subject {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .02em; padding: 3px 9px; border-radius: 999px;
+  }
+  .result-subject.c-teal { background: rgba(63,201,176,.16); color: var(--teal); }
+  .result-subject.c-coral { background: rgba(242,150,92,.16); color: var(--coral); }
+  .result-subject.c-cold { background: rgba(111,168,224,.16); color: var(--cold); }
+  .result-subject.c-violet { background: rgba(183,156,240,.16); color: var(--violet); }
+  .result-chapter { font-size: 11.5px; color: var(--mist); }
+  .result-card h4 { font-size: 16px; margin: 0 0 6px; font-weight: 700; }
+  .result-card p { color: var(--mist); font-size: 12.5px; line-height: 1.6; margin: 0 0 10px; }
+  .result-card .topics { display: flex; flex-wrap: wrap; gap: 6px; }
+  .result-card .topics span { font-size: 10.5px; padding: 3px 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--mist); }
+  .result-card mark, .result-card .topics span mark { background: rgba(63,201,176,.28); color: var(--teal); border-radius: 3px; padding: 0 2px; }
+
+
   @media (prefers-reduced-motion: reduce) { * { transition-duration: .001ms !important; } }
 </style>
 </head>
@@ -121,17 +146,23 @@
 <div class="status-bar">
   <div class="search-box">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input type="text" id="search" placeholder="과목 검색...">
+    <input type="text" id="search" placeholder="단원 검색...">
   </div>
 </div>
 
+<div class="results" id="results">
+  <div class="results-count" id="resultsCount"></div>
+  <div class="result-list" id="resultList"></div>
+</div>
+
+<div id="browseView">
 <div class="section-label">공통과목</div>
 <div class="grid" id="grid-common">
   <a class="subject-card active c-coral" data-name="통합과학 통합과학1 통합과학2" href="https://wmfsljy-coder.github.io/integrated-science/">
     <div class="icon-badge">🧪</div>
     <h3 class="display">통합과학</h3>
     <p>통합과학1(과학의 기초·물질과 규칙성·시스템과 상호작용)과 통합과학2(변화와 다양성·환경과 에너지·과학과 미래 사회), 총 13개 단원의 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 13개 단원 완성</span>
+    <span class="status-pill ready">● 13개 단원</span>
     <div class="go">→</div>
   </a>
   <a class="subject-card active c-teal" data-name="과학탐구실험 과학탐구실험1" href="https://wmfsljy-coder.github.io/science-inquiry/">
@@ -149,7 +180,7 @@
     <div class="icon-badge">🌍</div>
     <h3 class="display">지구과학</h3>
     <p>대기·해양·고체지구·천문 6개 단원, 슬라이더와 클릭형 시뮬레이션으로 구성된 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 6개 단원 완성</span>
+    <span class="status-pill ready">● 6개 단원</span>
     <div class="go">→</div>
   </a>
 </div>
@@ -160,14 +191,14 @@
     <div class="icon-badge">🪐</div>
     <h3 class="display">지구시스템과학</h3>
     <p>지구시스템과학1(지구의 탄생과 진화·판구조론)과 지구시스템과학2(해수와 대기의 운동)의 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 4개 단원 완성</span>
+    <span class="status-pill ready">● 4개 단원</span>
     <div class="go">→</div>
   </a>
   <a class="subject-card active c-cold" data-name="행성우주과학 행성우주과학1 행성우주과학2" href="https://wmfsljy-coder.github.io/planet-space/">
     <div class="icon-badge">🛰️</div>
     <h3 class="display">행성우주과학</h3>
     <p>행성우주과학1(우주 탐사와 태양계)과 행성우주과학2(태양과 별의 관측·은하와 우주)의 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 4개 단원 완성</span>
+    <span class="status-pill ready">● 4개 단원</span>
     <div class="go">→</div>
   </a>
 </div>
@@ -178,23 +209,24 @@
     <div class="icon-badge">📜</div>
     <h3 class="display">과학의 역사와 문화</h3>
     <p>인류 문명의 탄생부터 과학과 인류의 미래까지, 과학과 사회·문화의 상호작용을 카드·타임라인·비교 화면으로 탐색하는 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 3개 대단원 완성</span>
+    <span class="status-pill ready">● 3개 단원</span>
     <div class="go">→</div>
   </a>
   <a class="subject-card active c-teal" data-name="융합과학탐구" href="https://wmfsljy-coder.github.io/convergence-science-inquiry/">
     <div class="icon-badge">🧬</div>
     <h3 class="display">융합과학탐구</h3>
     <p>문제 발견부터 데이터 수집·시각화, 가설과 모형의 검증, 결론 도출, 미래 사회 전망까지 탐구의 전 과정을 다루는 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 3개 대단원 완성</span>
+    <span class="status-pill ready">● 3개 단원</span>
     <div class="go">→</div>
   </a>
   <a class="subject-card active c-violet" data-name="기후변화와 환경생태" href="https://wmfsljy-coder.github.io/climate-change-ecology/">
     <div class="icon-badge">🌱</div>
     <h3 class="display">기후변화와 환경생태</h3>
     <p>날씨와 기후, 되먹임의 원리부터 기후위기가 생태계와 생활환경에 미치는 영향, 탄소중립과 국제 협약까지 다루는 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 3개 대단원 완성</span>
+    <span class="status-pill ready">● 3개 단원</span>
     <div class="go">→</div>
   </a>
+</div>
 </div>
 <p class="no-result" id="noResult">검색 결과가 없습니다.</p>
 
@@ -212,18 +244,120 @@
     themeBtn.textContent = next === "dark" ? "라이트 모드" : "다크 모드";
   });
 
+  var UNITS = [
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅰ-1", title: "과학의 기본량", desc: "SI 기본단위, 우주와 미시세계의 스케일, 과학적 표기법을 다룹니다.", topics: ["SI 단위", "스케일 비교", "과학적 표기법"], url: "https://wmfsljy-coder.github.io/integrated-science-1/1-1/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅰ-2", title: "과학의 측정과 우리 사회", desc: "정밀도와 정확도, 측정 표준의 유용성, 측정 기술이 만든 현대 문명을 다룹니다.", topics: ["정밀도·정확도", "측정 표준"], url: "https://wmfsljy-coder.github.io/integrated-science-1/1-2/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅱ-1", title: "자연의 구성 원소", desc: "빅뱅과 원소의 생성, 별의 핵융합, 우주·지각·생명체의 원소 존재비를 다룹니다.", topics: ["빅뱅 핵합성", "별의 진화", "원소 존재비"], url: "https://wmfsljy-coder.github.io/integrated-science-1/2-1/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅱ-2", title: "물질의 규칙성과 성질", desc: "원소의 주기성, 화학 결합, 규산염·탄소 화합물의 규칙성, 물질의 전기적 성질을 다룹니다.", topics: ["주기율표", "화학 결합", "도체·반도체"], url: "https://wmfsljy-coder.github.io/integrated-science-1/2-2/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅲ-1", title: "지구시스템", desc: "지구시스템의 구성과 상호작용, 에너지원, 판구조론과 지권의 변화를 다룹니다.", topics: ["4권 상호작용", "에너지원", "판구조론"], url: "https://wmfsljy-coder.github.io/integrated-science-1/3-1/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅲ-2", title: "역학 시스템", desc: "중력과 자유 낙하, 뉴턴 운동 법칙, 충돌과 운동량 보존을 다룹니다.", topics: ["자유 낙하", "F=ma", "운동량 보존"], url: "https://wmfsljy-coder.github.io/integrated-science-1/3-2/" },
+    { subject: "통합과학1", color: "c-coral", chapter: "Ⅲ-3", title: "생명 시스템", desc: "효소와 활성화 에너지, 동화·이화 작용, 유전정보의 흐름(전사·번역)을 다룹니다.", topics: ["효소", "물질대사", "유전정보 흐름"], url: "https://wmfsljy-coder.github.io/integrated-science-1/3-3/" },
+
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅰ-1", title: "지구 환경 변화와 생물다양성", desc: "지질시대와 대멸종, 자연선택과 진화, 생물다양성의 세 층위를 다룹니다.", topics: ["대멸종", "자연선택", "생물다양성"], url: "https://wmfsljy-coder.github.io/integrated-science-2/1-1/" },
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅰ-2", title: "화학 변화", desc: "산화와 환원, 산과 염기, 화학 반응에서의 에너지 출입을 다룹니다.", topics: ["산화·환원", "산과 염기", "발열·흡열"], url: "https://wmfsljy-coder.github.io/integrated-science-2/1-2/" },
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅱ-1", title: "생태계와 환경 변화", desc: "생태계의 구성 요소, 생태계 평형(개체수 변동), 지구 환경 변화와 인간 생활을 다룹니다.", topics: ["먹이 사슬", "개체수 변동", "환경 문제"], url: "https://wmfsljy-coder.github.io/integrated-science-2/2-1/" },
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅱ-2", title: "에너지 전환과 활용", desc: "태양 에너지의 전환, 발전과 에너지원, 에너지 효율을 다룹니다.", topics: ["에너지 흐름", "발전 방식", "에너지 효율"], url: "https://wmfsljy-coder.github.io/integrated-science-2/2-2/" },
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅲ-1", title: "과학 기술의 활용", desc: "과학 기술 발전의 흐름과 빅데이터의 수집·분석·활용 과정을 다룹니다.", topics: ["기술 발전사", "빅데이터"], url: "https://wmfsljy-coder.github.io/integrated-science-2/3-1/" },
+    { subject: "통합과학2", color: "c-coral", chapter: "Ⅲ-2", title: "과학 기술의 발전과 쟁점", desc: "미래를 바꿀 과학 기술과, 그 기술을 둘러싼 사회적 쟁점·윤리를 다룹니다.", topics: ["미래 기술", "과학 윤리"], url: "https://wmfsljy-coder.github.io/integrated-science-2/3-2/" },
+
+    { subject: "과학탐구실험1", color: "c-teal", chapter: "①", title: "과학의 본성과 탐구의 역사", desc: "과학 지식이 만들어지는 방식과, 역사 속에서 과학적 설명이 어떻게 바뀌어 왔는지를 다룹니다.", topics: ["과학의 본성", "과학사 사례"], url: "https://wmfsljy-coder.github.io/science-inquiry-1/1-1/" },
+    { subject: "과학탐구실험1", color: "c-teal", chapter: "②", title: "탐구 방법과 변인 통제", desc: "귀납적·연역적 탐구, 변인 통제, 데이터 시각화 유형을 다룹니다.", topics: ["귀납·연역", "변인 통제", "데이터 시각화"], url: "https://wmfsljy-coder.github.io/science-inquiry-1/1-2/" },
+    { subject: "과학탐구실험1", color: "c-teal", chapter: "Ⅰ", title: "과학의 본성과 역사 속의 과학 탐구", desc: "갈릴레이의 낙하 실험, 도량형의 역사, 우리 선조의 과학 기술, 멘델레예프의 주기율표, 동시 발견 사례를 다룹니다.", topics: ["갈릴레이 낙하 실험", "도량형의 역사", "주기율표", "동시 발견"], url: "https://wmfsljy-coder.github.io/science-inquiry-1/1-3/" },
+    { subject: "과학탐구실험1", color: "c-teal", chapter: "Ⅱ", title: "과학 탐구의 과정과 절차", desc: "귀납적 탐구, 파스퇴르의 생물속생설, 뉴턴의 프리즘 실험, 기후 변화 빅데이터, 과학 마술, 천연 항생물질 탐구를 다룹니다.", topics: ["파스퇴르 실험", "프리즘 분산", "기후 빅데이터", "항생물질"], url: "https://wmfsljy-coder.github.io/science-inquiry-1/1-4/" },
+
+    { subject: "과학탐구실험2", color: "c-teal", chapter: "①", title: "일상 속 과학 원리", desc: "GPS·전자레인지·에어백 등 생활 기술 속 과학 원리와, 과학적 문제 해결 과정을 다룹니다.", topics: ["생활 속 과학", "문제 해결 과정"], url: "https://wmfsljy-coder.github.io/science-inquiry-2/2-1/" },
+    { subject: "과학탐구실험2", color: "c-teal", chapter: "②", title: "첨단 과학과 탐구 설계", desc: "AI·IoT 등 첨단 과학 기술과, 센서를 활용한 탐구 설계 사례(자동 급수 장치)를 다룹니다.", topics: ["첨단 기술", "센서 탐구 설계"], url: "https://wmfsljy-coder.github.io/science-inquiry-2/2-2/" },
+    { subject: "과학탐구실험2", color: "c-teal", chapter: "Ⅰ", title: "생활 속의 과학 탐구", desc: "동결 건조 식품, 생활 제품 속 과학, 놀이공원 가속도, 건축물 내진 설계, 유사과학 비평, 외래종과 생물다양성, 학교 주변 오염 측정, 운동 안전사고 예방까지 8개 탐구를 다룹니다.", topics: ["동결 건조", "내진 설계", "유사과학", "외래종"], url: "https://wmfsljy-coder.github.io/science-inquiry-2/2-3/" },
+    { subject: "과학탐구실험2", color: "c-teal", chapter: "Ⅱ", title: "미래 사회와 첨단 과학 탐구", desc: "마이크로컨트롤러 스마트 온실 설계, 센서 활용 생활 발명품, 우주 개발 사례로 본 과학 기술 발전 방향 평가를 다룹니다.", topics: ["스마트 온실", "센서 발명품", "우주 개발"], url: "https://wmfsljy-coder.github.io/science-inquiry-2/2-4/" },
+
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅰ-1", title: "해수의 순환과 대기의 변화", desc: "해수의 성질, 표층·심층 해류, 우리나라 주변 해류, 기압과 날씨 변화, 태풍, 악기상까지 해양과 대기를 아우르며 배웁니다.", topics: ["해수의 성질", "해수의 순환", "기압과 날씨", "태풍", "악기상"], url: "https://wmfsljy-coder.github.io/earth-science-2/1-1/" },
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅰ-2", title: "대기와 해양의 상호작용과 기후 변화", desc: "용승과 침강, 엔소(ENSO), 기후 변화의 자연적·인위적 요인, 온실 효과와 지구 온난화, 국제 사회의 대응을 다룹니다.", topics: ["용승·침강", "엔소(ENSO)", "기후 변화", "탄소 중립"], url: "https://wmfsljy-coder.github.io/earth-science-2/1-2/" },
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅱ-1", title: "지구의 역사", desc: "상대연령을 결정하는 법칙들, 지층 대비, 반감기를 이용한 절대연령 계산, 퇴적암과 퇴적구조, 지질 시대와 표준 화석을 다룹니다.", topics: ["상대연령", "지층 대비", "퇴적구조", "지질 시대"], url: "https://wmfsljy-coder.github.io/earth-science-2/2-1/" },
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅱ-2", title: "한반도의 암석", desc: "마그마의 종류와 화성암, 암석의 순환, 접촉·광역 변성 작용, 우리나라의 국가지질공원을 살펴봅니다.", topics: ["화성암", "암석의 순환", "변성 작용", "지질공원"], url: "https://wmfsljy-coder.github.io/earth-science-2/2-2/" },
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅲ-1", title: "태양계 천체", desc: "행성의 겉보기 배치, 순행과 역행, 금성의 위상 변화, 일식과 월식이 일어나는 조건을 시뮬레이션합니다.", topics: ["합과 충", "역행 운동", "금성의 위상", "일식·월식"], url: "https://wmfsljy-coder.github.io/earth-science-2/3-1/" },
+    { subject: "지구과학", color: "c-teal", chapter: "Ⅲ-2", title: "별과 우주의 진화", desc: "별의 분광형, H-R도, 질량에 따른 별의 진화, 은하의 분류, 허블 법칙과 우주의 팽창을 다룹니다.", topics: ["분광형", "H-R도", "별의 진화", "허블 법칙"], url: "https://wmfsljy-coder.github.io/earth-science-2/3-2/" },
+
+    { subject: "지구시스템과학", color: "c-violet", chapter: "1-1", title: "지구의 탄생과 진화", desc: "지구의 탄생부터 산소 농도의 진화, 탄소와 물의 순환까지 오늘의 지구가 만들어지기까지의 여정을 다룹니다.", topics: ["지구의 탄생", "산소 농도의 진화", "탄소와 물의 순환"], url: "https://wmfsljy-coder.github.io/earth-system-1/1-1/" },
+    { subject: "지구시스템과학", color: "c-violet", chapter: "1-2", title: "판 구조 운동과 지구 내부 구조", desc: "판구조론과 플룸구조론, 화산 활동과 암석의 순환, 지진파로 밝혀낸 지구 내부 구조를 다룹니다.", topics: ["판구조론·플룸구조론", "화산 활동", "지진파"], url: "https://wmfsljy-coder.github.io/earth-system-1/1-2/" },
+    { subject: "지구시스템과학", color: "c-violet", chapter: "2-1", title: "해수의 운동", desc: "해수를 움직이는 힘부터 해파, 해일과 조석까지 바다를 움직이는 힘을 다룹니다.", topics: ["해수를 움직이는 힘", "해파", "해일과 조석"], url: "https://wmfsljy-coder.github.io/earth-system-2/2-1/" },
+    { subject: "지구시스템과학", color: "c-violet", chapter: "2-2", title: "강수 과정과 대기의 운동", desc: "지구 대기의 역할과 열수지, 대기 안정도와 강수, 대기를 움직이는 힘과 행성파까지 다룹니다.", topics: ["대기의 역할", "대기 안정도", "대기를 움직이는 힘", "행성파"], url: "https://wmfsljy-coder.github.io/earth-system-2/2-2/" },
+
+    { subject: "행성우주과학", color: "c-cold", chapter: "1-1", title: "우주 탐사와 태양 활동", desc: "우주 탐사 방법과 태양 활동, 태양 활동이 지구에 미치는 우주 위험까지 다룹니다.", topics: ["우주 탐사 방법", "태양 활동", "우주 위험"], url: "https://wmfsljy-coder.github.io/planet-space-1/1-1/" },
+    { subject: "행성우주과학", color: "c-cold", chapter: "1-2", title: "태양계 천체와 외계 행성", desc: "케플러 법칙부터 행성과 소천체, 외계 행성계 탐사까지 태양계 안팎의 천체를 다룹니다.", topics: ["케플러 법칙", "행성과 소천체", "외계 행성계 탐사"], url: "https://wmfsljy-coder.github.io/planet-space-1/1-2/" },
+    { subject: "행성우주과학", color: "c-cold", chapter: "2-1", title: "태양과 별의 관측", desc: "태양 관측부터 연주 시차와 거리, 별의 공간 운동, 별의 질량과 변광성까지 다룹니다.", topics: ["태양 관측", "연주 시차", "변광성"], url: "https://wmfsljy-coder.github.io/planet-space-2/2-1/" },
+    { subject: "행성우주과학", color: "c-cold", chapter: "2-2", title: "은하와 우주", desc: "성단과 우리은하부터 성간 물질, 은하의 질량과 암흑 물질, 우주의 거대 구조까지 다룹니다.", topics: ["우리은하", "성간 물질", "암흑 물질"], url: "https://wmfsljy-coder.github.io/planet-space-2/2-2/" },
+
+    { subject: "과학의 역사와 문화", color: "c-coral", chapter: "Ⅰ", title: "과학과 문명의 탄생과 통합", desc: "인류 문명의 탄생과 과학, 고대 그리스의 과학, 중세의 종교와 과학, 르네상스와 과학혁명, 과학자의 신념과 세계관을 다룹니다.", topics: ["4대 문명", "그리스 철학자", "중세 과학", "과학혁명", "천동설·지동설"], url: "https://wmfsljy-coder.github.io/science-history-culture/1/" },
+    { subject: "과학의 역사와 문화", color: "c-coral", chapter: "Ⅱ", title: "변화하는 과학과 세계", desc: "현대 과학과 사회문화, 과학자의 논쟁과 연구 규범, 현대 예술과 과학, 감염병과 과학, 교통수단의 발달, 20세기 과학기술의 빛과 그림자를 다룹니다.", topics: ["연구 윤리", "과학과 예술", "감염병", "교통의 발달", "빛과 그림자"], url: "https://wmfsljy-coder.github.io/science-history-culture/2/" },
+    { subject: "과학의 역사와 문화", color: "c-coral", chapter: "Ⅲ", title: "과학과 인류의 미래", desc: "새로운 문화의 등장, 과학 용어의 사회 확산, 과학기술과 결합한 음악, 인간과 기계의 연결, 가상·증강 현실, 과학기술과 시민 참여를 다룹니다.", topics: ["1인 미디어", "AI를 보는 시선", "VR·AR", "시민 과학"], url: "https://wmfsljy-coder.github.io/science-history-culture/3/" },
+
+    { subject: "융합과학탐구", color: "c-teal", chapter: "Ⅰ", title: "융합과학 탐구의 이해", desc: "융합과학의 역할과 유용성, 다양한 탐구 과정의 특성, 데이터의 이해와 활용, 디지털 탐구 도구의 이해와 활용을 다룹니다.", topics: ["X선 결정학", "탐구 과정 비교", "빅데이터", "디지털 도구"], url: "https://wmfsljy-coder.github.io/convergence-science-inquiry/1/" },
+    { subject: "융합과학탐구", color: "c-teal", chapter: "Ⅱ", title: "융합과학 탐구의 과정", desc: "문제 발견부터 방법 설계, 데이터 수집, 데이터 시각화, 가설·모형 검증, 결론 도출과 평가, 과학적 의사소통까지 탐구의 전 과정을 다룹니다.", topics: ["가설연역법", "MBL 센서", "내삽·외삽", "발표와 토론"], url: "https://wmfsljy-coder.github.io/convergence-science-inquiry/2/" },
+    { subject: "융합과학탐구", color: "c-teal", chapter: "Ⅲ", title: "융합과학 탐구의 전망", desc: "미래 사회와 융합과학기술, 융합과학기술과 사회적 난제 해결, 융합과학 탐구와 윤리, 사회 문제와 시민참여를 다룹니다.", topics: ["4차 산업혁명", "스마트팜", "연구 윤리", "시민 과학"], url: "https://wmfsljy-coder.github.io/convergence-science-inquiry/3/" },
+
+    { subject: "기후변화와 환경생태", color: "c-violet", chapter: "Ⅰ", title: "기후와 환경생태의 특성", desc: "날씨와 기후의 차이, 기후요소와 기후인자, 기후시스템의 되먹임 작용, 기후변화가 생태계와 생활환경에 미치는 영향을 다룹니다.", topics: ["양의 되먹임", "음의 되먹임", "생태계 영향", "해상 도시"], url: "https://wmfsljy-coder.github.io/climate-change-ecology/1/" },
+    { subject: "기후변화와 환경생태", color: "c-violet", chapter: "Ⅱ", title: "기후위기와 환경생태 변화", desc: "기후위기의 원인, 해수면 상승, 극한 기상 현상, 미래 생태계 변화, 개화 시기·곤충·수생태계·감염병 변화까지 광범위하게 다룹니다.", topics: ["SSP 시나리오", "슈퍼 태풍", "꿀벌 군집 붕괴", "물꽃 현상"], url: "https://wmfsljy-coder.github.io/climate-change-ecology/2/" },
+    { subject: "기후변화와 환경생태", color: "c-violet", chapter: "Ⅲ", title: "기후위기에 대응하는 우리의 노력", desc: "해양생태계 복원 기술, 기후 재해 대응, 탄소중립 사회와 과학기술, 국제 협약과 시민 참여까지 기후위기 대응 노력을 다룹니다.", topics: ["바다숲 복원", "탄소중립", "파리 협정", "탄소중립 학교"], url: "https://wmfsljy-coder.github.io/climate-change-ecology/3/" }
+  ];
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  function highlight(text, q) {
+    var safe = escapeHtml(text);
+    if (!q) return safe;
+    var re = new RegExp("(" + escapeRegExp(escapeHtml(q)) + ")", "ig");
+    return safe.replace(re, "<mark>$1</mark>");
+  }
+
   var search = document.getElementById("search");
-  var cards = Array.prototype.slice.call(document.querySelectorAll(".subject-card"));
   var noResult = document.getElementById("noResult");
+  var browseView = document.getElementById("browseView");
+  var resultsView = document.getElementById("results");
+  var resultsCount = document.getElementById("resultsCount");
+  var resultList = document.getElementById("resultList");
+
+  function renderResults(q) {
+    var matches = UNITS.filter(function (u) {
+      var haystack = (u.subject + " " + u.chapter + " " + u.title + " " + u.desc + " " + u.topics.join(" ")).toLowerCase();
+      return haystack.indexOf(q) !== -1;
+    });
+
+    resultList.innerHTML = matches.map(function (u) {
+      var topicsHtml = u.topics.map(function (t) {
+        return "<span>" + highlight(t, q) + "</span>";
+      }).join("");
+      return (
+        '<a class="result-card" href="' + u.url + '">' +
+          '<div class="result-head">' +
+            '<span class="result-subject ' + u.color + '">' + escapeHtml(u.subject) + "</span>" +
+            '<span class="result-chapter">' + escapeHtml(u.chapter) + "</span>" +
+          "</div>" +
+          "<h4>" + highlight(u.title, q) + "</h4>" +
+          "<p>" + highlight(u.desc, q) + "</p>" +
+          '<div class="topics">' + topicsHtml + "</div>" +
+        "</a>"
+      );
+    }).join("");
+
+    resultsCount.innerHTML = "<b>" + matches.length + "개</b> 단원에서 \"" + escapeHtml(search.value.trim()) + "\"을(를) 찾았습니다.";
+    noResult.style.display = matches.length === 0 ? "block" : "none";
+  }
+
   search.addEventListener("input", function () {
     var q = search.value.trim().toLowerCase();
-    var visibleCount = 0;
-    cards.forEach(function (c) {
-      var match = c.getAttribute("data-name").toLowerCase().indexOf(q) !== -1;
-      c.style.display = match ? "" : "none";
-      if (match) visibleCount++;
-    });
-    noResult.style.display = visibleCount === 0 ? "block" : "none";
+    if (q === "") {
+      browseView.style.display = "";
+      resultsView.style.display = "none";
+      noResult.style.display = "none";
+      return;
+    }
+    browseView.style.display = "none";
+    resultsView.style.display = "block";
+    renderResults(q);
   });
 })();
 </script>
