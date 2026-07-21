@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>지구과학 교사 웹툴 모음</title>
+<title>지구과학 웹툴</title>
 <style>
   :root {
     --abyss: #061621; --panel: #0c2438; --panel-2: #102c44; --rail: #081b2b;
@@ -37,7 +37,7 @@
 
   .status-bar {
     max-width: 1100px; margin: 30px auto 0; padding: 0 30px;
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    display: flex; align-items: center; justify-content: flex-end; gap: 16px; flex-wrap: wrap;
   }
   .progress-wrap { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 12px; }
   .progress-track { flex: 1; height: 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
@@ -114,15 +114,11 @@
 
 <div class="hero">
   <div class="eyebrow">고등학교 과학 · 인터랙티브 학습 도구</div>
-  <h1 class="display">지구과학 교사 웹툴 모음</h1>
+  <h1 class="display">지구과학 웹툴</h1>
   <p>수업에서 바로 활용할 수 있는 과목별 인터랙티브 학습 도구입니다. 학생이 직접 조작하며 개념을 확인할 수 있도록 설계했습니다. 아래에서 과목을 선택하세요.</p>
 </div>
 
 <div class="status-bar">
-  <div class="progress-wrap">
-    <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
-    <div class="progress-label"><b>8</b> / 8개 과목 제작 완료</div>
-  </div>
   <div class="search-box">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="search" placeholder="과목 검색...">
@@ -164,14 +160,14 @@
     <div class="icon-badge">🪐</div>
     <h3 class="display">지구시스템과학</h3>
     <p>지구시스템과학1(지구의 탄생과 진화·판구조론)과 지구시스템과학2(해수와 대기의 운동)의 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 1·2권 완성</span>
+    <span class="status-pill ready">● 4개 단원 완성</span>
     <div class="go">→</div>
   </a>
   <a class="subject-card active c-cold" data-name="행성우주과학 행성우주과학1 행성우주과학2" href="https://wmfsljy-coder.github.io/planet-space/">
     <div class="icon-badge">🛰️</div>
     <h3 class="display">행성우주과학</h3>
     <p>행성우주과학1(우주 탐사와 태양계)과 행성우주과학2(태양과 별의 관측·은하와 우주)의 인터랙티브 학습 도구입니다.</p>
-    <span class="status-pill ready">● 1·2권 완성</span>
+    <span class="status-pill ready">● 4개 단원 완성</span>
     <div class="go">→</div>
   </a>
 </div>
@@ -201,30 +197,6 @@
   </a>
 </div>
 <p class="no-result" id="noResult">검색 결과가 없습니다.</p>
-
-<div class="section-label">이 사이트 활용법</div>
-<div class="tips">
-  <div class="tip-card">
-    <div class="num">01</div>
-    <h4>수업 중 시연</h4>
-    <p>프로젝터로 화면을 띄우고 슬라이더·버튼을 직접 조작하며 개념을 시각적으로 설명할 수 있습니다.</p>
-  </div>
-  <div class="tip-card">
-    <div class="num">02</div>
-    <h4>학생 개별 활동</h4>
-    <p>링크를 공유하면 학생이 각자 기기로 접속해 스스로 조작하며 개념을 확인할 수 있습니다. 로그인이 필요 없습니다.</p>
-  </div>
-  <div class="tip-card">
-    <div class="num">03</div>
-    <h4>다크 · 라이트 모드</h4>
-    <p>오른쪽 위 버튼으로 화면 밝기를 전환할 수 있어, 어두운 교실이나 밝은 창가 어디서나 보기 편합니다.</p>
-  </div>
-  <div class="tip-card">
-    <div class="num">04</div>
-    <h4>8개 과목 제작 완료</h4>
-    <p>공통 과목부터 진로·융합선택 과목까지 8개 과목의 인터랙티브 학습 도구가 모두 준비되었습니다. 이 페이지를 즐겨찾기 해 두세요.</p>
-  </div>
-</div>
 
 <button class="theme-toggle" id="themeToggle">라이트 모드</button>
 
