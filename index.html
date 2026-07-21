@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>지구과학 교사 웹툴 모음</title>
+<style>
+  :root {
+    --abyss: #061621; --panel: #0c2438; --panel-2: #102c44; --rail: #081b2b;
+    --foam: #eaf3f2; --mist: #a9c3ca; --teal: #3fc9b0; --teal-dim: #2a8f7c;
+    --coral: #f2965c; --cold: #6fa8e0; --violet: #b79cf0; --line: #1c3c52; --ink: #eaf3f2;
+  }
+  :root[data-theme="light"] {
+    --abyss: #eef5f4; --panel: #ffffff; --panel-2: #f4f9f8; --rail: #e2edec;
+    --foam: #0c2233; --mist: #4a6270; --teal: #1f9683; --teal-dim: #17765f;
+    --coral: #d97a3f; --cold: #3a72b8; --violet: #7c5cc4; --line: #d3e2e0; --ink: #0c2233;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --abyss: #eef5f4; --panel: #ffffff; --panel-2: #f4f9f8; --rail: #e2edec;
+      --foam: #0c2233; --mist: #4a6270; --teal: #1f9683; --teal-dim: #17765f;
+      --coral: #d97a3f; --cold: #3a72b8; --violet: #7c5cc4; --line: #d3e2e0; --ink: #0c2233;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--abyss); color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    min-height: 100vh;
+  }
+  .display { font-family: Georgia, "Noto Serif KR", "Batang", serif; }
+
+  .hero { padding: 70px 30px 20px; max-width: 1100px; margin: 0 auto; }
+  .hero .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); font-weight: 700; }
+  .hero h1 { font-size: clamp(30px, 5vw, 48px); margin: 10px 0 14px; text-wrap: balance; }
+  .hero p { color: var(--mist); font-size: 15.5px; line-height: 1.7; max-width: 660px; margin: 0; }
+
+  .status-bar {
+    max-width: 1100px; margin: 30px auto 0; padding: 0 30px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .progress-wrap { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 12px; }
+  .progress-track { flex: 1; height: 8px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal-dim), var(--teal)); border-radius: 999px; }
+  .progress-label { font-size: 12.5px; color: var(--mist); white-space: nowrap; }
+  .progress-label b { color: var(--teal); }
+
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; min-width: 220px;
+  }
+  .search-box svg { flex: none; opacity: .6; }
+  .search-box input {
+    border: none; background: transparent; outline: none; color: var(--ink);
+    font-size: 13.5px; width: 100%; font-family: inherit;
+  }
+  .search-box input::placeholder { color: var(--mist); }
+
+  .grid {
+    max-width: 1100px; margin: 26px auto 0; padding: 0 30px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px;
+  }
+  .subject-card {
+    display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+    padding: 24px; text-decoration: none; color: inherit; position: relative; overflow: hidden;
+    transition: border-color .15s, transform .15s;
+  }
+  .subject-card.active:hover { border-color: var(--teal-dim); transform: translateY(-2px); }
+  .subject-card.disabled { opacity: .55; cursor: not-allowed; }
+  .subject-card .icon-badge {
+    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 14px;
+  }
+  .subject-card.c-teal .icon-badge { background: rgba(63,201,176,.16); color: var(--teal); }
+  .subject-card.c-coral .icon-badge { background: rgba(242,150,92,.16); color: var(--coral); }
+  .subject-card.c-cold .icon-badge { background: rgba(111,168,224,.16); color: var(--cold); }
+  .subject-card.c-violet .icon-badge { background: rgba(183,156,240,.16); color: var(--violet); }
+  .subject-card h3 { font-size: 20px; margin: 0 0 6px; }
+  .subject-card p { color: var(--mist); font-size: 13px; line-height: 1.6; margin: 0 0 16px; min-height: 40px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 999px; letter-spacing: .02em;
+  }
+  .status-pill.ready { background: rgba(63,201,176,.16); color: var(--teal); }
+  .status-pill.soon { background: var(--panel-2); color: var(--mist); border: 1px solid var(--line); }
+  .subject-card .go { position: absolute; top: 24px; right: 24px; color: var(--mist); font-size: 18px; }
+
+  .section-label {
+    max-width: 1100px; margin: 46px auto 0; padding: 0 30px;
+    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--mist); font-weight: 700;
+  }
+  .tips {
+    max-width: 1100px; margin: 16px auto 70px; padding: 0 30px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+  }
+  .tip-card {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  }
+  .tip-card .num { font-family: Georgia, serif; font-size: 22px; color: var(--teal); font-weight: 700; }
+  .tip-card h4 { font-size: 14px; margin: 6px 0 4px; }
+  .tip-card p { font-size: 12.5px; color: var(--mist); line-height: 1.6; margin: 0; }
+
+  .theme-toggle {
+    position: fixed; top: 16px; right: 18px; background: var(--panel); border: 1px solid var(--line);
+    color: var(--mist); border-radius: 999px; padding: 6px 12px; font-size: 11px; cursor: pointer; z-index: 10;
+  }
+  .no-result { color: var(--mist); font-size: 13px; padding: 20px 4px; display: none; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .001ms !important; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eyebrow">고등학교 과학 · 인터랙티브 학습 도구</div>
+  <h1 class="display">지구과학 교사 웹툴 모음</h1>
+  <p>수업에서 바로 활용할 수 있는 과목별 인터랙티브 학습 도구입니다. 학생이 직접 조작하며 개념을 확인할 수 있도록 설계했습니다. 아래에서 과목을 선택하세요.</p>
+</div>
+
+<div class="status-bar">
+  <div class="progress-wrap">
+    <div class="progress-track"><div class="progress-fill" style="width:25%"></div></div>
+    <div class="progress-label"><b>1</b> / 4개 과목 제작 완료</div>
+  </div>
+  <div class="search-box">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search" placeholder="과목 검색...">
+  </div>
+</div>
+
+<div class="section-label">과목 목록</div>
+<div class="grid" id="grid">
+  <a class="subject-card active c-teal" data-name="지구과학" href="https://wmfsljy-coder.github.io/earth-science-2/">
+    <div class="icon-badge">🌍</div>
+    <h3 class="display">지구과학</h3>
+    <p>대기·해양·고체지구·천문 6개 단원, 슬라이더와 클릭형 시뮬레이션으로 구성된 인터랙티브 학습 도구입니다.</p>
+    <span class="status-pill ready">● 6개 단원 완성</span>
+    <div class="go">→</div>
+  </a>
+  <div class="subject-card disabled c-coral" data-name="통합과학1">
+    <div class="icon-badge">🧪</div>
+    <h3 class="display">통합과학1</h3>
+    <p>물질과 규칙성, 시스템과 상호작용 등 통합과학1 단원의 인터랙티브 도구를 준비하고 있습니다.</p>
+    <span class="status-pill soon">준비 중</span>
+  </div>
+  <div class="subject-card disabled c-cold" data-name="통합과학2">
+    <div class="icon-badge">⚛️</div>
+    <h3 class="display">통합과학2</h3>
+    <p>변화와 다양성, 환경과 에너지 등 통합과학2 단원의 인터랙티브 도구를 준비하고 있습니다.</p>
+    <span class="status-pill soon">준비 중</span>
+  </div>
+  <div class="subject-card disabled c-violet" data-name="지구시스템과학">
+    <div class="icon-badge">🪐</div>
+    <h3 class="display">지구시스템과학</h3>
+    <p>지구시스템의 구성과 상호작용을 다루는 진로 선택 과목의 인터랙티브 도구를 준비하고 있습니다.</p>
+    <span class="status-pill soon">준비 중</span>
+  </div>
+</div>
+<p class="no-result" id="noResult">검색 결과가 없습니다.</p>
+
+<div class="section-label">이 사이트 활용법</div>
+<div class="tips">
+  <div class="tip-card">
+    <div class="num">01</div>
+    <h4>수업 중 시연</h4>
+    <p>프로젝터로 화면을 띄우고 슬라이더·버튼을 직접 조작하며 개념을 시각적으로 설명할 수 있습니다.</p>
+  </div>
+  <div class="tip-card">
+    <div class="num">02</div>
+    <h4>학생 개별 활동</h4>
+    <p>링크를 공유하면 학생이 각자 기기로 접속해 스스로 조작하며 개념을 확인할 수 있습니다. 로그인이 필요 없습니다.</p>
+  </div>
+  <div class="tip-card">
+    <div class="num">03</div>
+    <h4>다크 · 라이트 모드</h4>
+    <p>오른쪽 위 버튼으로 화면 밝기를 전환할 수 있어, 어두운 교실이나 밝은 창가 어디서나 보기 편합니다.</p>
+  </div>
+  <div class="tip-card">
+    <div class="num">04</div>
+    <h4>계속 업데이트</h4>
+    <p>통합과학1·2, 지구시스템과학 단원도 순차적으로 추가될 예정입니다. 이 페이지를 즐겨찾기 해 두세요.</p>
+  </div>
+</div>
+
+<button class="theme-toggle" id="themeToggle">라이트 모드</button>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+  var themeBtn = document.getElementById("themeToggle");
+  themeBtn.addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    themeBtn.textContent = next === "dark" ? "라이트 모드" : "다크 모드";
+  });
+
+  var search = document.getElementById("search");
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".subject-card"));
+  var noResult = document.getElementById("noResult");
+  search.addEventListener("input", function () {
+    var q = search.value.trim().toLowerCase();
+    var visibleCount = 0;
+    cards.forEach(function (c) {
+      var match = c.getAttribute("data-name").toLowerCase().indexOf(q) !== -1;
+      c.style.display = match ? "" : "none";
+      if (match) visibleCount++;
+    });
+    noResult.style.display = visibleCount === 0 ? "block" : "none";
+  });
+})();
+</script>
+</body>
+</html>
