@@ -58,6 +58,8 @@
   (function () {
     var brand = document.querySelector(".rail .brand");
     if (!brand || brand.querySelector("a.hub")) return;
+    /* 학생 기기에서는 과목 밖으로 나가는 길을 만들지 않는다. 교사 허브를 연 적이 있는 기기에서만 보인다. */
+    try { if (localStorage.getItem("sth-teacher") !== "1") return; } catch (e) { return; }
     var a = document.createElement("a");
     a.className = "home hub";
     a.href = "https://wmfsljy-coder.github.io/science-teacher-hub/";

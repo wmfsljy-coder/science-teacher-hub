@@ -312,6 +312,8 @@ border-radius: 999px; padding: 7px 14px; font-size: 11.5px; font-weight: 700;
 font-family: inherit; cursor: pointer; box-shadow: var(--shadow-card);
 }
 .theme-toggle:hover { border-color: var(--brand); color: var(--ink); }
+/* 위의 기본 규칙이 모바일 규칙(top:auto)보다 뒤에 있어 top·bottom 이 함께 걸려 버튼이 세로로 늘어났다 */
+@media (max-width: 780px) { .theme-toggle { top: auto; bottom: 14px; right: 14px; } }
 
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
 

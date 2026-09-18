@@ -108,7 +108,7 @@
   <div class="qr-block">
     <button class="qr-toggle" id="qrToggle" type="button" aria-expanded="false"><span>📱 QR 코드</span><span class="qr-caret">▾</span></button>
     <div class="qr-panel" id="qrPanel" hidden>
-      <p class="qr-hint">학생들이 휴대폰이나 태블릿으로 찍으면 이 페이지로 바로 접속됩니다.</p>
+      <p class="qr-hint">이 페이지는 교사용 허브입니다. 학생에게는 과목 페이지에 있는 QR을 나눠 주세요. 학생 화면에는 다른 과목으로 가는 길이 보이지 않습니다.</p>
       <div class="qr-code" id="qrCode"></div>
       <p class="qr-url" id="qrUrl"></p>
     </div>
@@ -213,6 +213,7 @@
 
 <button class="theme-toggle" id="themeToggle">다크 모드</button>
 
+<script>try{localStorage.setItem("sth-teacher","1")}catch(e){}</script>
 <script src="assets/theme.js"></script>
 <script>
 (function () {
