@@ -57,6 +57,16 @@
       return !/처음|초기화|다시|리셋|지우기/.test(b.textContent || "");              // 되돌리기 버튼은 누르지 않는다
     });
     for (var j = 0; j < btns.length; j++) await press(btns[j]);
+    /* 캔버스 위의 점을 누르게 하는 장면도 있다 — 격자로 훑어 누른다 */
+    var cvs = list(scene, "canvas");
+    for (var ci = 0; ci < cvs.length; ci++) {
+      var rc = cvs[ci].getBoundingClientRect();
+      if (!rc.width || !rc.height) continue;
+      for (var gx = 1; gx < 12; gx++) for (var gy = 1; gy < 8; gy++) {
+        var ev = { bubbles: true, clientX: rc.left + rc.width * gx / 12, clientY: rc.top + rc.height * gy / 8 };
+        ["mousedown", "mouseup", "click"].forEach(function (t) { cvs[ci].dispatchEvent(new MouseEvent(t, ev)); });
+      }
+    }
   }
 
   var report = [], stuck = [], todo = [], tabs = list(document, ".tab-btn");
@@ -80,6 +90,20 @@
       if (cleared(epKey, d)) continue;
       if (late()) { todo.push(epKey + " 장면" + (d + 1)); continue; }
       var ranges = list(scene, "input[type=range]"), tries = 0;
+      /* 캔버스 위의 좁은 점(암맥·포획암처럼)을 놓치지 않도록 장면마다 한 번 촘촘히 훑는다 */
+      var fine = list(scene, "canvas");
+      for (var fi = 0; fi < fine.length; fi++) {
+        var fr = fine[fi].getBoundingClientRect();
+        if (!fr.width || !fr.height) continue;
+        for (var fx = 0; fx < 60; fx++) {
+          for (var fy = 0; fy < 40; fy++) {
+            fine[fi].dispatchEvent(new MouseEvent("click", { bubbles: true,
+              clientX: fr.left + fr.width * (fx + 0.5) / 60, clientY: fr.top + fr.height * (fy + 0.5) / 40 }));
+          }
+        }
+        await sleep(0);
+      }
+      if (cleared(epKey, d)) { report.push("· " + epKey + " 장면" + (d + 1) + ": 그림 훑기로 통과"); continue; }
 
       outer:
       for (var round = 0; round < ROUNDS; round++) {
