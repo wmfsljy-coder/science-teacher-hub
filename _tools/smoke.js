@@ -6,17 +6,43 @@
   window.addEventListener("error", function (e) { errs.push(e.message + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno); });
   window.confirm = function () { return false; };
 
+  var boxes = {}, overlap = {};
   var proto = CanvasRenderingContext2D.prototype, orig = proto.fillText;
   proto.fillText = function (s, x, y) {
     try {
       var w = this.measureText(s).width, a = this.textAlign, m = this.getTransform();
       var L = a === "center" ? x - w / 2 : (a === "right" || a === "end" ? x - w : x), R = L + w;
       var W = this.canvas._w || 900, H = this.canvas._h || 9999;
-      if (m.b === 0 && m.c === 0 && (L < -2 || R > W + 2 || y < 0 || y > H + 2)) {
+      var flat = (m.b === 0 && m.c === 0);
+      if (flat && (L < -2 || R > W + 2 || y < 0 || y > H + 2)) {
         clip[this.canvas.id + " | " + String(s).slice(0, 24)] = Math.round(L) + "~" + Math.round(R) + " y" + Math.round(y);
+      }
+      /* 글자끼리 겹치는 곳 찾기 — 한 번 그리는 동안(같은 프레임) 쌓인 상자끼리만 견준다 */
+      if (flat && String(s).trim()) {
+        var size = parseFloat((this.font.match(/(\d+(?:\.\d+)?)px/) || [0, 12])[1]) || 12;
+        var id = this.canvas.id || "(이름없음)";
+        var key = id + "|" + Math.round(x) + "," + Math.round(y);
+        if (!boxes[id]) boxes[id] = [];
+        var box = { L: L, R: R, T: y - size * 0.8, B: y + size * 0.25, s: String(s).slice(0, 18), k: key };
+        for (var q = 0; q < boxes[id].length; q++) {
+          var o = boxes[id][q];
+          if (o.k === key) continue;
+          var ix = Math.min(R, o.R) - Math.max(L, o.L), iy = Math.min(box.B, o.B) - Math.max(box.T, o.T);
+          if (ix > 3 && iy > 3 && ix * iy > 40 && o.s !== box.s) {   /* 같은 글자끼리는 다시 그린 것이라 뺀다 */
+            overlap[id + " : “" + o.s + "” ↔ “" + box.s + "”"] = Math.round(ix) + "×" + Math.round(iy) + "px";
+          }
+        }
+        boxes[id].push(box);
+        if (boxes[id].length > 400) boxes[id].shift();
       }
     } catch (e) {}
     return orig.apply(this, arguments);
+  };
+  /* 화면을 다시 그리기 시작하면(clearRect) 그 캔버스의 상자를 비운다 — 한 프레임 안에서만 견주기 위해 */
+  var origClear = proto.clearRect;
+  proto.clearRect = function (x, y, w, h) {
+    try { if (x <= 1 && y <= 1 && w >= (this.canvas._w || this.canvas.width) - 2) boxes[this.canvas.id || "(이름없음)"] = []; } catch (e) {}
+    return origClear.apply(this, arguments);
   };
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -56,8 +82,8 @@
   }
   await sleep(1500);
   if (window.redrawCanvases) window.redrawCanvases();
-  proto.fillText = orig;
+  proto.fillText = orig; proto.clearRect = origClear;
   var blank = Array.prototype.slice.call(document.querySelectorAll("canvas")).filter(function (c) { return !c._dprSet; }).map(function (c) { return c.id; });
-  return JSON.stringify({ errors: errs, clipped: clip, canvasesNeverSetUp: blank, notes: report,
+  return JSON.stringify({ errors: errs, clipped: clip, 글자겹침: overlap, canvasesNeverSetUp: blank, notes: report,
     tabs: tabs.length, episodes: document.querySelectorAll(".episode").length, scenes: document.querySelectorAll(".scene").length }, null, 1);
 })();
