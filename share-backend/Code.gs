@@ -9,6 +9,7 @@
  *  시트 '반목록'(선택) : A열에 허용할 반 코드를 적으면 그 반만 받는다. 없으면 모두 받는다.
  *
  *  'share' 의 '숨김' 칸에 아무 글자나 적으면 그 줄은 학생 화면에 나오지 않는다.
+ *  한 반을 통째로 지우려면 ?action=wipe&key=교사열쇠&cls=반&confirm=지움 (되돌릴 수 없다).
  */
 var SHEET = 'share';
 var LOG = '활동';
@@ -46,6 +47,11 @@ function teacherKey_() {
     return made;
   }
   return String(sh.getRange('B1').getValue()).trim();
+}
+/** 시트의 표준시를 스크립트와 맞춘다. 다르면 시각이 몇 시간씩 어긋나 기록된다. */
+function ensureTz_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss.getSpreadsheetTimeZone() !== 'Asia/Seoul') ss.setSpreadsheetTimeZone('Asia/Seoul');
 }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
@@ -132,7 +138,28 @@ function doGet(e) {
     return out_({ ok: true, classes: classes, cells: Object.keys(cell).map(function (k2) { return cell[k2]; }), units: units2, recent: recent });
   }
 
-  return out_({ ok: true, hello: 'sth-share' });
+  /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.
+     시험 자료를 치우거나 지난 학년도 반을 정리할 때 쓴다. 되돌릴 수 없다. */
+  if (p.action === 'wipe') {
+    if (cut_(p.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var wc = cut_(p.cls, 12);
+    if (!wc) return out_({ ok: false, error: '지울 반을 적어 주세요' });
+    if (cut_(p.confirm, 10) !== '지움') return out_({ ok: false, error: 'confirm=지움 이 필요합니다' });
+    var gone = 0;
+    var lk = LockService.getScriptLock(); lk.waitLock(10000);
+    try {
+      [sheet_(), logSheet_()].forEach(function (sh) {
+        var vs = sh.getDataRange().getValues();
+        for (var r = vs.length - 1; r >= 1; r--) {
+          if (String(vs[r][1]) === wc) { sh.deleteRow(r + 1); gone++; }
+        }
+      });
+    } finally { lk.releaseLock(); }
+    return out_({ ok: true, removed: gone });
+  }
+
+  return out_({ ok: true, hello: 'sth-share', tz: SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
+                now: new Date(), nowMs: Date.now() });
 }
 
 function doPost(e) {
@@ -148,6 +175,7 @@ function doPost(e) {
   var row = [new Date(), cls, nick, unit, label, JSON.stringify(res), cut_(d.line, 300), ''];
   var again = false;
 
+  ensureTz_();
   var lock = LockService.getScriptLock(); lock.waitLock(10000);
   try {
     var sh = sheet_(), rows = sh.getDataRange().getValues();
@@ -168,7 +196,7 @@ function doPost(e) {
 
 /** 시트 메뉴에서 한 번 눌러 권한을 승인하고 열쇠를 확인하는 용도. */
 function 준비하기() {
-  sheet_(); logSheet_();
+  ensureTz_(); sheet_(); logSheet_();
   var key = teacherKey_();
   SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
 }
