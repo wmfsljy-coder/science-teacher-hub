@@ -4,12 +4,15 @@
  *                  학생 한 명의 한 단원에 한 줄. 다시 올리면 그 줄을 덮어쓴다(지금 상태).
  *  시트 '활동'   : 시각 | 반 | 별명 | 단원 | 단원이름 | 올린 칸 수 | 처음/다시
  *                  올릴 때마다 한 줄씩 쌓기만 한다(반별 활동 기록). 덮어쓰지 않는다.
+ *  시트 '설정'   : A1 '교사 열쇠' / B1 에 아무도 모르는 글자. 선생님 화면에서 이 열쇠를 넣어야
+ *                  모든 반을 한눈에 볼 수 있다. 시트를 처음 쓸 때 저절로 만들어진다.
  *  시트 '반목록'(선택) : A열에 허용할 반 코드를 적으면 그 반만 받는다. 없으면 모두 받는다.
  *
  *  'share' 의 '숨김' 칸에 아무 글자나 적으면 그 줄은 학생 화면에 나오지 않는다.
  */
 var SHEET = 'share';
 var LOG = '활동';
+var CONF = '설정';
 
 function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -29,8 +32,24 @@ function logSheet_() {
   }
   return sh;
 }
+/** 교사 열쇠. 없으면 만들어 둔다. */
+function teacherKey_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(CONF);
+  if (!sh) {
+    sh = ss.insertSheet(CONF);
+    var made = 'sth-' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+    sh.getRange('A1').setValue('교사 열쇠');
+    sh.getRange('B1').setValue(made);
+    sh.getRange('A2').setValue('이 열쇠를 선생님 화면(반별 활동)에 한 번 넣으면 모든 반을 볼 수 있습니다. 바꾸고 싶으면 B1 을 고치세요.');
+    sh.setColumnWidth(1, 120); sh.setColumnWidth(2, 260);
+    return made;
+  }
+  return String(sh.getRange('B1').getValue()).trim();
+}
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
+function ms_(v) { var t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? null : t; }
 function allowed_(cls) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
   if (!sh || sh.getLastRow() < 1) return true;
@@ -66,12 +85,51 @@ function doGet(e) {
       if (!by[u]) by[u] = { unit: u, label: String(w[4] || ''), n: 0, last: null };
       by[u].n++;
       if (String(w[4] || '')) by[u].label = String(w[4]);
-      var t = w[0] instanceof Date ? w[0].getTime() : Date.parse(w[0]);
-      if (!isNaN(t) && (by[u].last === null || t > by[u].last)) by[u].last = t;
+      var t = ms_(w[0]);
+      if (t !== null && (by[u].last === null || t > by[u].last)) by[u].last = t;
     }
     var units = Object.keys(by).map(function (u) { return by[u]; });
     units.sort(function (a, b) { return (b.last || 0) - (a.last || 0); });
     return out_({ ok: true, units: units });
+  }
+
+  /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
+  if (p.action === 'teacher') {
+    if (cut_(p.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var rs2 = sheet_().getDataRange().getValues();
+    var cls_ = {}, cell = {}, units2 = {};
+    for (var a = 1; a < rs2.length; a++) {
+      var v = rs2[a];
+      if (String(v[7]).trim()) continue;
+      var c = String(v[1]), un = String(v[3]), lb = String(v[4] || ''), nk = String(v[2]), tt = ms_(v[0]);
+      if (!c || !un) continue;
+      if (!cls_[c]) cls_[c] = { cls: c, nicks: {}, units: {}, last: null };
+      cls_[c].nicks[nk] = 1; cls_[c].units[un] = 1;
+      if (tt !== null && (cls_[c].last === null || tt > cls_[c].last)) cls_[c].last = tt;
+      var ck = c + '\u0000' + un;
+      if (!cell[ck]) cell[ck] = { cls: c, unit: un, n: 0, last: null };
+      cell[ck].n++;
+      if (tt !== null && (cell[ck].last === null || tt > cell[ck].last)) cell[ck].last = tt;
+      if (lb) units2[un] = lb;
+      else if (!units2[un]) units2[un] = un;
+    }
+    var classes = Object.keys(cls_).map(function (c) {
+      return { cls: c, students: Object.keys(cls_[c].nicks).length, units: Object.keys(cls_[c].units).length, last: cls_[c].last };
+    });
+    classes.sort(function (x, y) { return x.cls < y.cls ? -1 : (x.cls > y.cls ? 1 : 0); });
+
+    /* 최근 활동 — '활동' 시트의 끝에서부터 */
+    var lg = logSheet_(), recent = [];
+    var lastRow = lg.getLastRow();
+    if (lastRow > 1) {
+      var from = Math.max(2, lastRow - 59);
+      var block = lg.getRange(from, 1, lastRow - from + 1, 7).getValues();
+      for (var b = block.length - 1; b >= 0; b--) {
+        var g = block[b];
+        recent.push({ t: ms_(g[0]), cls: String(g[1]), nick: String(g[2]), unit: String(g[3]), label: String(g[4] || ''), n: g[5], kind: String(g[6] || '') });
+      }
+    }
+    return out_({ ok: true, classes: classes, cells: Object.keys(cell).map(function (k2) { return cell[k2]; }), units: units2, recent: recent });
   }
 
   return out_({ ok: true, hello: 'sth-share' });
@@ -106,4 +164,14 @@ function doPost(e) {
     logSheet_().appendRow([new Date(), cls, nick, unit, label, keys.length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
   return out_({ ok: true, updated: again });
+}
+
+/** 시트 메뉴에서 한 번 눌러 권한을 승인하고 열쇠를 확인하는 용도. */
+function 준비하기() {
+  sheet_(); logSheet_();
+  var key = teacherKey_();
+  SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
+}
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addToUi();
 }
