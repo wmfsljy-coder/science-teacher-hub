@@ -126,7 +126,9 @@
     if (!URL_) { msg.textContent = "공유 주소가 없습니다."; msg.className = "msg bad"; return; }
     if (!k) { msg.textContent = "열쇠를 넣어 주세요."; msg.className = "msg bad"; return; }
     msg.textContent = "불러오는 중…"; msg.className = "msg";
-    fetch(URL_ + "?action=teacher&key=" + encodeURIComponent(k))
+    /* 열쇠가 주소에 남지 않도록 POST 로 보낸다(text/plain 이라 사전 요청이 없다) */
+    fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify({ action: "teacher", key: k }) })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j.ok) throw new Error(j.error || "오류");

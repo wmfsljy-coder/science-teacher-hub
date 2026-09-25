@@ -9,7 +9,8 @@
  *  시트 '반목록'(선택) : A열에 허용할 반 코드를 적으면 그 반만 받는다. 없으면 모두 받는다.
  *
  *  'share' 의 '숨김' 칸에 아무 글자나 적으면 그 줄은 학생 화면에 나오지 않는다.
- *  한 반을 통째로 지우려면 ?action=wipe&key=교사열쇠&cls=반&confirm=지움 (되돌릴 수 없다).
+ *  한 반을 통째로 지우려면 POST {action:'wipe', key, cls, confirm:'지움'} (되돌릴 수 없다).
+ *  교사 화면도 POST {action:'teacher', key} 로 받는다 — 열쇠가 주소에 남지 않게.
  */
 var SHEET = 'share';
 var LOG = '활동';
@@ -55,6 +56,9 @@ function ensureTz_() {
 }
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
+/** 학생이 보낸 글이 = + - @ 로 시작하면 시트가 수식으로 실행한다(=IMPORTXML 로 자료를 빼돌릴 수도 있다).
+ *  앞에 ' 를 붙여 글자로만 저장한다. 시트에서 읽으면 ' 는 빠진 채로 돌아온다. */
+function safe_(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
 function ms_(v) { var t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? null : t; }
 function allowed_(cls) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
@@ -99,9 +103,17 @@ function doGet(e) {
     return out_({ ok: true, units: units });
   }
 
+  return out_({ ok: true, hello: 'sth-share', tz: SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
+                now: new Date(), nowMs: Date.now() });
+}
+
+function doPost(e) {
+  var d;
+  try { d = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: '형식 오류' }); }
+  /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
-  if (p.action === 'teacher') {
-    if (cut_(p.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+  if (d.action === 'teacher') {
+    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var rs2 = sheet_().getDataRange().getValues();
     var cls_ = {}, cell = {}, units2 = {};
     for (var a = 1; a < rs2.length; a++) {
@@ -140,13 +152,13 @@ function doGet(e) {
 
   /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.
      시험 자료를 치우거나 지난 학년도 반을 정리할 때 쓴다. 되돌릴 수 없다. */
-  if (p.action === 'wipe') {
-    if (cut_(p.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
-    var wc = cut_(p.cls, 12);
+  if (d.action === 'wipe') {
+    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var wc = cut_(d.cls, 12);
     if (!wc) return out_({ ok: false, error: '지울 반을 적어 주세요' });
-    if (cut_(p.confirm, 10) !== '지움') return out_({ ok: false, error: 'confirm=지움 이 필요합니다' });
+    if (cut_(d.confirm, 10) !== '지움') return out_({ ok: false, error: 'confirm=지움 이 필요합니다' });
     var gone = 0;
-    var lk = LockService.getScriptLock(); lk.waitLock(10000);
+    var lk = LockService.getScriptLock(); if (!lk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시 시도해 주세요' });
     try {
       [sheet_(), logSheet_()].forEach(function (sh) {
         var vs = sh.getDataRange().getValues();
@@ -158,13 +170,6 @@ function doGet(e) {
     return out_({ ok: true, removed: gone });
   }
 
-  return out_({ ok: true, hello: 'sth-share', tz: SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
-                now: new Date(), nowMs: Date.now() });
-}
-
-function doPost(e) {
-  var d;
-  try { d = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: '형식 오류' }); }
   if (d.action !== 'post') return out_({ ok: false, error: '알 수 없는 요청' });
   var cls = cut_(d.cls, 12), nick = cut_(d.nick, 12), unit = cut_(d.unit, 24);
   if (!cls || !nick || !unit) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
@@ -172,11 +177,12 @@ function doPost(e) {
   var res = {}, keys = Object.keys(d.results || {}).slice(0, 12);
   keys.forEach(function (k) { res[cut_(k, 8)] = cut_(d.results[k], 300); });
   var label = cut_(d.unitLabel, 60);
-  var row = [new Date(), cls, nick, unit, label, JSON.stringify(res), cut_(d.line, 300), ''];
+  var row = [new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), JSON.stringify(res), safe_(cut_(d.line, 300)), ''];
   var again = false;
 
   ensureTz_();
-  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
   try {
     var sh = sheet_(), rows = sh.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
@@ -189,7 +195,7 @@ function doPost(e) {
     }
     if (!again) sh.appendRow(row);
     /* 활동 기록은 덮어쓰지 않고 쌓는다 */
-    logSheet_().appendRow([new Date(), cls, nick, unit, label, keys.length, again ? '다시' : '처음']);
+    logSheet_().appendRow([new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), keys.length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
   return out_({ ok: true, updated: again });
 }
