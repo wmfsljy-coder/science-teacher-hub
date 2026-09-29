@@ -18,9 +18,9 @@ CSS = '''
 .share h4 { font-family: "Jua"; font-weight: 400; font-size: 17px; margin: 18px 0 10px; color: var(--ink); }
 .share-id { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .share-id label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--mist); }
-.share-id input { border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-family: inherit;
+.share-id input, .share-id select { border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 14px; font-family: inherit;
   background: var(--card-2); color: var(--ink); width: 150px; }
-.share-id input:focus { outline: none; border-color: var(--brand); }
+.share-id input:focus, .share-id select:focus { outline: none; border-color: var(--brand); }
 .sm-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 9px 12px; border-radius: 12px; background: var(--card-2);
   border: 2px solid var(--line); margin-bottom: 6px; font-size: 13px; color: var(--mist); }
 .sm-row b { color: var(--ink); }
