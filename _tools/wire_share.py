@@ -37,7 +37,7 @@ CSS = '''
 .sh-card .sh-nick { font-family: "Jua"; font-size: 15px; margin-bottom: 4px; }
 .sh-card p { margin: 0 0 4px; color: var(--mist); }
 .sh-card p b { color: var(--ink); }
-.sh-card blockquote { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--amber-100); color: #3a2a00; }
+.sh-card blockquote { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--amber-100); color: var(--ink); }
 '''
 
 def css(s):
