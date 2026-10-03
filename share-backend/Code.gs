@@ -131,6 +131,9 @@ function doGet(e) {
     return out_({ ok: true, units: units });
   }
 
+  /* 바로가기 탭 만들기 — 내용은 코드에 박힌 공개 링크뿐이라 열쇠 없이도 된다(이미 최신이면 아무것도 안 한다). */
+  if (p.action === 'links') { ensureLinks_(false); return out_({ ok: true, ver: LINKS_VER, n: LINKS.length }); }
+
   /* 받는 반 코드 목록(반목록 탭 A열) — 코드는 학생 화면 소스에도 있는 공개 정보다. 비어 있으면 모든 반을 받는다. */
   if (p.action === 'classes') {
     var csh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
@@ -326,10 +329,32 @@ function doPost(e) {
 
 /** 시트 메뉴에서 한 번 눌러 권한을 승인하고 열쇠를 확인하는 용도. */
 function 준비하기() {
-  ensureTz_(); sheet_(); logSheet_(); classSheet_();
+  ensureTz_(); sheet_(); logSheet_(); classSheet_(); ensureLinks_(false);
   var key = teacherKey_();
   SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
 }
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addToUi();
+  SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기').addToUi();
+  try { ensureLinks_(false); } catch (e) {}
+}
+function 바로가기() { ensureLinks_(true); SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('바로가기')); }
+/** '바로가기' 탭 — 교사용 허브와 전 과목·전 단원 링크(links.gs 의 LINKS). 목록이 바뀌었거나 force 이면 다시 쓴다. */
+function ensureLinks_(force) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('바로가기'), fresh = !sh;
+  if (!sh) sh = ss.insertSheet('바로가기', 0);
+  if (!force && !fresh && String(sh.getRange('H1').getValue()) === LINKS_VER) return sh;
+  sh.clear();
+  var head = [['구분', '학년', '과목', '단원', '학생 화면', '교사 미리 보기(모든 장면 열림)']];
+  var body = LINKS.map(function (r) {
+    var u = r[4], q = function (s) { return String(s).replace(/"/g, '""'); };
+    return [r[0], r[1], r[2], r[3], '=HYPERLINK("' + q(u) + '","' + q(r[3] && r[0] === '단원' ? '열기' : '열기 ↗') + '")',
+            r[0] === '단원' ? '=HYPERLINK("' + q(u + '?open=1') + '","미리 보기")' : ''];
+  });
+  sh.getRange(1, 1, 1, 6).setValues(head).setFontWeight('bold').setBackground('#e8f0fe');
+  sh.getRange(2, 1, body.length, 6).setValues(body);
+  sh.getRange('H1').setValue(LINKS_VER).setFontColor('#bbbbbb');
+  sh.setFrozenRows(1);
+  [70, 60, 150, 300, 90, 170].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+  for (var i = 0; i < LINKS.length; i++) if (LINKS[i][0] !== '단원') sh.getRange(i + 2, 1, 1, 6).setBackground(LINKS[i][0] === '교사' ? '#fff4d6' : '#f3f6fb').setFontWeight('bold');
+  return sh;
 }
