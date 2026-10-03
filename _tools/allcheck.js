@@ -29,7 +29,7 @@
       out[u] = {
         탭: names.length,
         순서: names.slice(-4).join(" › "),
-        문제: d.querySelectorAll(".qz-card").length,
+        문제: d.querySelectorAll(".qz-card:not(.qz-mini)").length,
         실험: d.querySelectorAll(".lab-case").length,
         정리줄: /수준별 문제/.test(txt) && /응용 실험실/.test(txt) ? "O" : "X",
         안보이는탭: bad.length ? bad : undefined,
