@@ -181,6 +181,26 @@
     STATE[k] = v; store(); return v;
   };
 
+  /* ---- 보기 섞기 ----
+     정답이 늘 같은 자리에 있지 않도록, 질문 글자로 정한 순서로 보기를 늘어놓는다(다시 열어도 같은 순서).
+     보기 앞의 ㉠㉡㉢ 은 보이는 자리대로 다시 붙인다. keep 이 참이면(해설이 번호를 가리키는 문항) 섞지 않는다.
+     돌려주는 값: order[보이는 자리] = 원래 번호, text[원래 번호] = 화면에 보이는 글 */
+  var MARK_ = "㉠㉡㉢㉣㉤";
+  window.sthStripMark = function (t) { return String(t == null ? "" : t).replace(/^[㉠㉡㉢㉣㉤]\s*/, ""); };
+  window.sthHasRef = function (x) { return /[①②③④⑤㉠㉡㉢㉣㉤]/.test(Array.isArray(x) ? x.join(" ") : String(x || "")); };
+  window.sthShuffle = function (opts, seed, keep) {
+    var n = opts.length, ord = [], i, h = 2166136261;
+    for (i = 0; i < n; i++) ord.push(i);
+    if (!keep && n >= 2) {
+      seed = String(seed || "");
+      for (i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul ? Math.imul(h, 16777619) >>> 0 : (h * 16777619) >>> 0; }
+      for (i = n - 1; i > 0; i--) { h = (Math.imul ? Math.imul(h, 1103515245) : h * 1103515245) + 12345 >>> 0; var j = (h >>> 8) % (i + 1), x = ord[i]; ord[i] = ord[j]; ord[j] = x; }
+    }
+    var marked = n > 0 && opts.every(function (t) { return /^[㉠㉡㉢㉣㉤]/.test(String(t)); }), text = [];
+    ord.forEach(function (o, pos) { text[o] = marked ? MARK_.charAt(pos) + " " + window.sthStripMark(opts[o]) : opts[o]; });
+    return { order: ord, text: text };
+  };
+
   /* ---- 예측 잠금 ----
      opt = { gate:'게이트 요소 id', veil:'덮개 요소 id', key:'저장 이름',
              question:'질문', options:['㉠ …','㉡ …'], onPick:function(i, text){} }   */
@@ -192,9 +212,11 @@
              + '<p>' + opt.question + '</p><div class="opts"></div>';
     gate.innerHTML = html;
     var box = gate.querySelector(".opts");
-    opt.options.forEach(function (t, i) {
+    var mix = window.sthShuffle(opt.options, opt.key + "|" + opt.question, opt.keepOrder), btn = [];
+    opt.options.forEach(function (t0, i) {
+      var t = mix.text[i];
       var b = document.createElement("button");
-      b.className = "opt"; b.type = "button"; b.textContent = t;
+      b.className = "opt"; b.type = "button"; b.textContent = t; b.setAttribute("data-i", i);
       b.addEventListener("click", function () {
         Array.prototype.forEach.call(box.children, function (o) { o.classList.remove("picked"); });
         b.classList.add("picked");
@@ -204,14 +226,16 @@
         store();
         if (typeof opt.onPick === "function") opt.onPick(i, t);
       });
-      box.appendChild(b);
+      btn[i] = b;
     });
+    mix.order.forEach(function (o) { box.appendChild(btn[o]); });
     /* 이미 고른 적이 있으면 그대로 복원한다 */
     var prev = STATE[opt.key || "pred"];
     if (prev) {
-      var idx = opt.options.indexOf(prev);
+      var idx = -1;
+      opt.options.forEach(function (t, i) { if (idx < 0 && window.sthStripMark(t) === window.sthStripMark(prev)) idx = i; });
       if (idx >= 0) {
-        box.children[idx].classList.add("picked");
+        btn[idx].classList.add("picked");
         gate.classList.add("done");
         if (veil) veil.hidden = true;
         if (typeof opt.onPick === "function") opt.onPick(idx, prev);
