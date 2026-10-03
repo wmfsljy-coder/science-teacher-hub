@@ -72,14 +72,24 @@ function classSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('반목록');
   if (!sh) {
     sh = ss.insertSheet('반목록');
+    sh.getRange(1, 1, CLASSES.length, 1).setNumberFormat('@');          /* '1-1' 이 날짜(1월 1일)로 바뀌지 않게 글자 칸으로 */
     sh.getRange(1, 1, CLASSES.length, 2).setValues(CLASSES);
     sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 280);
   }
+  return heal_(sh);
+}
+/** 반목록 A열에 날짜로 바뀐 반 코드(예: 2026-01-01 ← '1-1')가 있으면 '월-일' 글자로 되돌린다. */
+function heal_(sh) {
+  var n = sh.getLastRow(); if (n < 1) return sh;
+  var rg = sh.getRange(1, 1, n, 1), v = rg.getValues(), bad = false;
+  v = v.map(function (r) { var x = r[0]; if (x instanceof Date) { bad = true; return [(x.getMonth() + 1) + '-' + x.getDate()]; } return [x]; });
+  if (bad) { rg.setNumberFormat('@'); rg.setValues(v); }
   return sh;
 }
 function allowed_(cls) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
   if (!sh || sh.getLastRow() < 1) return true;
+  heal_(sh);
   var list = sh.getRange(1, 1, sh.getLastRow(), 1).getValues().map(function (r) { return String(r[0]).trim(); }).filter(String);
   return list.length === 0 || list.indexOf(cls) !== -1;
 }
@@ -119,6 +129,14 @@ function doGet(e) {
     var units = Object.keys(by).map(function (u) { return by[u]; });
     units.sort(function (a, b) { return (b.last || 0) - (a.last || 0); });
     return out_({ ok: true, units: units });
+  }
+
+  /* 받는 반 코드 목록(반목록 탭 A열) — 코드는 학생 화면 소스에도 있는 공개 정보다. 비어 있으면 모든 반을 받는다. */
+  if (p.action === 'classes') {
+    var csh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
+    if (csh) heal_(csh);
+    var codes = csh && csh.getLastRow() ? csh.getRange(1, 1, csh.getLastRow(), 1).getValues().map(function (r) { return String(r[0]).trim(); }).filter(String) : [];
+    return out_({ ok: true, sheet: !!csh, classes: codes });
   }
 
   return out_({ ok: true, hello: 'sth-share', tz: SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone(),
