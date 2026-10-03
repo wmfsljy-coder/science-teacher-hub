@@ -110,7 +110,7 @@
     return Math.round(s / 86400) + "일 전";
   }
 
-  var out = $("out"), msg = $("msg"), pick = null, data = null;
+  var out = $("out"), msg = $("msg"), pick = null, data = null, evd = null;
 
   function note(html) { out.innerHTML = ""; var p = el("div", "panel"); p.innerHTML = html; out.appendChild(p); }
 
@@ -135,6 +135,7 @@
         try { localStorage.setItem(KEY, k); } catch (e) {}
         msg.textContent = "불러왔습니다. " + when(Date.now());
         data = j; paint();
+        loadEv(k);
       })
       .catch(function (e) {
         msg.textContent = "불러오지 못했습니다. (" + e.message + ")"; msg.className = "msg bad";
@@ -146,6 +147,64 @@
            + '<li>권한을 허용하면 <b>교사 열쇠</b> 가 뜹니다. 그 글자를 위 칸에 넣으세요.</li>'
            + '</ol>');
       });
+  }
+
+  /* 수업 효과 기록(첫 추리·완주·한 번에 맞힘·막힌 장면) — 열쇠가 맞을 때만 */
+  function loadEv(k) {
+    fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify({ action: "evidence", key: k }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.ok) { evd = j.rows || []; paint(); } })
+      .catch(function () {});
+  }
+  function pct(a, b) { return b ? Math.round(a / b * 100) + "%" : "–"; }
+  function evRows() {
+    var rows = (evd || []).filter(function (r) { return !pick || r.cls === pick; });
+    return rows.map(function (r) {
+      var epN = 0, epDone = 0, stuck = {};
+      r.eps.forEach(function (e) { epN += e.n; epDone += e.done; Object.keys(e.stuck).forEach(function (sc) { var key = e.k + " " + sc + "장면"; stuck[key] = (stuck[key] || 0) + e.stuck[sc]; }); });
+      var top = Object.keys(stuck).sort(function (a, b) { return stuck[b] - stuck[a]; })[0];
+      return { unit: r.unit, label: r.label || r.unit, cls: r.cls, n: r.n, ev: r.withEv,
+               pre: pct(r.g1, r.gn), preN: r.gn, done: pct(epDone, epN), q1: pct(r.q1, r.qt), qt: r.qt,
+               lab: pct(r.lab, r.n), stuck: top ? top + " (" + stuck[top] + "명)" : "–",
+               gates: r.gates.map(function (g) { return g.k + " " + g.ok + "/" + g.n; }).join(" · ") };
+    });
+  }
+  function csv() {
+    var head = ["단원", "단원이름", "반", "올린 학생", "효과 기록 학생", "첫 추리 정답률", "첫 추리 응답 수", "이야기 완주율", "수준별 문제 한 번에 맞힌 비율", "손댄 문항 수", "응용 실험실 1개 이상 해결", "가장 많이 멈춘 장면", "첫 추리 문항별(맞음/응답)"];
+    var lines = [head].concat(evRows().map(function (r) { return [r.unit, r.label, r.cls, r.n, r.ev, r.pre, r.preN, r.done, r.q1, r.qt, r.lab, r.stuck, r.gates]; }));
+    var txt = String.fromCharCode(0xFEFF) + lines.map(function (l) { return l.map(function (c) { c = String(c); return (c.indexOf(",") >= 0 || c.indexOf("\"") >= 0 || c.indexOf(String.fromCharCode(10)) >= 0) ? "\"" + c.split("\"").join("\"\"") + "\"" : c; }).join(","); }).join(String.fromCharCode(13, 10));
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv;charset=utf-8" }));
+    a.download = "수업효과_" + (pick || "전체") + "_" + new Date().toISOString().slice(0, 10) + ".csv";
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  function paintEv() {
+    if (!evd) return;
+    var p = el("div", "panel");
+    p.appendChild(el("h2", "display", "수업 효과"));
+    var sub = el("p", "sub");
+    sub.innerHTML = "학생이 올릴 때 함께 오는 기록입니다(2026-10-03 이후 올린 것부터). <b>첫 추리 정답률</b>은 이야기를 시작하기 전 예상이 맞은 비율(사전), "
+      + "<b>이야기 완주율</b>은 끝까지 푼 이야기의 비율, <b>한 번에 맞힌 비율</b>은 수준별 문제를 해설 없이 첫 시도에 맞힌 비율(사후)입니다. "
+      + "첫 추리는 일부러 오개념을 건드리는 질문이라 낮게 나오는 것이 정상입니다. 학생 수가 적으면 해석에 주의하세요."
+      + (pick ? "  지금은 " + pick + "반만 보고 있습니다." : "");
+    p.appendChild(sub);
+    var rows = evRows();
+    if (!rows.length) { p.appendChild(el("p", "empty", "아직 효과 기록이 담긴 올리기가 없습니다. 학생이 다음에 올리면 쌓이기 시작합니다.")); out.appendChild(p); return; }
+    var bt = el("button", "btn", "📥 표 내려받기 (CSV)"); bt.type = "button"; bt.addEventListener("click", csv);
+    p.appendChild(bt);
+    var sc = el("div", "tbl-scroll"), tb = document.createElement("table"); tb.className = "act";
+    var cols = [["unit", "단원"], ["cls", "반"], ["n", "학생"], ["pre", "첫 추리 정답률(사전)"], ["done", "이야기 완주율"], ["q1", "한 번에 맞힘(사후)"], ["lab", "실험실 해결"], ["stuck", "가장 많이 멈춘 장면"]];
+    var tr = document.createElement("tr"); cols.forEach(function (c) { var th = document.createElement("th"); if (c[0] === "unit") th.className = "unit"; th.textContent = c[1]; tr.appendChild(th); });
+    var th_ = document.createElement("thead"); th_.appendChild(tr); tb.appendChild(th_);
+    var tbody = document.createElement("tbody");
+    rows.forEach(function (r) {
+      var t = document.createElement("tr");
+      cols.forEach(function (c) { var td = document.createElement("td"); if (c[0] === "unit") { td.className = "unit"; td.textContent = r.label; td.title = r.gates; } else td.textContent = r[c[0]]; t.appendChild(td); });
+      tbody.appendChild(t);
+    });
+    tb.appendChild(tbody); sc.appendChild(tb); p.appendChild(sc);
+    out.appendChild(p);
   }
 
   function paint() {
@@ -233,6 +292,7 @@
     });
     p3.appendChild(feed);
     out.appendChild(p3);
+    paintEv();
   }
 
   $("go").addEventListener("click", load);

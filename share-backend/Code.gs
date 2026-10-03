@@ -79,6 +79,7 @@ function doGet(e) {
       if (String(r[1]) !== cls || String(r[3]) !== unit || String(r[7]).trim()) continue;
       var res = {};
       try { res = JSON.parse(r[5] || '{}'); } catch (err) {}
+      delete res._ev;                                           // 수업 효과 기록은 선생님 화면에서만
       items.push({ nick: String(r[2]), results: res, line: String(r[6] || ''), t: r[0] });
     }
     return out_({ ok: true, items: items });
@@ -150,6 +151,52 @@ function doPost(e) {
     return out_({ ok: true, classes: classes, cells: Object.keys(cell).map(function (k2) { return cell[k2]; }), units: units2, recent: recent });
   }
 
+  /* 수업 효과 — 단원 × 반 마다 완료율·첫 추리 정답률·한 번에 맞힌 비율·막힌 장면. 교사 열쇠가 맞아야 한다.
+     학생 화면이 올린 results._ev ( g:키=1/0,… | e:이야기=푼/전체@막힌 장면,… | q:한 번에/손댄 ) 를 모은다. */
+  if (d.action === 'evidence') {
+    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var ev = sheet_().getDataRange().getValues(), agg = {};
+    for (var x = 1; x < ev.length; x++) {
+      var q = ev[x];
+      if (String(q[7]).trim()) continue;
+      var ec = String(q[1]), eu = String(q[3]);
+      if (!ec || !eu) continue;
+      var rr = {}; try { rr = JSON.parse(q[5] || '{}'); } catch (err2) {}
+      var ak = eu + '\u0000' + ec;
+      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0 };
+      var A = agg[ak]; A.n++;
+      if (/응용 \d+\/\d+ 해결/.test(String(rr.rLab || '')) && !/응용 0\//.test(String(rr.rLab))) A.lab++;
+      var s0 = String(rr._ev || '');
+      if (!s0) continue;
+      A.withEv++;
+      s0.split('|').forEach(function (part) {
+        var tag = part.slice(0, 2), body = part.slice(2);
+        if (!body) return;
+        body.split(',').forEach(function (it) {
+          if (tag === 'g:') {
+            var kv = it.split('='); if (kv.length < 2) return;
+            var gg = A.gates[kv[0]] || (A.gates[kv[0]] = { k: kv[0], n: 0, ok: 0 });
+            gg.n++; A.gn++; if (kv[1] === '1') { gg.ok++; A.g1++; }
+          } else if (tag === 'e:') {
+            var m = /^([^=]+)=(\d+)\/(\d+)(?:@(\d+))?$/.exec(it); if (!m) return;
+            var ee = A.eps[m[1]] || (A.eps[m[1]] = { k: m[1], tot: +m[3], n: 0, done: 0, stuck: {} });
+            ee.n++; if (+m[2] >= +m[3]) ee.done++; else if (m[4]) ee.stuck[m[4]] = (ee.stuck[m[4]] || 0) + 1;
+          } else if (tag === 'q:') {
+            var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) { A.q1 += +qm[1]; A.qt += +qm[2]; }
+          }
+        });
+      });
+    }
+    var list = Object.keys(agg).map(function (k3) {
+      var A = agg[k3];
+      A.gates = Object.keys(A.gates).map(function (g2) { return A.gates[g2]; });
+      A.eps = Object.keys(A.eps).map(function (e2) { return A.eps[e2]; });
+      return A;
+    });
+    list.sort(function (a1, b1) { return a1.unit < b1.unit ? -1 : (a1.unit > b1.unit ? 1 : (a1.cls < b1.cls ? -1 : 1)); });
+    return out_({ ok: true, rows: list });
+  }
+
   /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.
      시험 자료를 치우거나 지난 학년도 반을 정리할 때 쓴다. 되돌릴 수 없다. */
   if (d.action === 'wipe') {
@@ -195,7 +242,7 @@ function doPost(e) {
     }
     if (!again) sh.appendRow(row);
     /* 활동 기록은 덮어쓰지 않고 쌓는다 */
-    logSheet_().appendRow([new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), keys.length, again ? '다시' : '처음']);
+    logSheet_().appendRow([new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), keys.filter(function (k) { return k !== '_ev'; }).length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
   return out_({ ok: true, updated: again });
 }
