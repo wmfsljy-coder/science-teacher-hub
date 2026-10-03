@@ -6,7 +6,7 @@
   var out = {};
   for (var i = 0; i < (window.LR || []).length; i++) {
     var u = window.LR[i], repo = u.split("/")[0];
-    for (var f of ["/" + u + "/index.html", "/" + u + "/episodes.js", "/" + u + "/lab-cases.js", "/" + repo + "/assets/lab.js", "/" + repo + "/assets/story.css"]) {
+    for (var f of ["/" + u + "/index.html", "/" + u + "/episodes.js", "/" + u + "/lab-cases.js", "/" + u + "/real-cases.js", "/" + repo + "/assets/link.js", "/" + repo + "/assets/lab.js", "/" + repo + "/assets/story.css"]) {
       try { await fetch(f, { cache: "reload" }); } catch (e) {}
     }
     var fr = document.createElement("iframe");
