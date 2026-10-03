@@ -5,6 +5,7 @@
 - 바로 열기: https://wmfsljy-coder.github.io/science-teacher-hub/
 - 동료 교사용 안내(복제·반 코드·수업 흐름): [GUIDE.md](GUIDE.md)
 - 제작 과정과 검증 방법: [MAKING.md](MAKING.md)
+- 10분 시연 순서: [DEMO.md](DEMO.md)
 - 성취기준 대응표와 단원별 지도안 목록: [STANDARDS.md](STANDARDS.md) (지도안은 각 단원 폴더의 `LESSON.md`)
 
 ## 내 학교에서 쓰기
