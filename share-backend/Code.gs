@@ -60,6 +60,23 @@ function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').tri
  *  앞에 ' 를 붙여 글자로만 저장한다. 시트에서 읽으면 ' 는 빠진 채로 돌아온다. */
 function safe_(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
 function ms_(v) { var t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? null : t; }
+/** 반목록 기본값 — 시트에 '반목록' 탭이 없을 때 준비하기가 만든다. 고칠 때는 시트의 탭을 고치면 된다(A열 코드만 본다). */
+var CLASSES = (function () {
+  var out = [], i, subj = [['지구과학', '지구과학'], ['지구시스템', '지구시스템과학'], ['행성우주', '행성우주과학'],
+    ['기후환경', '기후변화와 환경생태'], ['융합탐구', '융합과학 탐구'], ['과학사', '과학의 역사와 문화']];
+  for (i = 1; i <= 7; i++) out.push(['1-' + i, '1학년 ' + i + '반 (통합과학·과학탐구실험)']);
+  subj.forEach(function (s) { ['A', 'B'].forEach(function (b) { out.push(['2-' + s[0] + b, '2학년 ' + s[1] + ' ' + b + '반']); }); });
+  return out;
+})();
+function classSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('반목록');
+  if (!sh) {
+    sh = ss.insertSheet('반목록');
+    sh.getRange(1, 1, CLASSES.length, 2).setValues(CLASSES);
+    sh.setColumnWidth(1, 140); sh.setColumnWidth(2, 280);
+  }
+  return sh;
+}
 function allowed_(cls) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
   if (!sh || sh.getLastRow() < 1) return true;
@@ -224,6 +241,21 @@ function doPost(e) {
     return out_({ ok: true, cls: wc, unit: wu, students: st });
   }
 
+  /* 옛 시트의 기록을 옮겨 붙인다 — 교사 열쇠와 confirm:'옮김' 이 있어야 한다. rows: share 줄들, logs: 활동 줄들(첫 칸은 시각 숫자). */
+  if (d.action === 'import') {
+    if (cut_(d.key, 40) !== teacherKey_() || d.confirm !== '옮김') return out_({ ok: false, error: '열쇠 또는 확인이 맞지 않습니다' });
+    ensureTz_();
+    var ilk = LockService.getScriptLock(); if (!ilk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시' });
+    try {
+      var fix = function (r, n) { var o = []; for (var c = 0; c < n; c++) { var v = r[c]; o.push(c === 0 ? new Date(+v || Date.parse(v) || Date.now()) : safe_(v == null ? '' : v)); } return o; };
+      var A1 = (d.rows || []).slice(0, 5000).map(function (r) { return fix(r, 8); });
+      var A2 = (d.logs || []).slice(0, 20000).map(function (r) { return fix(r, 7); });
+      if (A1.length) { var s1 = sheet_(); s1.getRange(s1.getLastRow() + 1, 1, A1.length, 8).setValues(A1); }
+      if (A2.length) { var s2 = logSheet_(); s2.getRange(s2.getLastRow() + 1, 1, A2.length, 7).setValues(A2); }
+    } finally { ilk.releaseLock(); }
+    return out_({ ok: true, rows: A1.length, logs: A2.length });
+  }
+
   /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.
      시험 자료를 치우거나 지난 학년도 반을 정리할 때 쓴다. 되돌릴 수 없다. */
   if (d.action === 'wipe') {
@@ -276,7 +308,7 @@ function doPost(e) {
 
 /** 시트 메뉴에서 한 번 눌러 권한을 승인하고 열쇠를 확인하는 용도. */
 function 준비하기() {
-  ensureTz_(); sheet_(); logSheet_();
+  ensureTz_(); sheet_(); logSheet_(); classSheet_();
   var key = teacherKey_();
   SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
 }
