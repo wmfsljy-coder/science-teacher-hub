@@ -24,6 +24,7 @@
   .keyrow input { border: 2px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 14px;
     font-family: inherit; background: var(--card-2); color: var(--ink); width: 280px; }
   .keyrow input:focus { outline: none; border-color: var(--brand); }
+  .keyrow select { border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 14px; font-family: inherit; background: var(--card-2); color: var(--ink); max-width: 360px; }
   .msg { font-size: 13px; color: var(--mist); margin-left: 4px; }
   .msg.bad { color: var(--rose-700); }
 
@@ -204,6 +205,96 @@
       tbody.appendChild(t);
     });
     tb.appendChild(tbody); sc.appendChild(tb); p.appendChild(sc);
+    out.appendChild(p);
+    paintGroups(rows);
+  }
+
+  /* 모둠 편성 · 먼저 가 볼 학생 — 반 하나와 단원 하나를 골라 학생별 기록을 불러온다.
+     첫 추리에서 서로 다른 보기를 고른 학생끼리 같은 모둠이 되도록 나눈다(생각이 다르면 토론이 생긴다). */
+  var grp = { unit: null, size: 4, list: null, seed: 0, err: "" };
+  var MK = "㉠㉡㉢㉣㉤";
+  function progress(s) { var n = 0, t = 0; Object.keys(s.e).forEach(function (k) { n += s.e[k][0]; t += s.e[k][1]; }); return t ? n / t : 0; }
+  function sig(s, keys) { return keys.map(function (k) { var g = s.g[k]; return g ? (g[1] != null ? g[1] : (g[0] ? "o" : "x")) : "-"; }).join("|"); }
+  function rnd(i) { var x = Math.sin((i + 1) * 9301 + grp.seed * 49297) * 233280; return x - Math.floor(x); }
+  function makeGroups(list, size) {
+    var keys = {}; list.forEach(function (s) { Object.keys(s.g).forEach(function (k) { keys[k] = 1; }); }); keys = Object.keys(keys).sort();
+    var order = list.map(function (s, i) { return { s: s, sg: sig(s, keys), r: rnd(i) }; });
+    order.sort(function (a, b) { return a.sg < b.sg ? -1 : (a.sg > b.sg ? 1 : a.r - b.r); });
+    var G = Math.max(1, Math.round(list.length / size)), out2 = [];
+    for (var i = 0; i < G; i++) out2.push([]);
+    order.forEach(function (o, i) { out2[i % G].push(o.s); });
+    return { groups: out2, keys: keys };
+  }
+  function loadStudents() {
+    var k = ($("key").value || "").trim();
+    if (!pick || !grp.unit) return;
+    grp.list = null; grp.err = "불러오는 중…"; paint();
+    fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify({ action: "students", key: k, cls: pick, unit: grp.unit }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); grp.list = j.students || []; grp.err = ""; paint(); })
+      .catch(function (e) { grp.err = "불러오지 못했습니다 (" + e.message + ")"; paint(); });
+  }
+  function paintGroups(evrows) {
+    var p = el("div", "panel");
+    p.appendChild(el("h2", "display", "모둠 편성 · 먼저 가 볼 학생"));
+    var sub = el("p", "sub");
+    sub.innerHTML = "수업 흐름 예: 개인 탐구 15분 → 학생이 <b>우리 반</b> 탭에서 한 번 올리기 → 여기서 모둠 편성 → 모둠 20분 → 전체 공유 5분 → 개인 정리 10분. "
+      + "첫 추리에서 <b>서로 다른 보기를 고른 학생</b>이 한 모둠에 섞이도록 나눕니다. 학생이 쓴 글은 불러오지 않습니다.";
+    p.appendChild(sub);
+    if (!pick) { p.appendChild(el("p", "empty", "위에서 반 카드를 하나 누르면 시작할 수 있습니다.")); out.appendChild(p); return; }
+    var units = []; (evrows || []).forEach(function (r) { if (r.cls === pick && r.ev && !units.some(function (u) { return u[0] === r.unit; })) units.push([r.unit, r.label]); });
+    if (!units.length) { p.appendChild(el("p", "empty", pick + "반에는 아직 효과 기록이 담긴 올리기가 없습니다.")); out.appendChild(p); return; }
+    var row = el("div", "keyrow");
+    var l1 = el("label", null, "단원"), s1 = document.createElement("select");
+    units.forEach(function (u) { var o = document.createElement("option"); o.value = u[0]; o.textContent = u[1] || u[0]; if (grp.unit === u[0]) o.selected = true; s1.appendChild(o); });
+    if (!grp.unit || !units.some(function (u) { return u[0] === grp.unit; })) grp.unit = units[0][0];
+    s1.addEventListener("change", function () { grp.unit = s1.value; grp.list = null; paint(); });
+    l1.appendChild(s1); row.appendChild(l1);
+    var l2 = el("label", null, "모둠 인원"), s2 = document.createElement("select");
+    [3, 4, 5].forEach(function (n) { var o = document.createElement("option"); o.value = n; o.textContent = n + "명 안팎"; if (grp.size === n) o.selected = true; s2.appendChild(o); });
+    s2.addEventListener("change", function () { grp.size = +s2.value; paint(); });
+    l2.appendChild(s2); row.appendChild(l2);
+    var b1 = el("button", "btn primary", grp.list ? "다시 불러오기" : "학생별 기록 불러오기"); b1.type = "button"; b1.addEventListener("click", loadStudents); row.appendChild(b1);
+    if (grp.list && grp.list.length) { var b2 = el("button", "btn", "다른 조합으로 섞기"); b2.type = "button"; b2.addEventListener("click", function () { grp.seed++; paint(); }); row.appendChild(b2); }
+    if (grp.err) row.appendChild(el("span", "msg", grp.err));
+    p.appendChild(row);
+    if (grp.list) {
+      var L = grp.list;
+      if (!L.length) { p.appendChild(el("p", "empty", "이 단원을 올린 학생이 없습니다.")); out.appendChild(p); return; }
+      /* 먼저 가 볼 학생: 이야기 진행이 가장 더딘 순, 힌트를 많이 본 순 */
+      var slow = L.slice().sort(function (a, b) { return progress(a) - progress(b) || ((b.h || [0, 0, 0])[2] - (a.h || [0, 0, 0])[2]); }).slice(0, Math.min(5, L.length));
+      var h3 = el("h3", null, "먼저 가 볼 학생"); h3.style.cssText = "font-size:15px;margin:16px 0 6px"; p.appendChild(h3);
+      var feed = el("div", "feed");
+      slow.forEach(function (s) {
+        var r = el("div", "feed-row"); r.appendChild(el("span", "who", s.nick));
+        var st = []; Object.keys(s.e).forEach(function (k) { var e = s.e[k]; st.push(k + " " + e[0] + "/" + e[1] + (e[2] ? " (" + e[2] + "장면에서 멈춤)" : "")); });
+        r.appendChild(el("span", "u", "이야기 " + Math.round(progress(s) * 100) + "% · " + (st.join(", ") || "기록 없음")));
+        r.appendChild(el("span", null, "실험실 힌트 " + (s.h ? s.h[2] : 0) + "단계 · 올린 때 " + ago(s.t)));
+        feed.appendChild(r);
+      });
+      p.appendChild(feed);
+      /* 모둠 */
+      var G = makeGroups(L, grp.size);
+      var h4 = el("h3", null, "모둠 " + G.groups.length + "개 (" + L.length + "명)"); h4.style.cssText = "font-size:15px;margin:18px 0 6px"; p.appendChild(h4);
+      var gg = el("div", "cls-grid"), txt = [];
+      G.groups.forEach(function (m, i) {
+        var c = el("div", "cls-card"); c.style.cursor = "default";
+        c.appendChild(el("div", "name", (i + 1) + "모둠"));
+        var nums = el("div", "nums");
+        nums.innerHTML = m.map(function (s) {
+          var chips = G.keys.map(function (k) { var g = s.g[k]; return g ? (g[1] != null ? MK.charAt(g[1]) || "?" : "") + (g[0] ? "✓" : "✗") : "·"; }).join(" ");
+          return "<b>" + s.nick.replace(/[<>&]/g, "") + "</b> " + chips;
+        }).join("<br>");
+        c.appendChild(nums); gg.appendChild(c);
+        txt.push((i + 1) + "모둠: " + m.map(function (s) { return s.nick; }).join(", "));
+      });
+      p.appendChild(gg);
+      p.appendChild(el("p", "sub", "이름 옆 기호는 첫 추리 문항(" + G.keys.join(", ") + ")마다 고른 보기와 맞음(✓)·어긋남(✗)입니다. 보기 기호는 원래 순서 기준이라 학생 화면의 순서와 다를 수 있습니다."));
+      var b3 = el("button", "btn", "📋 모둠 명단 복사"); b3.type = "button";
+      b3.addEventListener("click", function () { var s = txt.join(String.fromCharCode(10)); try { navigator.clipboard.writeText(s); b3.textContent = "복사했습니다"; } catch (e) { window.prompt("복사하세요", s); } });
+      p.appendChild(b3);
+    }
     out.appendChild(p);
   }
 

@@ -176,13 +176,15 @@ function doPost(e) {
           if (tag === 'g:') {
             var kv = it.split('='); if (kv.length < 2) return;
             var gg = A.gates[kv[0]] || (A.gates[kv[0]] = { k: kv[0], n: 0, ok: 0 });
-            gg.n++; A.gn++; if (kv[1] === '1') { gg.ok++; A.g1++; }
+            gg.n++; A.gn++; if (kv[1].charAt(0) === '1') { gg.ok++; A.g1++; }
           } else if (tag === 'e:') {
             var m = /^([^=]+)=(\d+)\/(\d+)(?:@(\d+))?$/.exec(it); if (!m) return;
             var ee = A.eps[m[1]] || (A.eps[m[1]] = { k: m[1], tot: +m[3], n: 0, done: 0, stuck: {} });
             ee.n++; if (+m[2] >= +m[3]) ee.done++; else if (m[4]) ee.stuck[m[4]] = (ee.stuck[m[4]] || 0) + 1;
           } else if (tag === 'q:') {
             var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) { A.q1 += +qm[1]; A.qt += +qm[2]; }
+          } else if (tag === 'h:') {
+            var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) { A.ls = (A.ls || 0) + +hm[1]; A.lt = (A.lt || 0) + +hm[2]; A.hs = (A.hs || 0) + +hm[3]; }
           }
         });
       });
@@ -195,6 +197,31 @@ function doPost(e) {
     });
     list.sort(function (a1, b1) { return a1.unit < b1.unit ? -1 : (a1.unit > b1.unit ? 1 : (a1.cls < b1.cls ? -1 : 1)); });
     return out_({ ok: true, rows: list });
+  }
+
+  /* 한 반 · 한 단원의 학생별 기록 — 모둠 편성과 '먼저 가 볼 학생'에 쓴다. 교사 열쇠가 맞아야 한다.
+     학생 글(한 줄)은 보내지 않는다. 별명·첫 추리(맞음 여부·고른 보기)·이야기 진행·문항·실험실만. */
+  if (d.action === 'students') {
+    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var wc = cut_(d.cls, 12), wu = cut_(d.unit, 24), sv = sheet_().getDataRange().getValues(), st = [];
+    for (var y = 1; y < sv.length; y++) {
+      var w = sv[y];
+      if (String(w[7]).trim() || String(w[1]) !== wc || String(w[3]) !== wu) continue;
+      var wr = {}; try { wr = JSON.parse(w[5] || '{}'); } catch (err3) {}
+      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null };
+      String(wr._ev || '').split('|').forEach(function (part) {
+        var tag = part.slice(0, 2), body = part.slice(2);
+        if (!body) return;
+        body.split(',').forEach(function (it) {
+          if (tag === 'g:') { var kv = it.split('='); if (kv.length < 2) return; var gv = kv[1].split('~'); one.g[kv[0]] = [+gv[0], gv.length > 1 ? +gv[1] : null]; }
+          else if (tag === 'e:') { var m = /^([^=]+)=(\d+)\/(\d+)(?:@(\d+))?$/.exec(it); if (m) one.e[m[1]] = [+m[2], +m[3], m[4] ? +m[4] : 0]; }
+          else if (tag === 'q:') { var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) one.q = [+qm[1], +qm[2]]; }
+          else if (tag === 'h:') { var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) one.h = [+hm[1], +hm[2], +hm[3]]; }
+        });
+      });
+      st.push(one);
+    }
+    return out_({ ok: true, cls: wc, unit: wu, students: st });
   }
 
   /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.

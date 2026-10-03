@@ -222,7 +222,7 @@
         b.classList.add("picked");
         gate.classList.add("done");
         if (veil) veil.hidden = true;
-        STATE[opt.key || "pred"] = t;
+        STATE[opt.key || "pred"] = t; STATE[(opt.key || "pred") + "I"] = i;
         store();
         if (typeof opt.onPick === "function") opt.onPick(i, t);
       });
@@ -235,7 +235,7 @@
       var idx = -1;
       opt.options.forEach(function (t, i) { if (idx < 0 && window.sthStripMark(t) === window.sthStripMark(prev)) idx = i; });
       if (idx >= 0) {
-        btn[idx].classList.add("picked");
+        btn[idx].classList.add("picked"); if (STATE[(opt.key || "pred") + "I"] == null) STATE[(opt.key || "pred") + "I"] = idx;
         gate.classList.add("done");
         if (veil) veil.hidden = true;
         if (typeof opt.onPick === "function") opt.onPick(idx, prev);
