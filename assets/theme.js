@@ -112,11 +112,30 @@
     ctx.scale(dpr, dpr);
 
     canvas._dprSet = true;
+    /* 화면 읽기 프로그램용: 그림이라는 것과 무엇의 그림인지, 수치는 아래 글에도 나온다는 것을 알린다 */
+    if (!canvas.hasAttribute("role")) {
+      canvas.setAttribute("role", "img");
+      if (!canvas.hasAttribute("aria-label")) {
+        var sc = canvas.closest ? canvas.closest("[data-title], .lab-case, .tab-panel") : null, nm = "";
+        if (sc) nm = sc.getAttribute("data-title") || ((sc.querySelector("h3, h2") || {}).textContent || "");
+        canvas.setAttribute("aria-label", (nm ? nm + " — " : "") + "조작에 따라 바뀌는 그림. 수치와 판정은 그림 아래 글로도 나옵니다.");
+      }
+    }
     canvas._w = W;
     canvas._h = H;
     canvases.push(canvas);
     return ctx;
   };
+
+  /* 판정·안내 칸이 바뀌면 읽어 주도록 */
+  function liveRegions() {
+    Array.prototype.forEach.call(document.querySelectorAll("[id$='-info'], .mission, .lab-verdict, .why"), function (e) {
+      if (!e.hasAttribute("aria-live")) e.setAttribute("aria-live", "polite");
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function () { setTimeout(liveRegions, 0); });
+  else setTimeout(liveRegions, 0);
+  window.addEventListener("load", function () { setTimeout(liveRegions, 300); });
 
   function redrawAll() {
     for (var i = 0; i < canvases.length; i++) {
