@@ -368,19 +368,33 @@ function ensureLinks_(force) {
    내 생각 점검(사전·사후 오개념 진단) — 학생 화면 assets/precheck.js 가 올리는 _ev 의 p: 조각
      p:문장=처음>나중,…   처음: 2 맞음·확실, 1 맞음·반반, 0 모름, -1 틀림·반반, -2 틀림·확실, n 답 없음 / 나중: 1 맞음, 0 틀림
    ========================================================================= */
-var PC_RE = /^([a-z0-9]+)=(-?\d|n)(?:>([01]))?$/;
+var PC_RE = /^([a-z0-9]+)=(-?\d|n)(?:>(-?\d))?$/;
+/** 한 문장의 처음·나중 기록을 더한다. 나중 값은 2·1(맞음)·-1·-2(틀림), 예전 기록의 0 은 틀림으로 본다.
+ *  짝(처음·나중 모두 있는 것)으로 사전·사후 정답, 확신 오답(굳은 오개념), 변화 유형을 센다. */
 function pcAdd_(store, it) {
   var m = PC_RE.exec(it); if (!m) return;
-  var x = store[m[1]] || (store[m[1]] = { k: m[1], n: 0, ok: 0, sure: 0, wrong: 0, sureWrong: 0, unk: 0, an: 0, aok: 0, fix: 0 });
-  var f = m[2], a = m[3] == null ? null : +m[3];
-  if (f !== 'n') {
-    x.n++; f = +f;
+  var x = store[m[1]] || (store[m[1]] = { k: m[1], n: 0, ok: 0, sure: 0, wrong: 0, sureWrong: 0, unk: 0, an: 0, aok: 0, fix: 0,
+                                           pn: 0, pre: 0, post: 0, preSW: 0, postSW: 0, keep: 0, slip: 0, stay: 0 });
+  var f = m[2] === 'n' ? null : +m[2], a = m[3] == null ? null : +m[3];
+  if (f !== null) {
+    x.n++;
     if (f > 0) x.ok++; else if (f < 0) x.wrong++; else x.unk++;
     if (f === -2) x.sureWrong++;
     if (f === 2 || f === -2) x.sure++;
   }
-  if (a !== null) { x.an++; if (a === 1) { x.aok++; if (f === 'n' || f <= 0) x.fix++; } }
+  if (a !== null) {
+    x.an++; if (a > 0) x.aok++;
+    if (a > 0 && (f === null || f <= 0)) x.fix++;
+    if (f !== null) {
+      var p0 = f > 0, p1 = a > 0;
+      x.pn++; if (p0) x.pre++; if (p1) x.post++;
+      if (f === -2) x.preSW++; if (a === -2) x.postSW++;
+      if (p0 && p1) x.keep++; else if (p0 && !p1) x.slip++; else if (!p0 && !p1) x.stay++;
+    }
+  }
 }
+/** 짝 기록 묶음의 정규화 향상도 g = (사후 정답 − 사전 정답) / (짝 수 − 사전 정답) */
+function pcGain_(x) { return x.pn - x.pre > 0 ? Math.round((x.post - x.pre) / (x.pn - x.pre) * 100) / 100 : null; }
 /** 단원의 생각 점검 문장 { p1: { s: '문장', a: true }, … } — precheck.gs 의 PC_ITEMS(도구가 만든 파일)에서 읽는다. */
 function pcItems_(u) { return (typeof PC_ITEMS !== 'undefined' && PC_ITEMS[u]) || {}; }
 function pct_(a, b) { return b ? Math.round(a / b * 100) + '%' : '–'; }
@@ -404,23 +418,35 @@ function 생각점검() {
   var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('생각 점검');
   if (!sh) sh = ss.insertSheet('생각 점검');
   sh.clear();
-  var head = ['단원', '반', '번호', '문장', '정답', '처음에 답한 학생', '처음 맞음', '확신하고 틀림', '잘 모르겠다', '이야기 뒤 다시 답함', '이야기 뒤 맞음', '틀림·모름 → 맞음'];
-  var body = [], cache = {};
+  var head = ['단원', '반', '번호', '문장', '정답', '처음에 답한 학생', '처음 맞음', '처음 확신 오답', '잘 모르겠다',
+              '두 번 답한 학생', '사전 정답', '사후 정답', '사후 확신 오답', '오개념→바른 개념', '흔들림', '남은 오개념', '정규화 향상도 g'];
+  var body = [], cache = {}, sum = [];
   Object.keys(agg).sort().forEach(function (key) {
     var A = agg[key], items = cache[A.unit] || (cache[A.unit] = pcItems_(A.unit));
+    var T = { pn: 0, pre: 0, post: 0, preSW: 0, postSW: 0, fix: 0, slip: 0, stay: 0 };
     Object.keys(A.pc).sort().forEach(function (k) {
-      var x = A.pc[k], it = items[k] || {};
-      body.push([labels[A.unit] || A.unit, A.cls, k, it.s || '(문장을 읽지 못함)', it.a == null ? '' : (it.a ? '맞다' : '틀리다'), x.n,
-        pct_(x.ok, x.n), x.sureWrong + '명 (' + pct_(x.sureWrong, x.n) + ')', x.unk, x.an, pct_(x.aok, x.an), x.fix]);
+      var x = A.pc[k], it = items[k] || {}, gx = pcGain_(x);
+      Object.keys(T).forEach(function (t) { T[t] += x[t] || 0; });
+      body.push([labels[A.unit] || A.unit, A.cls, k, it.s || '(문장 목록에 없음)', it.a == null ? '' : (it.a ? '맞다' : '틀리다'), x.n,
+        pct_(x.ok, x.n), x.sureWrong + '명 (' + pct_(x.sureWrong, x.n) + ')', x.unk,
+        x.pn, pct_(x.pre, x.pn), pct_(x.post, x.pn), x.postSW + '명', x.fix, x.slip, x.stay, gx === null ? '–' : gx]);
     });
+    var gT = pcGain_(T);
+    sum.push([labels[A.unit] || A.unit, A.cls, T.pn, pct_(T.pre, T.pn), pct_(T.post, T.pn), T.preSW + ' → ' + T.postSW, T.fix, T.slip, T.stay, gT === null ? '–' : gT]);
   });
   sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#e8f0fe');
   if (body.length) sh.getRange(2, 1, body.length, head.length).setValues(body.map(function (r) { return r.map(safe_); }));
   else sh.getRange(2, 1).setValue('아직 생각 점검 기록이 담긴 올리기가 없습니다. 학생이 생각 점검을 하고 우리 반 탭에서 올리면 쌓입니다.');
   sh.setFrozenRows(1);
-  [220, 110, 50, 420, 60, 90, 80, 110, 80, 100, 90, 110].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+  [200, 100, 45, 380, 55, 80, 70, 100, 70, 80, 70, 70, 85, 95, 60, 75, 85].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   sh.getRange(2, 4, Math.max(1, body.length), 1).setWrap(true);
-  sh.getRange('N1').setValue('만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm')).setFontColor('#999999');
+  /* 아래쪽: 단원 × 반 요약 — 오개념이 바뀌었는지 한 줄로 */
+  var top = body.length + 4;
+  sh.getRange(top - 1, 1).setValue('단원 × 반 요약 — 두 번 모두 답한 문장만 셈. g 0.7 이상 크게 바뀜 · 0.3~0.7 어느 정도 · 0.3 미만 조금').setFontWeight('bold');
+  var sh2 = [['단원', '반', '짝 응답 수', '사전 정답', '사후 정답', '확신 오답 사전 → 사후', '오개념→바른 개념', '흔들림', '남은 오개념', '정규화 향상도 g']];
+  sh.getRange(top, 1, 1, sh2[0].length).setValues(sh2).setFontWeight('bold').setBackground('#e6f4ea');
+  if (sum.length) sh.getRange(top + 1, 1, sum.length, sh2[0].length).setValues(sum.map(function (r) { return r.map(safe_); }));
+  sh.getRange('R1').setValue('만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm')).setFontColor('#999999');
   ss.setActiveSheet(sh);
 }
 
