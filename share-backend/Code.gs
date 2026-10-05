@@ -201,7 +201,7 @@ function doPost(e) {
       if (!ec || !eu) continue;
       var rr = {}; try { rr = JSON.parse(q[5] || '{}'); } catch (err2) {}
       var ak = eu + '\u0000' + ec;
-      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0 };
+      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0, pc: {} };
       var A = agg[ak]; A.n++;
       if (/응용 \d+\/\d+ 해결/.test(String(rr.rLab || '')) && !/응용 0\//.test(String(rr.rLab))) A.lab++;
       var s0 = String(rr._ev || '');
@@ -223,6 +223,8 @@ function doPost(e) {
             var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) { A.q1 += +qm[1]; A.qt += +qm[2]; }
           } else if (tag === 'h:') {
             var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) { A.ls = (A.ls || 0) + +hm[1]; A.lt = (A.lt || 0) + +hm[2]; A.hs = (A.hs || 0) + +hm[3]; }
+          } else if (tag === 'p:') {
+            pcAdd_(A.pc, it);
           }
         });
       });
@@ -231,6 +233,7 @@ function doPost(e) {
       var A = agg[k3];
       A.gates = Object.keys(A.gates).map(function (g2) { return A.gates[g2]; });
       A.eps = Object.keys(A.eps).map(function (e2) { return A.eps[e2]; });
+      A.pc = Object.keys(A.pc).sort().map(function (p2) { return A.pc[p2]; });
       return A;
     });
     list.sort(function (a1, b1) { return a1.unit < b1.unit ? -1 : (a1.unit > b1.unit ? 1 : (a1.cls < b1.cls ? -1 : 1)); });
@@ -246,7 +249,7 @@ function doPost(e) {
       var w = sv[y];
       if (String(w[7]).trim() || String(w[1]) !== wc || String(w[3]) !== wu) continue;
       var wr = {}; try { wr = JSON.parse(w[5] || '{}'); } catch (err3) {}
-      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null };
+      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {} };
       String(wr._ev || '').split('|').forEach(function (part) {
         var tag = part.slice(0, 2), body = part.slice(2);
         if (!body) return;
@@ -255,6 +258,7 @@ function doPost(e) {
           else if (tag === 'e:') { var m = /^([^=]+)=(\d+)\/(\d+)(?:@(\d+))?$/.exec(it); if (m) one.e[m[1]] = [+m[2], +m[3], m[4] ? +m[4] : 0]; }
           else if (tag === 'q:') { var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) one.q = [+qm[1], +qm[2]]; }
           else if (tag === 'h:') { var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) one.h = [+hm[1], +hm[2], +hm[3]]; }
+          else if (tag === 'p:') { var pm = PC_RE.exec(it); if (pm) one.p[pm[1]] = [pm[2], pm[3] == null ? null : +pm[3]]; }
         });
       });
       st.push(one);
@@ -334,7 +338,8 @@ function 준비하기() {
   SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
 }
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기').addToUi();
+  SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기')
+    .addItem('생각 점검 표 새로 만들기', '생각점검').addToUi();
   try { ensureLinks_(false); } catch (e) {}
 }
 function 바로가기() { ensureLinks_(true); SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('바로가기')); }
@@ -358,3 +363,64 @@ function ensureLinks_(force) {
   for (var i = 0; i < LINKS.length; i++) if (LINKS[i][0] !== '단원') sh.getRange(i + 2, 1, 1, 6).setBackground(LINKS[i][0] === '교사' ? '#fff4d6' : '#f3f6fb').setFontWeight('bold');
   return sh;
 }
+
+/* =========================================================================
+   내 생각 점검(사전·사후 오개념 진단) — 학생 화면 assets/precheck.js 가 올리는 _ev 의 p: 조각
+     p:문장=처음>나중,…   처음: 2 맞음·확실, 1 맞음·반반, 0 모름, -1 틀림·반반, -2 틀림·확실, n 답 없음 / 나중: 1 맞음, 0 틀림
+   ========================================================================= */
+var PC_RE = /^([a-z0-9]+)=(-?\d|n)(?:>([01]))?$/;
+function pcAdd_(store, it) {
+  var m = PC_RE.exec(it); if (!m) return;
+  var x = store[m[1]] || (store[m[1]] = { k: m[1], n: 0, ok: 0, sure: 0, wrong: 0, sureWrong: 0, unk: 0, an: 0, aok: 0, fix: 0 });
+  var f = m[2], a = m[3] == null ? null : +m[3];
+  if (f !== 'n') {
+    x.n++; f = +f;
+    if (f > 0) x.ok++; else if (f < 0) x.wrong++; else x.unk++;
+    if (f === -2) x.sureWrong++;
+    if (f === 2 || f === -2) x.sure++;
+  }
+  if (a !== null) { x.an++; if (a === 1) { x.aok++; if (f === 'n' || f <= 0) x.fix++; } }
+}
+/** 단원의 생각 점검 문장 { p1: { s: '문장', a: true }, … } — precheck.gs 의 PC_ITEMS(도구가 만든 파일)에서 읽는다. */
+function pcItems_(u) { return (typeof PC_ITEMS !== 'undefined' && PC_ITEMS[u]) || {}; }
+function pct_(a, b) { return b ? Math.round(a / b * 100) + '%' : '–'; }
+/** '생각 점검' 탭 — 단원 · 반 · 문장마다 처음 생각과 이야기 뒤 생각을 모은 표. 메뉴에서 누를 때마다 새로 쓴다. */
+function 생각점검() {
+  ensureTz_();
+  var rs = sheet_().getDataRange().getValues(), agg = {}, labels = {};
+  for (var i = 1; i < rs.length; i++) {
+    var q = rs[i];
+    if (String(q[7]).trim()) continue;
+    var c = String(q[1]), u = String(q[3]); if (!c || !u) continue;
+    var rr = {}; try { rr = JSON.parse(q[5] || '{}'); } catch (e) {}
+    String(rr._ev || '').split('|').forEach(function (part) {
+      if (part.slice(0, 2) !== 'p:' || !part.slice(2)) return;
+      var key = u + '\u0000' + c;
+      if (!agg[key]) agg[key] = { unit: u, cls: c, pc: {} };
+      part.slice(2).split(',').forEach(function (it) { pcAdd_(agg[key].pc, it); });
+    });
+    if (String(q[4] || '')) labels[u] = String(q[4]);
+  }
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName('생각 점검');
+  if (!sh) sh = ss.insertSheet('생각 점검');
+  sh.clear();
+  var head = ['단원', '반', '번호', '문장', '정답', '처음에 답한 학생', '처음 맞음', '확신하고 틀림', '잘 모르겠다', '이야기 뒤 다시 답함', '이야기 뒤 맞음', '틀림·모름 → 맞음'];
+  var body = [], cache = {};
+  Object.keys(agg).sort().forEach(function (key) {
+    var A = agg[key], items = cache[A.unit] || (cache[A.unit] = pcItems_(A.unit));
+    Object.keys(A.pc).sort().forEach(function (k) {
+      var x = A.pc[k], it = items[k] || {};
+      body.push([labels[A.unit] || A.unit, A.cls, k, it.s || '(문장을 읽지 못함)', it.a == null ? '' : (it.a ? '맞다' : '틀리다'), x.n,
+        pct_(x.ok, x.n), x.sureWrong + '명 (' + pct_(x.sureWrong, x.n) + ')', x.unk, x.an, pct_(x.aok, x.an), x.fix]);
+    });
+  });
+  sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#e8f0fe');
+  if (body.length) sh.getRange(2, 1, body.length, head.length).setValues(body.map(function (r) { return r.map(safe_); }));
+  else sh.getRange(2, 1).setValue('아직 생각 점검 기록이 담긴 올리기가 없습니다. 학생이 생각 점검을 하고 우리 반 탭에서 올리면 쌓입니다.');
+  sh.setFrozenRows(1);
+  [220, 110, 50, 420, 60, 90, 80, 110, 80, 100, 90, 110].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
+  sh.getRange(2, 4, Math.max(1, body.length), 1).setWrap(true);
+  sh.getRange('N1').setValue('만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm')).setFontColor('#999999');
+  ss.setActiveSheet(sh);
+}
+
