@@ -339,8 +339,9 @@ function 준비하기() {
 }
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기')
-    .addItem('생각 점검 표 새로 만들기', '생각점검').addToUi();
+    .addItem('생각 점검 표 새로 만들기', '생각점검').addItem('과목별 보기 새로 만들기 (반별 명단 · 과목 탭)', '과목별보기메뉴').addToUi();
   try { ensureLinks_(false); } catch (e) {}
+  try { 과목별보기(true); } catch (e) {}                          /* 열 때마다 반별 명단·과목 탭을 최신으로 */
 }
 function 바로가기() { ensureLinks_(true); SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('바로가기')); }
 /** '바로가기' 탭 — 교사용 허브와 전 과목·전 단원 링크(links.gs 의 LINKS). 목록이 바뀌었거나 force 이면 다시 쓴다. */
@@ -450,3 +451,180 @@ function 생각점검() {
   ss.setActiveSheet(sh);
 }
 
+
+/* =========================================================================
+   과목별 보기 — 시트를 열 때와 메뉴 '과목별 보기 새로 만들기'에서 다시 쓴다.
+   · '반별 명단' 탭 : 반 · 별명 마다 한 줄 — 어느 과목·몇 단원을 했는지, 처음·마지막 활동, 올린 횟수
+   · '과목·○○' 탭 : 과목마다 하나. 위는 반 요약(반마다 학생 수, 단원마다 올린 학생 수),
+                     아래는 반별 명단(학생 한 줄 × 단원 한 칸: 이야기 · 문제 · 생각 점검), 칸 색으로 진행 정도
+   단원 순서·이름·이야기 수는 precheck.gs 의 UNIT_LIST(도구가 만든 파일)에서 읽는다.
+   ========================================================================= */
+var VIEW_PREFIX = '과목·';
+var COLOR_DONE = '#d9f2e1', COLOR_PART = '#fff4c2', COLOR_TOUCH = '#eef1f5';
+function unitInfo_() {
+  var by = {}, order = [], subjects = [];
+  (typeof UNIT_LIST !== 'undefined' ? UNIT_LIST : []).forEach(function (r, i) {
+    by[r[0]] = { id: r[0], subj: r[1], name: r[2], grade: r[3], eps: r[4] || 0, i: i };
+    order.push(r[0]);
+    if (subjects.indexOf(r[1]) < 0) subjects.push(r[1]);
+  });
+  return { by: by, order: order, subjects: subjects };
+}
+/** 한 학생 · 한 단원의 _ev 를 읽어 짧은 요약으로 — 이야기 끝낸 수, 문제 한 번에 맞힘/손댄, 생각 점검 처음→나중 맞힌 수 */
+function evSum_(ev, eps) {
+  var o = { done: 0, started: 0, q1: 0, qt: 0, pn: 0, pre: 0, post: 0, f: 0, fok: 0 };
+  String(ev || '').split('|').forEach(function (part) {
+    var tag = part.slice(0, 2), body = part.slice(2);
+    if (!body) return;
+    body.split(',').forEach(function (it) {
+      if (tag === 'e:') { var m = /^([^=]+)=(\d+)\/(\d+)/.exec(it); if (m) { o.started++; if (+m[2] >= +m[3]) o.done++; } }
+      else if (tag === 'q:') { var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) { o.q1 = +qm[1]; o.qt = +qm[2]; } }
+      else if (tag === 'p:') {
+        var pm = PC_RE.exec(it); if (!pm) return;
+        var f = pm[2] === 'n' ? null : +pm[2], a = pm[3] == null ? null : +pm[3];
+        if (f !== null) { o.f++; if (f > 0) o.fok++; }
+        if (f !== null && a !== null) { o.pn++; if (f > 0) o.pre++; if (a > 0) o.post++; }
+      }
+    });
+  });
+  o.eps = eps || o.started;
+  var bits = [];
+  if (o.eps) bits.push('이야기 ' + o.done + '/' + o.eps);
+  if (o.qt) bits.push('문제 ' + o.q1 + '/' + o.qt);
+  if (o.pn) bits.push('생각 ' + o.pre + '→' + o.post + '/' + o.pn);
+  else if (o.f) bits.push('생각 처음 ' + o.fok + '/' + o.f);
+  o.text = bits.join(' · ') || '올림';
+  o.color = o.eps && o.done >= o.eps ? COLOR_DONE : (o.done || o.started ? COLOR_PART : COLOR_TOUCH);
+  return o;
+}
+function day_(t) { return t == null ? '' : Utilities.formatDate(new Date(t), 'Asia/Seoul', 'M/d HH:mm'); }
+function classOrder_() {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록'), list = [];
+  if (sh && sh.getLastRow()) { heal_(sh); list = sh.getRange(1, 1, sh.getLastRow(), 2).getValues().map(function (r) { return [String(r[0]).trim(), String(r[1] || '')]; }).filter(function (r) { return r[0]; }); }
+  if (!list.length) list = CLASSES;
+  var pos = {}, names = {};
+  list.forEach(function (r, i) { pos[r[0]] = i; names[r[0]] = r[1]; });
+  return { cmp: function (a, b) { var x = pos[a] == null ? 1e4 : pos[a], y = pos[b] == null ? 1e4 : pos[b]; return x !== y ? x - y : (a < b ? -1 : (a > b ? 1 : 0)); }, names: names };
+}
+function nickCmp_(a, b) { return a.localeCompare(b, 'ko', { numeric: true }); }
+function freshTab_(name, after) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(name);
+  if (!sh) sh = ss.insertSheet(name, after == null ? ss.getNumSheets() : after);
+  var f = sh.getFilter(); if (f) f.remove();
+  sh.clear(); sh.setFrozenRows(0); sh.setFrozenColumns(0);
+  return sh;
+}
+/** quiet: 시트를 열 때 저절로 부를 때는 탭을 옮겨 다니지 않는다 */
+function 과목별보기(quiet) {
+  ensureTz_();
+  var U = unitInfo_(), CO = classOrder_();
+  var rs = sheet_().getDataRange().getValues();
+  var stu = {}, subjCls = {}, unitLabel = {};
+  for (var i = 1; i < rs.length; i++) {
+    var r = rs[i];
+    if (String(r[7]).trim()) continue;
+    var c = String(r[1]), nk = String(r[2]), u = String(r[3]); if (!c || !nk || !u) continue;
+    var ui = U.by[u], subj = ui ? ui.subj : '기타';
+    if (!ui && String(r[4] || '')) unitLabel[u] = String(r[4]);
+    var rr = {}; try { rr = JSON.parse(r[5] || '{}'); } catch (e) {}
+    var k = c + '\u0000' + nk, t = ms_(r[0]);
+    var S = stu[k] || (stu[k] = { cls: c, nick: nk, units: {}, subj: {}, first: null, last: null, posts: 0, done: 0 });
+    var sm = evSum_(rr._ev, ui ? ui.eps : 0); sm.t = t;
+    S.units[u] = sm; S.subj[subj] = 1;
+    if (sm.eps && sm.done >= sm.eps) S.done++;
+    if (t !== null && (S.last === null || t > S.last)) S.last = t;
+    (subjCls[subj] || (subjCls[subj] = {}))[c] = 1;
+  }
+  /* 활동 탭 — 올린 횟수와 처음 올린 시각 */
+  var lg = logSheet_(), ln = lg.getLastRow();
+  if (ln > 1) lg.getRange(2, 1, ln - 1, 3).getValues().forEach(function (g) {
+    var S = stu[String(g[1]) + '\u0000' + String(g[2])]; if (!S) return;
+    S.posts++; var t = ms_(g[0]); if (t !== null && (S.first === null || t < S.first)) S.first = t;
+  });
+  var keys = Object.keys(stu).sort(function (a, b) { var A = stu[a], B = stu[b]; return CO.cmp(A.cls, B.cls) || nickCmp_(A.nick, B.nick); });
+  var stamp = '만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') + ' · 시트를 열 때마다, 또는 메뉴 우리 반 공유 → 과목별 보기 새로 만들기';
+
+  /* ---- 반별 명단 ---- */
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var base = ss.getSheetByName('바로가기') ? ss.getSheetByName('바로가기').getIndex() : 0;
+  var rl = freshTab_('반별 명단', base);
+  var head = ['반', '반 이름', '별명', '과목', '올린 단원 수', '이야기를 다 마친 단원', '처음 올림', '마지막 활동', '올린 횟수'];
+  var body = keys.map(function (k) {
+    var S = stu[k], subs = U.subjects.filter(function (s) { return S.subj[s]; }).concat(S.subj['기타'] ? ['기타'] : []);
+    return [S.cls, CO.names[S.cls] || '', S.nick, subs.join(', '), Object.keys(S.units).length, S.done, day_(S.first), day_(S.last), S.posts];
+  });
+  rl.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#e8f0fe');
+  if (body.length) {
+    rl.getRange(2, 1, body.length, head.length).setNumberFormat('@').setValues(body.map(function (r) { return r.map(function (v) { return typeof v === 'number' ? v : safe_(v); }); }));
+    rl.getRange(2, 5, body.length, 2).setNumberFormat('0'); rl.getRange(2, 9, body.length, 1).setNumberFormat('0');
+    /* 반이 바뀌는 줄에 옅은 띠 */
+    var band = [], on = false, prev = null;
+    body.forEach(function (r) { if (r[0] !== prev) { on = !on; prev = r[0]; } band.push(new Array(head.length).fill(on ? '#ffffff' : '#f6f8fb')); });
+    rl.getRange(2, 1, body.length, head.length).setBackgrounds(band);
+    rl.getRange(1, 1, body.length + 1, head.length).createFilter();
+  } else rl.getRange(2, 1).setValue('아직 올린 학생이 없습니다.');
+  rl.setFrozenRows(1);
+  [60, 210, 100, 220, 85, 130, 90, 90, 70].forEach(function (w, j) { rl.setColumnWidth(j + 1, w); });
+  rl.getRange('K1').setValue(stamp).setFontColor('#999999');
+
+  /* ---- 과목·○○ 탭 ---- */
+  var made = [];
+  U.subjects.concat(subjCls['기타'] ? ['기타'] : []).forEach(function (subj) {
+    var name = VIEW_PREFIX + subj, sh = ss.getSheetByName(name);
+    if (!subjCls[subj]) { if (sh) { freshTab_(name).getRange(1, 1).setValue(subj + ' — 아직 올린 학생이 없습니다.'); } return; }
+    made.push(name);
+    sh = freshTab_(name);
+    var units = subj === '기타' ? Object.keys(unitLabel) : U.order.filter(function (u) { return U.by[u].subj === subj; });
+    var uname = function (u) { return U.by[u] ? U.by[u].name : (unitLabel[u] || u); };
+    var classes = Object.keys(subjCls[subj]).sort(CO.cmp);
+    var W = 3 + units.length, rows = [], colors = [], bold = [], heads = [];
+    var push = function (r, col, b) { while (r.length < W) r.push(''); rows.push(r); colors.push(col || new Array(W).fill('#ffffff')); if (b) bold.push(rows.length); };
+    push([subj + ' — 반별 활동', '', stamp], null, true);
+    push([]);
+    /* 위: 반 요약 */
+    push(['반 요약', '학생 수', '다 마친 단원 (합)'].concat(units.map(uname)), new Array(W).fill('#e8f0fe'), true); heads.push(rows.length);
+    classes.forEach(function (c) {
+      var mine = keys.filter(function (k) { return stu[k].cls === c && stu[k].subj[subj]; });
+      var doneCells = 0, cells = units.map(function (u) {
+        var n = 0, d = 0; mine.forEach(function (k) { var x = stu[k].units[u]; if (x) { n++; if (x.eps && x.done >= x.eps) d++; } });
+        doneCells += d; return n ? n + '명 (다 마침 ' + d + ')' : '';
+      });
+      push([c + (CO.names[c] ? ' ' + CO.names[c] : ''), mine.length, doneCells].concat(cells));
+    });
+    push([]);
+    push(['칸 읽는 법: 이야기 마친 수/전체 · 문제 한 번에 맞힘/손댄 문항 · 생각 점검 처음→이야기 뒤 맞힌 문장/두 번 답한 문장.  초록 = 이야기를 다 마침, 노랑 = 하는 중, 회색 = 올렸지만 이야기 기록 없음'], null, false);
+    /* 아래: 반별 명단 */
+    classes.forEach(function (c) {
+      push([]);
+      var mine = keys.filter(function (k) { return stu[k].cls === c && stu[k].subj[subj]; });
+      push([c + (CO.names[c] ? ' ' + CO.names[c] : '') + ' — ' + mine.length + '명', '마지막 활동', '다 마친 단원'].concat(units.map(uname)), new Array(W).fill('#e6f4ea'), true); heads.push(rows.length);
+      mine.forEach(function (k) {
+        var S = stu[k], last = null, done = 0, col = ['#ffffff', '#ffffff', '#ffffff'];
+        var cells = units.map(function (u) {
+          var x = S.units[u]; if (!x) { col.push('#ffffff'); return ''; }
+          if (x.t !== null && (last === null || x.t > last)) last = x.t;
+          if (x.eps && x.done >= x.eps) done++;
+          col.push(x.color); return x.text;
+        });
+        push([S.nick, day_(last), done + '/' + units.length].concat(cells), col);
+      });
+    });
+    var rg = sh.getRange(1, 1, rows.length, W);
+    rg.setNumberFormat('@');
+    rg.setValues(rows.map(function (r) { return r.map(function (v) { return typeof v === 'number' ? String(v) : safe_(v); }); }));
+    rg.setBackgrounds(colors).setVerticalAlignment('middle');
+    sh.getRange(3, 4, rows.length - 2, Math.max(1, units.length)).setWrap(true);
+    bold.forEach(function (n) { sh.getRange(n, 1, 1, W).setFontWeight('bold'); });
+    sh.getRange(1, 1).setFontSize(13);
+    sh.getRange(1, 3).setFontColor('#999999');
+    sh.setFrozenColumns(1);
+    sh.setColumnWidth(1, 190); sh.setColumnWidth(2, 85); sh.setColumnWidth(3, 95);
+    for (var j = 0; j < units.length; j++) sh.setColumnWidth(4 + j, 165);
+  });
+  if (!quiet) {
+    ss.setActiveSheet(rl);
+    SpreadsheetApp.getActiveSpreadsheet().toast('반별 명단과 과목 탭 ' + made.length + '개를 새로 썼습니다: ' + (made.join(', ') || '없음'), '과목별 보기', 6);
+  }
+  return made;
+}
+function 과목별보기메뉴() { 과목별보기(false); }
