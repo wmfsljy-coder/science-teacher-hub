@@ -82,7 +82,7 @@
 
   <div class="panel">
     <h2 class="display">교사 열쇠</h2>
-    <p class="sub">시트의 <b>설정</b> 탭 B1 에 있는 글자입니다. 한 번 넣으면 이 브라우저에 기억됩니다.</p>
+    <p class="sub">시트의 <b>설정</b> 탭 B1에 있는 글자입니다. 한 번 넣으면 이 브라우저에 기억됩니다.</p>
     <div class="keyrow">
       <label>열쇠 <input type="password" id="key" placeholder="시트 설정 탭 B1" autocomplete="off"></label>
       <button class="btn primary" type="button" id="go">불러오기</button>
@@ -122,7 +122,7 @@
 
   var out = $("out"), msg = $("msg"), pick = null, data = null, evd = null;
 
-  /* 과목별 보기 — 단원 코드로 과목을 찾는다(../assets/precheck-all.js 의 STH_UNITS) */
+  /* 과목별 보기 — 단원 코드로 과목을 찾는다(../assets/precheck-all.js의 STH_UNITS) */
   var SUBJ_KEY = "sth-teacher-subj", subj = null;
   try { subj = localStorage.getItem(SUBJ_KEY) || null; } catch (e) {}
   var UL = window.STH_UNITS || [], UMAP = {}, SUBJS = [];
@@ -138,7 +138,7 @@
 
   if (!URL_) {
     note('<h2 class="display">아직 공유가 켜지지 않았습니다</h2>'
-       + '<p class="sub">이 저장소의 <code>assets/share-config.js</code> 에 웹 앱 주소가 비어 있습니다.</p>');
+       + '<p class="sub">이 저장소의 <code>assets/share-config.js</code>에 웹 앱 주소가 비어 있습니다.</p>');
   }
 
   try { $("key").value = localStorage.getItem(KEY) || ""; } catch (e) {}
@@ -148,7 +148,7 @@
     if (!URL_) { msg.textContent = "공유 주소가 없습니다."; msg.className = "msg bad"; return; }
     if (!k) { msg.textContent = "열쇠를 넣어 주세요."; msg.className = "msg bad"; return; }
     msg.textContent = "불러오는 중…"; msg.className = "msg";
-    /* 열쇠가 주소에 남지 않도록 POST 로 보낸다(text/plain 이라 사전 요청이 없다) */
+    /* 열쇠가 주소에 남지 않도록 POST로 보낸다(text/plain이라 사전 요청이 없다) */
     fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
                   body: JSON.stringify({ action: "teacher", key: k }) })
       .then(function (r) { return r.json(); })
@@ -164,9 +164,9 @@
         note('<h2 class="display">불러오지 못했습니다</h2>'
            + '<p class="sub">열쇠가 다르거나, 시트에서 아직 <b>권한 승인</b>을 하지 않았을 수 있습니다.</p>'
            + '<ol class="steps">'
-           + '<li>구글 시트 <b>과학 수업</b> 를 엽니다.</li>'
-           + '<li>위쪽 메뉴에서 <b>우리 반 공유 → 준비하기 / 교사 열쇠 보기</b> 를 누릅니다.</li>'
-           + '<li>권한을 허용하면 <b>교사 열쇠</b> 가 뜹니다. 그 글자를 위 칸에 넣으세요.</li>'
+           + '<li>구글 시트 <b>과학 수업</b>를 엽니다.</li>'
+           + '<li>위쪽 메뉴에서 <b>우리 반 공유 → 준비하기 / 교사 열쇠 보기</b>를 누릅니다.</li>'
+           + '<li>권한을 허용하면 <b>교사 열쇠</b>가 뜹니다. 그 글자를 위 칸에 넣으세요.</li>'
            + '</ol>');
       });
   }
@@ -392,7 +392,7 @@
     p0.appendChild(row0);
     out.appendChild(p0);
 
-    /* 과목을 골랐으면 그 과목을 올린 반만 — 반마다 그 과목의 학생 수(뒷단이 bySubj 를 주면 그것으로, 아니면 칸에서 셈) */
+    /* 과목을 골랐으면 그 과목을 올린 반만 — 반마다 그 과목의 학생 수(뒷단이 bySubj를 주면 그것으로, 아니면 칸에서 셈) */
     if (subj) {
       var bs = (data.bySubj || []).filter(function (x) { return x.subj === subj; });
       if (!bs.length) {

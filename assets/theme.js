@@ -355,4 +355,91 @@
       return this;
     };
   }
+  /* ---------- 한글 줄바꿈 ----------
+     word-break: keep-all 은 어절 가운데를 끊지 않지만, 괄호·가운뎃점·빗금 앞뒤에서는 줄을 바꿀 수 있어
+     ‘궤도선(Mars’ ‘수온·염분·밀도가’ 같은 한 덩어리가 두 줄로 갈린다. 이런 짧은 어절을 <span class="nw"> 로
+     묶어 한 줄에 둔다. 나중에 바뀌는 글(설명 칸·판정 글)도 따라가며 묶는다. 글자 내용(textContent)은 그대로다. */
+  (function () {
+    if (!window.MutationObserver || !document.createTreeWalker) return;
+    var SKIP = /^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|CANVAS|SVG|CODE|PRE|TITLE)$/i;
+    var WORD = /\S*[가-힣]\S*/g, MARK = /[()（）·∙\/℃°%‰–\-~…]/;
+    var PROSE = "p, li, dd, .say, .info-card, .detail-panel, .why, .hint, .q, .msg, .lab-task-t, .lab-hint, .pc-ans, .pc-s, .std-note, .miscon, .stage-head p, .qz-q, .qz-fb, .qz-ans";
+    function skip(p) {
+      for (var a = p; a && a !== document.body; a = a.parentNode) {
+        if (a.nodeType !== 1) continue;
+        if (SKIP.test(a.tagName) || a.isContentEditable) return true;
+        if (a.classList && (a.classList.contains("nw") || a.classList.contains("tok"))) return true;
+      }
+      return false;
+    }
+    function wrap(n) {
+      var t = n.nodeValue, p = n.parentNode;
+      if (!t || !p || p.nodeType !== 1 || !MARK.test(t) || !/[가-힣]/.test(t) || skip(p)) return;
+      var out = [], last = 0, m, any = false, lim = p.closest && p.closest("td, th") && !p.closest(".pc-tbl") ? 10 : 18;   /* 표 칸은 좁아 짧은 것만 */
+      WORD.lastIndex = 0;
+      while ((m = WORD.exec(t))) {
+        if (!MARK.test(m[0]) || m[0].length > lim) continue;
+        any = true; out.push(t.slice(last, m.index), [m[0]]); last = m.index + m[0].length;
+      }
+      if (!any) return;
+      out.push(t.slice(last));
+      var f = document.createDocumentFragment();
+      out.forEach(function (x) {
+        if (typeof x === "string") { if (x) f.appendChild(document.createTextNode(x)); return; }
+        var s = document.createElement("span"); s.className = "nw"; s.textContent = x[0]; f.appendChild(s);
+      });
+      p.replaceChild(f, n);
+    }
+    function scan(root) {
+      if (!root) return;
+      if (root.nodeType === 3) { wrap(root); return; }
+      if (root.nodeType !== 1 || skip(root)) return;
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [], x;
+      while ((x = w.nextNode())) list.push(x);
+      list.forEach(wrap);
+      /* 문단 끝 외톨이 줄 막기: 마지막 낱말이 짧으면 그 앞 낱말과 묶는다(책에서 끝줄에 한 낱말만 남기지 않는 것처럼) */
+      var blocks = root.matches && root.matches(PROSE) ? [root] : [];
+      if (root.querySelectorAll) blocks = blocks.concat(Array.prototype.slice.call(root.querySelectorAll(PROSE)));
+      blocks.forEach(tail);
+      glue(root);
+    }
+    /* 강조 태그와 뒤에 붙은 조사가 다른 마디에 있을 때(<b>45°</b>로 · <b>감람석·운모·석영</b>은): 둘을 함께 묶는다 */
+    function glue(root) {
+      if (!root.querySelectorAll) return;
+      Array.prototype.forEach.call(root.querySelectorAll("b, strong, em, i, sub, sup"), function (e) {
+        var nx = e.nextSibling, tx = e.textContent;
+        if (!nx || nx.nodeType !== 3 || !tx || /\s$/.test(tx) || !MARK.test(tx) || skip(e)) return;
+        var m = /^[^\s]+/.exec(nx.nodeValue); if (!m || !/[가-힣]/.test(m[0] + tx) || tx.length + m[0].length > 20) return;
+        var s = document.createElement("span"); s.className = "nw";
+        e.parentNode.insertBefore(s, e); s.appendChild(e);
+        s.appendChild(document.createTextNode(m[0])); nx.nodeValue = nx.nodeValue.slice(m[0].length);
+      });
+    }
+    function tail(el) {
+      if (skip(el) || el.closest && el.closest("td, th") && !el.closest(".pc-tbl")) return;
+      var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), n = null, x;
+      while ((x = w.nextNode())) if (x.nodeValue.trim()) n = x;
+      if (!n || skip(n.parentNode)) return;
+      var t = n.nodeValue, m = /(\S+)(\s+)(\S+)(\s*)$/.exec(t);
+      if (!m || m[3].replace(/[^가-힣A-Za-z0-9]/g, "").length > 4 || (m[1] + m[3]).length > 20 || !/[가-힣]/.test(m[1] + m[3])) return;
+      var s = document.createElement("span"); s.className = "nw"; s.textContent = m[1] + m[2] + m[3];
+      var f = document.createDocumentFragment(), head = t.slice(0, m.index);
+      if (head) f.appendChild(document.createTextNode(head));
+      f.appendChild(s); if (m[4]) f.appendChild(document.createTextNode(m[4]));
+      n.parentNode.replaceChild(f, n);
+    }
+    var queue = [], busy = false;
+    function flush() { busy = false; var q = queue; queue = []; q.forEach(scan); }
+    function start() {
+      scan(document.body);
+      new MutationObserver(function (ms) {
+        ms.forEach(function (m) {
+          if (m.type === "characterData") queue.push(m.target);
+          else for (var i = 0; i < m.addedNodes.length; i++) queue.push(m.addedNodes[i]);
+        });
+        if (!busy && queue.length) { busy = true; (window.requestAnimationFrame || setTimeout)(flush); }
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  })();
 })();
