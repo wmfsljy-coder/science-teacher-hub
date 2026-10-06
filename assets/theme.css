@@ -429,3 +429,14 @@ body { overflow-wrap: break-word; line-break: strict; letter-spacing: -0.01em; }
 p, li, dd, blockquote, td, th, .say, .info-card, .detail-panel, .why, .hint, .q, .msg, .lab-task-t, .lab-hint,
 .pc-ans, .pc-s, .pc-head p, .std-note, .miscon, .gate p, .veil p, .readout .txt, .mini-card p, .compare-col p, .tip-card p, .unit-card p { text-wrap: pretty; }
 h1, h2, h3, h4, .display { text-wrap: balance; }
+
+/* ---------- 학생 화면은 이 단원만 ----------
+   ‘← 과목’ 링크와 교사용 안내는 기본으로 숨기고, 교사 기기(<html class="sth-teacher">)에서만 보인다.
+   과목 첫 화면(단원 목록)은 학생에게 안내 카드만 보인다(theme.js). */
+html:not(.sth-teacher) .rail .brand a.home, html:not(.sth-teacher) .teacher-note { display: none !important; }
+html:not(.sth-teacher) a.unit-card { visibility: hidden; }
+.gate-note { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.gate-card { max-width: 520px; background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 28px 26px; box-shadow: var(--shadow-card); }
+.gate-card h1 { font-size: clamp(24px, 6vw, 32px); font-weight: 400; margin: 8px 0 12px; }
+.gate-card p { color: var(--mist); font-size: 15px; line-height: 1.8; margin: 0; }
+.gate-card .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--teal-700); font-weight: 800; }

@@ -10,6 +10,28 @@
   "use strict";
   var root = document.documentElement;
 
+  /* ---------- 학생 화면은 이 단원만 ----------
+     학생에게는 단원 밖으로 나가는 길(‘← 과목’ 링크, 과목의 단원 목록, 허브, 교사용 안내)을 보이지 않는다.
+     교사 허브를 한 번 연 기기(sth-teacher=1)와 교사 미리 보기 주소(?open=1)에서만 보인다.
+     CSS 가 기본으로 숨겨 두고, 교사 기기이면 <html class="sth-teacher"> 로 다시 보이게 한다. */
+  var TEACHER = false;
+  try { TEACHER = localStorage.getItem("sth-teacher") === "1"; } catch (e) {}
+  if (/[?&]open=1/.test(location.search)) TEACHER = true;
+  window.STH_TEACHER = TEACHER;
+  if (TEACHER) root.classList.add("sth-teacher");
+  /* 과목 첫 화면(단원 카드 목록)은 교사용: 학생에게는 안내만 남긴다 */
+  (function () {
+    function gate() {
+      if (TEACHER || !document.querySelector("a.unit-card") || document.querySelector(".gate-note")) return;
+      Array.prototype.forEach.call(document.body.children, function (c) { if (!c.classList.contains("theme-toggle") && c.tagName !== "SCRIPT") c.style.display = "none"; });
+      var n = document.createElement("div"); n.className = "gate-note";
+      n.innerHTML = "<div class='gate-card'><div class='eyebrow'>학생 안내</div><h1 class='display'>선생님이 알려 준 단원 주소로 들어가세요</h1>"
+        + "<p>이 화면은 선생님이 수업할 단원을 고르는 곳이에요. 수업 시간에 받은 단원 주소(링크)로 들어가면 바로 시작할 수 있어요.</p></div>";
+      document.body.insertBefore(n, document.body.firstChild);
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", gate); else gate();
+  })();
+
   /* ---------- 테마 ---------- */
   var STORE = "sth-theme";
   function saved() {
@@ -59,7 +81,7 @@
     var brand = document.querySelector(".rail .brand");
     if (!brand || brand.querySelector("a.hub")) return;
     /* 학생 기기에서는 과목 밖으로 나가는 길을 만들지 않는다. 교사 허브를 연 적이 있는 기기에서만 보인다. */
-    try { if (localStorage.getItem("sth-teacher") !== "1") return; } catch (e) { return; }
+    if (!TEACHER) return;
     var a = document.createElement("a");
     a.className = "home hub";
     a.href = "https://wmfsljy-coder.github.io/science-teacher-hub/";
