@@ -54,6 +54,14 @@
   .feed-row .t { font-size: 11.5px; }
   .feed-row.first { border-color: var(--teal-100); }
 
+  .subj-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 2px solid var(--line); border-radius: 999px; padding: 7px 14px; font: inherit; font-weight: 800; font-size: 13.5px;
+    background: var(--card); color: var(--ink); cursor: pointer; }
+  .chip:hover { border-color: var(--teal-dim); }
+  .chip.on { border-color: var(--brand); background: var(--brand-100); color: var(--brand-700); }
+  .chip.on .c { color: var(--brand-700); }
+  .chip .c { color: var(--mist); font-weight: 700; margin-left: 4px; font-size: 12px; }
+  .chip:disabled { opacity: .45; cursor: default; }
   .empty { color: var(--mist); font-size: 13.5px; line-height: 1.8; }
   .steps { color: var(--mist); font-size: 13.5px; line-height: 1.9; margin: 10px 0 0; padding-left: 20px; }
   .steps b { color: var(--ink); }
@@ -114,6 +122,18 @@
 
   var out = $("out"), msg = $("msg"), pick = null, data = null, evd = null;
 
+  /* 과목별 보기 — 단원 코드로 과목을 찾는다(../assets/precheck-all.js 의 STH_UNITS) */
+  var SUBJ_KEY = "sth-teacher-subj", subj = null;
+  try { subj = localStorage.getItem(SUBJ_KEY) || null; } catch (e) {}
+  var UL = window.STH_UNITS || [], UMAP = {}, SUBJS = [];
+  UL.forEach(function (r, i) { UMAP[r[0]] = { subj: r[1], name: r[2], i: i }; if (SUBJS.indexOf(r[1]) < 0) SUBJS.push(r[1]); });
+  function subjOf(u) { return UMAP[u] ? UMAP[u].subj : "기타"; }
+  function inSubj(u) { return !subj || subjOf(u) === subj; }
+  /* 단원 이름: 과목을 골랐으면 단원 이름만, 전체 보기에서는 과목 이름을 앞에 붙인다 */
+  function uname(u, fallback) { var m = UMAP[u]; return m ? (subj ? m.name : m.subj + " " + m.name) : (fallback || u); }
+  function setSubj(s) { subj = s; try { if (s) localStorage.setItem(SUBJ_KEY, s); else localStorage.removeItem(SUBJ_KEY); } catch (e) {} grp.unit = null; grp.list = null; paint(); }
+  function scope() { return (subj ? subj + " · " : "") + (pick ? pick + "반" : (subj ? "모든 반" : "")); }
+
   function note(html) { out.innerHTML = ""; var p = el("div", "panel"); p.innerHTML = html; out.appendChild(p); }
 
   if (!URL_) {
@@ -161,7 +181,7 @@
   }
   function pct(a, b) { return b ? Math.round(a / b * 100) + "%" : "–"; }
   function evRows() {
-    var rows = (evd || []).filter(function (r) { return !pick || r.cls === pick; });
+    var rows = (evd || []).filter(function (r) { return (!pick || r.cls === pick) && inSubj(r.unit); });
     return rows.map(function (r) {
       var epN = 0, epDone = 0, stuck = {};
       r.eps.forEach(function (e) { epN += e.n; epDone += e.done; Object.keys(e.stuck).forEach(function (sc) { var key = e.k + " " + sc + "장면"; stuck[key] = (stuck[key] || 0) + e.stuck[sc]; }); });
@@ -189,7 +209,7 @@
     sub.innerHTML = "학생이 올릴 때 함께 오는 기록입니다(2026-10-03 이후 올린 것부터). <b>첫 추리 정답률</b>은 이야기를 시작하기 전 예상이 맞은 비율(사전), "
       + "<b>이야기 완주율</b>은 끝까지 푼 이야기의 비율, <b>한 번에 맞힌 비율</b>은 수준별 문제를 해설 없이 첫 시도에 맞힌 비율(사후)입니다. "
       + "첫 추리는 일부러 오개념을 건드리는 질문이라 낮게 나오는 것이 정상입니다. 학생 수가 적으면 해석에 주의하세요."
-      + (pick ? "  지금은 " + pick + "반만 보고 있습니다." : "");
+      + (scope() ? "  지금은 " + scope() + "만 보고 있습니다." : "");
     p.appendChild(sub);
     var rows = evRows();
     if (!rows.length) { p.appendChild(el("p", "empty", "아직 효과 기록이 담긴 올리기가 없습니다. 학생이 다음에 올리면 쌓이기 시작합니다.")); out.appendChild(p); return; }
@@ -215,7 +235,7 @@
      확신하고 틀린 학생이 많은 문장이 그 반에 단단히 박힌 오개념이다. */
   function paintPc() {
     var TXT = window.STH_PC_ITEMS || {};
-    var rows = (evd || []).filter(function (r) { return (!pick || r.cls === pick) && r.pc && r.pc.length; });
+    var rows = (evd || []).filter(function (r) { return (!pick || r.cls === pick) && inSubj(r.unit) && r.pc && r.pc.length; });
     var p = el("div", "panel");
     p.appendChild(el("h2", "display", "학생 생각 점검"));
     p.appendChild(el("p", "sub", "단원 첫머리의 ‘내 생각 점검’ 기록입니다. 확신하고 틀린 학생이 많은 문장부터 늘어놓았습니다. "
@@ -354,9 +374,40 @@
       return;
     }
 
+    /* 0) 과목 고르기 */
+    var have = {}, total = 0;
+    cells.forEach(function (x) { var sj = subjOf(x.unit); have[sj] = (have[sj] || 0) + x.n; total += x.n; });
+    if (subj && !have[subj]) subj = null;
+    var p0 = el("div", "panel");
+    p0.appendChild(el("h2", "display", "과목"));
+    p0.appendChild(el("p", "sub", "과목을 고르면 아래 모든 표가 그 과목의 단원과 반만 보여 줍니다. 괄호 안은 올라온 기록 수입니다."));
+    var row0 = el("div", "subj-row");
+    [[null, "전체", total]].concat(SUBJS.concat(have["기타"] ? ["기타"] : []).map(function (sj) { return [sj, sj, have[sj] || 0]; })).forEach(function (c) {
+      var b = el("button", "chip" + (subj === c[0] ? " on" : "")); b.type = "button";
+      b.textContent = c[1]; var cn = el("span", "c", c[2] ? String(c[2]) : "0"); b.appendChild(cn);
+      if (c[0] && !c[2]) b.disabled = true;
+      b.addEventListener("click", function () { setSubj(c[0]); });
+      row0.appendChild(b);
+    });
+    p0.appendChild(row0);
+    out.appendChild(p0);
+
+    /* 과목을 골랐으면 그 과목을 올린 반만 — 반마다 그 과목의 학생 수(뒷단이 bySubj 를 주면 그것으로, 아니면 칸에서 셈) */
+    if (subj) {
+      var bs = (data.bySubj || []).filter(function (x) { return x.subj === subj; });
+      if (!bs.length) {
+        var tmp = {};
+        cells.forEach(function (x) { if (subjOf(x.unit) !== subj) return; var t = tmp[x.cls] || (tmp[x.cls] = { cls: x.cls, students: null, units: 0, last: null, n: 0 }); t.units++; t.n += x.n; if (x.last && (t.last === null || x.last > t.last)) t.last = x.last; });
+        bs = Object.keys(tmp).map(function (k) { return tmp[k]; });
+      }
+      bs.sort(function (a, b) { return a.cls < b.cls ? -1 : (a.cls > b.cls ? 1 : 0); });
+      classes = bs;
+      if (pick && !classes.some(function (c) { return c.cls === pick; })) pick = null;
+    }
+
     /* 1) 반 카드 */
     var p1 = el("div", "panel");
-    p1.appendChild(el("h2", "display", "반"));
+    p1.appendChild(el("h2", "display", subj ? subj + " · 반" : "반"));
     var s1 = el("p", "sub", "반을 누르면 아래 표에서 그 반만 봅니다. 다시 누르면 전체로 돌아옵니다.");
     p1.appendChild(s1);
     var g = el("div", "cls-grid");
@@ -364,7 +415,7 @@
       var card = el("div", "cls-card" + (pick === c.cls ? " on" : ""));
       card.appendChild(el("div", "name", c.cls));
       var n = el("div", "nums");
-      n.innerHTML = "학생 <b>" + c.students + "</b>명 · 단원 <b>" + c.units + "</b>개<br>마지막 " + (when(c.last) || "-") + " (" + ago(c.last) + ")";
+      n.innerHTML = (c.students == null ? "기록 <b>" + c.n + "</b>건" : "학생 <b>" + c.students + "</b>명") + " · 단원 <b>" + c.units + "</b>개<br>마지막 " + (when(c.last) || "-") + " (" + ago(c.last) + ")";
       card.appendChild(n);
       card.addEventListener("click", function () { pick = (pick === c.cls) ? null : c.cls; paint(); });
       g.appendChild(card);
@@ -377,17 +428,21 @@
     var byUnit = {};
     cells.forEach(function (x) {
       if (pick && x.cls !== pick) return;
-      if (!byUnit[x.unit]) byUnit[x.unit] = { unit: x.unit, label: units[x.unit] || x.unit, by: {}, last: null, sum: 0 };
+      if (!inSubj(x.unit)) return;
+      if (!byUnit[x.unit]) byUnit[x.unit] = { unit: x.unit, label: uname(x.unit, units[x.unit]), by: {}, last: null, sum: 0 };
       byUnit[x.unit].by[x.cls] = x;
       byUnit[x.unit].sum += x.n;
       if (x.last && (byUnit[x.unit].last === null || x.last > byUnit[x.unit].last)) byUnit[x.unit].last = x.last;
     });
+    /* 과목을 골랐으면 아직 아무도 올리지 않은 단원도 빈 줄로 보여 주고, 교과서 순서로 늘어놓는다 */
+    if (subj) UL.forEach(function (r) { if (r[1] === subj && !byUnit[r[0]]) byUnit[r[0]] = { unit: r[0], label: r[2], by: {}, last: null, sum: 0 }; });
     var rows = Object.keys(byUnit).map(function (u) { return byUnit[u]; });
-    rows.sort(function (a, b) { return (b.last || 0) - (a.last || 0); });
+    if (subj) rows.sort(function (a, b) { return (UMAP[a.unit] ? UMAP[a.unit].i : 1e4) - (UMAP[b.unit] ? UMAP[b.unit].i : 1e4); });
+    else rows.sort(function (a, b) { return (b.last || 0) - (a.last || 0); });
 
     var p2 = el("div", "panel");
     p2.appendChild(el("h2", "display", "단원별 · 반별"));
-    p2.appendChild(el("p", "sub", "칸의 숫자는 그 단원을 올린 학생 수입니다." + (pick ? "  지금은 " + pick + "반만 보고 있습니다." : "")));
+    p2.appendChild(el("p", "sub", "칸의 숫자는 그 단원을 올린 학생 수입니다." + (scope() ? "  지금은 " + scope() + "만 보고 있습니다." : "")));
     var sc = el("div", "tbl-scroll"), tb = document.createElement("table");
     tb.className = "act";
     var thead = document.createElement("thead"), tr = document.createElement("tr");
@@ -417,7 +472,7 @@
     var p3 = el("div", "panel");
     p3.appendChild(el("h2", "display", "최근 활동"));
     p3.appendChild(el("p", "sub", "올릴 때마다 한 줄씩 쌓입니다. 덮어쓰기와 상관없이 남는 기록입니다."));
-    var feed = el("div", "feed"), list = recent.filter(function (r) { return !pick || r.cls === pick; }).slice(0, 40);
+    var feed = el("div", "feed"), list = recent.filter(function (r) { return (!pick || r.cls === pick) && inSubj(r.unit); }).slice(0, 40);
     if (!list.length) { p3.appendChild(el("p", "empty", "아직 없습니다.")); }
     list.forEach(function (r) {
       var row = el("div", "feed-row" + (r.kind === "처음" ? " first" : ""));

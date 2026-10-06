@@ -154,7 +154,7 @@ function doPost(e) {
   if (d.action === 'teacher') {
     if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var rs2 = sheet_().getDataRange().getValues();
-    var cls_ = {}, cell = {}, units2 = {};
+    var cls_ = {}, cell = {}, units2 = {}, cs = {}, UI = unitInfo_();
     for (var a = 1; a < rs2.length; a++) {
       var v = rs2[a];
       if (String(v[7]).trim()) continue;
@@ -163,6 +163,11 @@ function doPost(e) {
       if (!cls_[c]) cls_[c] = { cls: c, nicks: {}, units: {}, last: null };
       cls_[c].nicks[nk] = 1; cls_[c].units[un] = 1;
       if (tt !== null && (cls_[c].last === null || tt > cls_[c].last)) cls_[c].last = tt;
+      /* 과목별 — 반마다 그 과목을 올린 학생 수 */
+      var sj = (UI.by[un] || {}).subj || '기타', sk = c + '\u0000' + sj;
+      if (!cs[sk]) cs[sk] = { cls: c, subj: sj, nicks: {}, units: {}, last: null };
+      cs[sk].nicks[nk] = 1; cs[sk].units[un] = 1;
+      if (tt !== null && (cs[sk].last === null || tt > cs[sk].last)) cs[sk].last = tt;
       var ck = c + '\u0000' + un;
       if (!cell[ck]) cell[ck] = { cls: c, unit: un, n: 0, last: null };
       cell[ck].n++;
@@ -186,7 +191,8 @@ function doPost(e) {
         recent.push({ t: ms_(g[0]), cls: String(g[1]), nick: String(g[2]), unit: String(g[3]), label: String(g[4] || ''), n: g[5], kind: String(g[6] || '') });
       }
     }
-    return out_({ ok: true, classes: classes, cells: Object.keys(cell).map(function (k2) { return cell[k2]; }), units: units2, recent: recent });
+    var bySubj = Object.keys(cs).map(function (k4) { var x = cs[k4]; return { cls: x.cls, subj: x.subj, students: Object.keys(x.nicks).length, units: Object.keys(x.units).length, last: x.last }; });
+    return out_({ ok: true, classes: classes, cells: Object.keys(cell).map(function (k2) { return cell[k2]; }), units: units2, recent: recent, bySubj: bySubj });
   }
 
   /* 수업 효과 — 단원 × 반 마다 완료율·첫 추리 정답률·한 번에 맞힌 비율·막힌 장면. 교사 열쇠가 맞아야 한다.

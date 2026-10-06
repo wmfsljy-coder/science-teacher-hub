@@ -30,5 +30,7 @@ fs.writeFileSync(path.join(__dirname, "..", "share-backend", "precheck.gs"),
   "/** 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수] — 시트의 과목별 보기가 단원 순서·이름을 여기서 읽는다. */\nvar UNIT_LIST = " +
   JSON.stringify(list).replace(/\],\[/g, "],\n [") + ";\n", "utf8");
 fs.writeFileSync(path.join(__dirname, "..", "assets", "precheck-all.js"),
-  "/* 내 생각 점검 문장 — _tools/make_precheck_gs.js 가 만든 파일. 고치지 말고 다시 만든다. */\nwindow.STH_PC_ITEMS = " + json + ";\n", "utf8");
+  "/* 내 생각 점검 문장 — _tools/make_precheck_gs.js 가 만든 파일. 고치지 말고 다시 만든다. */\nwindow.STH_PC_ITEMS = " + json + ";\n" +
+  "/* 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수] — 선생님 화면의 과목별 보기가 쓴다. */\nwindow.STH_UNITS = " +
+  JSON.stringify(list).replace(/\],\[/g, "],\n [") + ";\n", "utf8");
 console.log("단원", Object.keys(all).length, "문장", n);
