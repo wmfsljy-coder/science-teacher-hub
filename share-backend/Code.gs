@@ -420,7 +420,7 @@ function 생각점검() {
   if (!sh) sh = ss.insertSheet('생각 점검');
   sh.clear();
   var head = ['단원', '반', '번호', '문장', '정답', '처음에 답한 학생', '처음 맞음', '처음 확신 오답', '잘 모르겠다',
-              '두 번 답한 학생', '사전 정답', '사후 정답', '사후 확신 오답', '오개념→바른 개념', '흔들림', '남은 오개념', '정규화 향상도 g'];
+              '두 번 답한 학생', '사전 정답', '사후 정답', '사후 확신 오답', '오개념→바른 개념', '맞았다가 틀림', '남은 오개념', '정규화 향상도 g'];
   var body = [], cache = {}, sum = [];
   Object.keys(agg).sort().forEach(function (key) {
     var A = agg[key], items = cache[A.unit] || (cache[A.unit] = pcItems_(A.unit));
@@ -437,14 +437,14 @@ function 생각점검() {
   });
   sh.getRange(1, 1, 1, head.length).setValues([head]).setFontWeight('bold').setBackground('#e8f0fe');
   if (body.length) sh.getRange(2, 1, body.length, head.length).setValues(body.map(function (r) { return r.map(safe_); }));
-  else sh.getRange(2, 1).setValue('아직 생각 점검 기록이 담긴 올리기가 없습니다. 학생이 생각 점검을 하고 우리 반 탭에서 올리면 쌓입니다.');
+  else sh.getRange(2, 1).setValue('아직 올라온 생각 점검 기록이 없습니다. 학생이 단원 첫머리의 생각 점검에 답하고 우리 반 탭에서 올리면 여기에 쌓입니다.');
   sh.setFrozenRows(1);
   [200, 100, 45, 380, 55, 80, 70, 100, 70, 80, 70, 70, 85, 95, 60, 75, 85].forEach(function (w, i) { sh.setColumnWidth(i + 1, w); });
   sh.getRange(2, 4, Math.max(1, body.length), 1).setWrap(true);
   /* 아래쪽: 단원 × 반 요약 — 오개념이 바뀌었는지 한 줄로 */
   var top = body.length + 4;
-  sh.getRange(top - 1, 1).setValue('단원 × 반 요약 — 두 번 모두 답한 문장만 셈. g 0.7 이상 크게 바뀜 · 0.3~0.7 어느 정도 · 0.3 미만 조금').setFontWeight('bold');
-  var sh2 = [['단원', '반', '짝 응답 수', '사전 정답', '사후 정답', '확신 오답 사전 → 사후', '오개념→바른 개념', '흔들림', '남은 오개념', '정규화 향상도 g']];
+  sh.getRange(top - 1, 1).setValue('단원 × 반 요약 — 처음과 이야기 뒤에 모두 답한 문장만 셉니다. g 0.7 이상 크게 바뀜 · 0.3~0.7 어느 정도 바뀜 · 0~0.3 조금 바뀜 · 0 이하 바뀌지 않음').setFontWeight('bold');
+  var sh2 = [['단원', '반', '두 번 답한 응답 수', '사전 정답', '사후 정답', '확신 오답 사전 → 사후', '오개념→바른 개념', '맞았다가 틀림', '남은 오개념', '정규화 향상도 g']];
   sh.getRange(top, 1, 1, sh2[0].length).setValues(sh2).setFontWeight('bold').setBackground('#e6f4ea');
   if (sum.length) sh.getRange(top + 1, 1, sum.length, sh2[0].length).setValues(sum.map(function (r) { return r.map(safe_); }));
   sh.getRange('R1').setValue('만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm')).setFontColor('#999999');
@@ -542,7 +542,7 @@ function 과목별보기(quiet) {
     S.posts++; var t = ms_(g[0]); if (t !== null && (S.first === null || t < S.first)) S.first = t;
   });
   var keys = Object.keys(stu).sort(function (a, b) { var A = stu[a], B = stu[b]; return CO.cmp(A.cls, B.cls) || nickCmp_(A.nick, B.nick); });
-  var stamp = '만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') + ' · 시트를 열 때마다, 또는 메뉴 우리 반 공유 → 과목별 보기 새로 만들기';
+  var stamp = '만든 시각 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm') + ' · 시트를 열 때마다 새로 씁니다 (메뉴: 우리 반 공유 → 과목별 보기 새로 만들기)';
 
   /* ---- 반별 명단 ---- */
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -582,17 +582,17 @@ function 과목별보기(quiet) {
     push([subj + ' — 반별 활동', '', stamp], null, true);
     push([]);
     /* 위: 반 요약 */
-    push(['반 요약', '학생 수', '다 마친 단원 (합)'].concat(units.map(uname)), new Array(W).fill('#e8f0fe'), true); heads.push(rows.length);
+    push(['반 요약', '학생 수', '다 마친 단원 수 (학생 합계)'].concat(units.map(uname)), new Array(W).fill('#e8f0fe'), true); heads.push(rows.length);
     classes.forEach(function (c) {
       var mine = keys.filter(function (k) { return stu[k].cls === c && stu[k].subj[subj]; });
       var doneCells = 0, cells = units.map(function (u) {
         var n = 0, d = 0; mine.forEach(function (k) { var x = stu[k].units[u]; if (x) { n++; if (x.eps && x.done >= x.eps) d++; } });
-        doneCells += d; return n ? n + '명 (다 마침 ' + d + ')' : '';
+        doneCells += d; return n ? n + '명 올림 · ' + d + '명 다 마침' : '';
       });
       push([c + (CO.names[c] ? ' ' + CO.names[c] : ''), mine.length, doneCells].concat(cells));
     });
     push([]);
-    push(['칸 읽는 법: 이야기 마친 수/전체 · 문제 한 번에 맞힘/손댄 문항 · 생각 점검 처음→이야기 뒤 맞힌 문장/두 번 답한 문장.  초록 = 이야기를 다 마침, 노랑 = 하는 중, 회색 = 올렸지만 이야기 기록 없음'], null, false);
+    push(['칸 읽는 법 — 이야기: 마친 수/전체 · 문제: 한 번에 맞힌 문항/풀어 본 문항 · 생각: 처음 맞힌 수→이야기 뒤 맞힌 수/두 번 답한 문장 수. 초록은 이야기를 다 마침, 노랑은 하는 중, 회색은 올렸지만 이야기 기록이 없음'], null, false);
     /* 아래: 반별 명단 */
     classes.forEach(function (c) {
       push([]);
@@ -623,7 +623,7 @@ function 과목별보기(quiet) {
   });
   if (!quiet) {
     ss.setActiveSheet(rl);
-    SpreadsheetApp.getActiveSpreadsheet().toast('반별 명단과 과목 탭 ' + made.length + '개를 새로 썼습니다: ' + (made.join(', ') || '없음'), '과목별 보기', 6);
+    SpreadsheetApp.getActiveSpreadsheet().toast('반별 명단과 과목 탭 ' + made.length + '개를 새로 만들었습니다: ' + (made.join(', ') || '없음'), '과목별 보기', 6);
   }
   return made;
 }

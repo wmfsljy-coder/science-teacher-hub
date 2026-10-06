@@ -219,9 +219,9 @@
     var p = el("div", "panel");
     p.appendChild(el("h2", "display", "학생 생각 점검"));
     p.appendChild(el("p", "sub", "단원 첫머리의 ‘내 생각 점검’ 기록입니다. 확신하고 틀린 학생이 많은 문장부터 늘어놓았습니다. "
-      + "이 문장은 수업 첫머리에 반 전체에 던져 토론을 여는 데 쓰기 좋습니다. ‘이야기 뒤 맞음’은 이야기를 끝낸 뒤 다시 답한 학생 가운데 맞힌 비율입니다. "
+      + "이런 문장은 수업 첫머리에 반 전체에 던져 토론을 여는 데 쓰기 좋습니다. ‘사전 → 사후 정답’은 처음과 이야기 뒤에 모두 답한 학생만으로 셉니다. "
       + "시트 메뉴 ‘우리 반 공유 → 생각 점검 표 새로 만들기’를 누르면 같은 표가 시트의 ‘생각 점검’ 탭에도 만들어집니다."));
-    if (!rows.length) { p.appendChild(el("p", "empty", "아직 생각 점검 기록이 담긴 올리기가 없습니다. 지금은 지구시스템과학 단원에 들어 있습니다.")); out.appendChild(p); return; }
+    if (!rows.length) { p.appendChild(el("p", "empty", "아직 올라온 생각 점검 기록이 없습니다. 학생이 단원 첫머리의 생각 점검에 답하고 우리 반 탭에서 올리면 여기에 쌓입니다.")); out.appendChild(p); return; }
     rows.forEach(function (r) {
       var items = TXT[r.unit] || {};
       var hh = el("h3", null, (r.label || r.unit) + " · " + r.cls + "반"); hh.style.cssText = "font-size:15px;margin:16px 0 6px"; p.appendChild(hh);
@@ -230,13 +230,13 @@
       r.pc.forEach(function (x) { Object.keys(T).forEach(function (k) { T[k] += x[k] || 0; }); });
       var gT = T.pn - T.pre > 0 ? (T.post - T.pre) / (T.pn - T.pre) : null;
       var ms = el("p", "sub");
-      ms.innerHTML = T.pn ? "<b>오개념 변화</b> — 짝 응답 " + T.pn + "개 · 정답 " + pct(T.pre, T.pn) + " → <b>" + pct(T.post, T.pn) + "</b> · 확신 오답 " + T.preSW + " → <b>" + T.postSW + "</b>"
-        + " · 정규화 향상도 <b>g = " + (gT === null ? "–" : gT.toFixed(2)) + "</b>" + (gT === null ? "" : gT >= 0.7 ? " (크게 바뀜)" : gT >= 0.3 ? " (어느 정도 바뀜)" : " (조금 바뀜)")
-        + " · 오개념→바른 개념 " + T.fix + " · 흔들림 " + T.slip + " · 남은 오개념 " + T.stay
+      ms.innerHTML = T.pn ? "<b>오개념 변화</b> — 두 번 답한 응답 " + T.pn + "개 · 정답 " + pct(T.pre, T.pn) + " → <b>" + pct(T.post, T.pn) + "</b> · 확신 오답 " + T.preSW + " → <b>" + T.postSW + "</b>"
+        + " · 정규화 향상도 <b>g = " + (gT === null ? "–" : gT.toFixed(2)) + "</b>" + (gT === null ? "" : gT >= 0.7 ? " (크게 바뀜)" : gT >= 0.3 ? " (어느 정도 바뀜)" : gT > 0 ? " (조금 바뀜)" : " (바뀌지 않음)")
+        + " · 오개념→바른 개념 " + T.fix + " · 맞았다가 틀림 " + T.slip + " · 남은 오개념 " + T.stay
         : "아직 이야기를 끝내고 다시 답한 학생이 없어 변화는 측정 전입니다.";
       ms.style.margin = "0 0 8px"; p.appendChild(ms);
       var sc = el("div", "tbl-scroll"), tb = document.createElement("table"); tb.className = "act";
-      var hd = ["문장", "정답", "처음 답함", "처음 맞음", "확신하고 틀림", "잘 모르겠다", "사전 → 사후 정답(짝)", "확신 오답 사전 → 사후", "g", "틀림·모름 → 맞음"];
+      var hd = ["문장", "정답", "처음 답함", "처음 맞음", "확신하고 틀림", "잘 모르겠다", "사전 → 사후 정답", "확신 오답 사전 → 사후", "g", "틀림·모름 → 맞음"];
       var tr = document.createElement("tr"); hd.forEach(function (h, i) { var th = document.createElement("th"); if (!i) th.className = "unit"; th.textContent = h; tr.appendChild(th); });
       var th_ = document.createElement("thead"); th_.appendChild(tr); tb.appendChild(th_);
       var body = document.createElement("tbody");
