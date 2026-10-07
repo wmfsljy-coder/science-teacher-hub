@@ -17,7 +17,7 @@ UNITS.forEach(function (u) {
   if (!id) { console.error("단원 코드를 찾지 못함:", u); return; }
   var lr = byUrl[u]; if (!lr) console.error("바로가기에 없는 단원:", u);
   var eps = (fs.readFileSync(path.join(dir, "index.html"), "utf8").match(/class="episode[\s"]/g) || []).length;
-  list.push([id, lr ? lr[2] : u.split("/")[0], lr ? lr[3] : u, lr ? lr[1] : "", eps]);
+  list.push([id, lr ? lr[2] : u.split("/")[0], lr ? lr[3] : u, lr ? lr[1] : "", eps, u]);
   var got = null;
   vm.runInNewContext(fs.readFileSync(f, "utf8"), { window: { sthPrecheck: function (o) { got = o; } } });
   if (!got) { console.error("문장을 읽지 못함:", u); return; }
@@ -27,10 +27,10 @@ UNITS.forEach(function (u) {
 var json = JSON.stringify(all, null, 1);
 fs.writeFileSync(path.join(__dirname, "..", "share-backend", "precheck.gs"),
   "/** 내 생각 점검 문장 — _tools/make_precheck_gs.js 가 만든 파일. 고치지 말고 다시 만든다. */\nvar PC_ITEMS = " + json + ";\n" +
-  "/** 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수] — 시트의 과목별 보기가 단원 순서·이름을 여기서 읽는다. */\nvar UNIT_LIST = " +
+  "/** 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수, 주소 경로] — 시트의 과목별 보기가 단원 순서·이름을 여기서 읽는다. */\nvar UNIT_LIST = " +
   JSON.stringify(list).replace(/\],\[/g, "],\n [") + ";\n", "utf8");
 fs.writeFileSync(path.join(__dirname, "..", "assets", "precheck-all.js"),
   "/* 내 생각 점검 문장 — _tools/make_precheck_gs.js 가 만든 파일. 고치지 말고 다시 만든다. */\nwindow.STH_PC_ITEMS = " + json + ";\n" +
-  "/* 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수] — 선생님 화면의 과목별 보기가 쓴다. */\nwindow.STH_UNITS = " +
+  "/* 단원 목록 [단원 코드, 과목, 단원 이름, 학년, 이야기 수, 주소 경로] — 선생님 화면의 과목별 보기가 쓴다. */\nwindow.STH_UNITS = " +
   JSON.stringify(list).replace(/\],\[/g, "],\n [") + ";\n", "utf8");
 console.log("단원", Object.keys(all).length, "문장", n);

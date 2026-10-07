@@ -108,13 +108,8 @@
   <h1 class="display">인터랙티브 학습 도구</h1>
   <p>8개 과목 44개 단원. 학생이 직접 조작하고, 예상을 걸고, 마지막에 문장으로 정리합니다. 아래에서 과목을 고르거나 단원·성취기준 코드로 검색하세요.</p>
   <div class="qr-block">
-    <button class="qr-toggle" id="qrToggle" type="button" aria-expanded="false"><span>📱 QR 코드</span><span class="qr-caret">▾</span></button>
+    <a class="qr-toggle" href="qr/"><span>📱 단원별 학생 입장 QR</span><span class="qr-caret">→</span></a>
     <a class="qr-toggle" href="class/"><span>📊 반별 활동</span><span class="qr-caret">→</span></a>
-    <div class="qr-panel" id="qrPanel" hidden>
-      <p class="qr-hint">이 페이지는 교사용 허브입니다. 학생에게는 과목 페이지에 있는 QR을 나눠 주세요. 학생 화면에는 다른 과목으로 가는 길이 보이지 않습니다.</p>
-      <div class="qr-code" id="qrCode"></div>
-      <p class="qr-url" id="qrUrl"></p>
-    </div>
   </div>
 </div>
 
@@ -351,24 +346,6 @@
 
   paintProgress();
   window.addEventListener("pageshow", paintProgress);
-})();
-</script>
-<script src="assets/qrcode.js"></script>
-<script>
-(function () {
-  var toggle = document.getElementById("qrToggle"), panel = document.getElementById("qrPanel");
-  var holder = document.getElementById("qrCode"), urlEl = document.getElementById("qrUrl");
-  var pageUrl = "https://wmfsljy-coder.github.io/science-teacher-hub/", built = false;
-  toggle.addEventListener("click", function () {
-    var open = panel.hidden;
-    panel.hidden = !open;
-    toggle.setAttribute("aria-expanded", String(open));
-    toggle.classList.toggle("open", open);
-    if (open && !built) {
-      var qr = qrcode(0, "M"); qr.addData(pageUrl); qr.make();
-      holder.innerHTML = qr.createSvgTag(4); urlEl.textContent = pageUrl; built = true;
-    }
-  });
 })();
 </script>
 </body>

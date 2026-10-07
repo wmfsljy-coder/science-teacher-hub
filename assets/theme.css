@@ -440,3 +440,18 @@ html:not(.sth-teacher) a.unit-card { visibility: hidden; }
 .gate-card h1 { font-size: clamp(24px, 6vw, 32px); font-weight: 400; margin: 8px 0 12px; }
 .gate-card p { color: var(--mist); font-size: 15px; line-height: 1.8; margin: 0; }
 .gate-card .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--teal-700); font-weight: 800; }
+
+/* ---------- 학생 입장 QR (교사 기기에서만 버튼이 생긴다) ---------- */
+.qr-btn { display: inline-block; margin-top: 10px; border: 2px solid var(--brand); background: var(--brand-100); color: var(--brand-700);
+  padding: 6px 12px; border-radius: 999px; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+.qr-btn:hover { background: var(--brand); color: #fff; }
+.unit-card .qr-btn { margin-top: 4px; }
+.qr-full { position: fixed; inset: 0; z-index: 9999; background: rgba(10, 20, 30, .72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.qf-box { background: #fff; color: #10202e; border-radius: 26px; padding: 26px 28px 22px; text-align: center; max-width: min(96vw, 720px); max-height: 96vh; overflow: auto; }
+.qf-sub { font-size: 14px; font-weight: 800; color: #0f766e; letter-spacing: .02em; }
+.qf-title { font-family: "Jua", "Gothic A1", sans-serif; font-size: clamp(24px, 4.5vw, 40px); margin: 6px 0 14px; line-height: 1.25; }
+.qf-code { width: min(64vh, 80vw); height: min(64vh, 80vw); margin: 0 auto; }
+.qf-code svg { width: 100%; height: 100%; display: block; }
+.qf-url { font-family: ui-monospace, Menlo, monospace; font-size: clamp(13px, 2vw, 18px); margin: 12px 0 4px; word-break: break-all; color: #10202e; }
+.qf-hint { font-size: 13.5px; color: #5b6b7b; margin: 4px 0 14px; }
+@media print { .qr-btn { display: none !important; } }

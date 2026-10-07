@@ -464,4 +464,62 @@
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
   })();
+  /* ---------- 학생 입장 QR (교사 기기에서만) ----------
+     window.sthQR(주소, 제목, 작은 제목) — 화면 가득 QR 을 띄운다. 학생은 휴대폰 카메라로 찍어 그 단원에 바로 들어간다.
+     QR 도구(qrcode.js)는 이 파일과 같은 폴더에서 처음 누를 때만 불러온다.
+     · 단원 페이지: 왼쪽 메뉴에 ‘📱 학생 입장 QR’ 버튼(precheck.js 는 00 들어가기 탭에도 하나 둔다)
+     · 과목 첫 화면: 단원 카드마다 ‘📱 QR’ 버튼 */
+  (function () {
+    var SELF = (document.currentScript && document.currentScript.src) || "";
+    function load(cb) {
+      if (window.qrcode) { cb(); return; }
+      var s = document.createElement("script");
+      s.src = SELF ? SELF.replace(/theme\.js(\?.*)?$/, "qrcode.js") : "assets/qrcode.js";
+      s.onload = cb; s.onerror = function () { window.alert("QR 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); };
+      document.head.appendChild(s);
+    }
+    function clean(u) { var a = document.createElement("a"); a.href = u; return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, ""); }
+    function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    window.sthQR = function (url, title, sub) {
+      url = clean(url || location.href);
+      load(function () {
+        var qr = window.qrcode(0, "M"); qr.addData(url); qr.make();
+        var o = document.createElement("div"); o.className = "qr-full"; o.setAttribute("role", "dialog"); o.setAttribute("aria-label", "학생 입장 QR");
+        o.innerHTML = "<div class='qf-box'><div class='qf-sub'>" + esc(sub) + "</div><div class='qf-title'>" + esc(title) + "</div>"
+          + "<div class='qf-code'>" + qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: "학생 입장 QR" }) + "</div>"
+          + "<div class='qf-url'>" + esc(url.replace(/^https?:\/\//, "")) + "</div>"
+          + "<p class='qf-hint'>휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.</p>"
+          + "<button type='button' class='btn qf-close'>닫기 (Esc)</button></div>";
+        function close() { o.remove(); document.removeEventListener("keydown", key); }
+        function key(e) { if (e.key === "Escape") close(); }
+        o.addEventListener("click", function (e) { if (e.target === o || e.target.classList.contains("qf-close")) close(); });
+        document.addEventListener("keydown", key);
+        document.body.appendChild(o);
+        o.querySelector(".qf-close").focus();
+      });
+    };
+    function unitTitle() {
+      var b = document.querySelector(".rail .brand"); if (!b) return ["", document.title];
+      var h = b.querySelector("h1"), ey = b.querySelector(".eyebrow"), home = b.querySelector("a.home:not(.hub)");
+      var subj = home ? home.textContent.replace(/^←\s*/, "") : "";
+      return [subj + (ey ? " · " + ey.textContent.trim() : ""), h ? (h.innerText || h.textContent).replace(/\s+/g, " ").trim() : document.title];
+    }
+    window.sthUnitQR = function () { var t = unitTitle(); window.sthQR(location.href, t[1], t[0]); };
+    function start() {
+      if (!TEACHER) return;
+      var brand = document.querySelector(".rail .brand");
+      if (brand && !brand.querySelector(".qr-btn")) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "qr-btn"; b.textContent = "📱 학생 입장 QR";
+        b.addEventListener("click", window.sthUnitQR); brand.appendChild(b);
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("a.unit-card"), function (c) {
+        if (c.querySelector(".qr-btn")) return;
+        var b = document.createElement("button"); b.type = "button"; b.className = "qr-btn"; b.textContent = "📱 QR";
+        var h = c.querySelector("h3");
+        b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.sthQR(c.href, h ? h.textContent.trim() : c.textContent.trim().slice(0, 40), document.title.split("—")[0].trim()); });
+        c.appendChild(b);
+      });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  })();
 })();
