@@ -522,4 +522,24 @@
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
   })();
+  /* ---------- 움직이는 그림 ----------
+     window.sthAnimate(canvas, frame) — 캔버스가 화면에 보이는 동안만 frame(초) 을 계속 부른다.
+     탭을 옮기거나 화면 밖으로 나가면 멈추고(배터리), ‘동작 줄이기’를 켠 기기에서는 처음 한 장만 그린다.
+     판의 이동·맨틀 대류처럼 ‘흐르는’ 현상을 정지 그림 대신 움직임으로 보여 줄 때 쓴다. */
+  window.sthAnimate = function (canvas, frame) {
+    var raf = 0, vis = !("IntersectionObserver" in window), last = 0, t = 0;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function loop(now) {
+      raf = 0;
+      if (!vis || document.hidden) { last = 0; return; }
+      if (last) t += Math.min(0.1, (now - last) / 1000);
+      last = now; frame(t);
+      raf = window.requestAnimationFrame(loop);
+    }
+    function kick() { if (!raf && vis && !reduce && !document.hidden) raf = window.requestAnimationFrame(loop); }
+    if (!vis) new IntersectionObserver(function (es) { vis = es[es.length - 1].isIntersecting; kick(); }).observe(canvas);
+    document.addEventListener("visibilitychange", kick);
+    kick();
+    return { now: function () { return t; } };
+  };
 })();
