@@ -207,7 +207,7 @@
   var MARK_ = "㉠㉡㉢㉣㉤";
   window.sthStripMark = function (t) { return String(t == null ? "" : t).replace(/^[㉠㉡㉢㉣㉤]\s*/, ""); };
   window.sthHasRef = function (x) { return /[①②③④⑤㉠㉡㉢㉣㉤]/.test(Array.isArray(x) ? x.join(" ") : String(x || "")); };
-  window.sthShuffle = function (opts, seed, keep) {
+  window.sthShuffle = function (opts, seed, keep, fixMarks) {
     var n = opts.length, ord = [], i, h = 2166136261;
     for (i = 0; i < n; i++) ord.push(i);
     if (!keep && n >= 2) {
@@ -216,7 +216,7 @@
       for (i = n - 1; i > 0; i--) { h = (Math.imul ? Math.imul(h, 1103515245) : h * 1103515245) + 12345 >>> 0; var j = (h >>> 8) % (i + 1), x = ord[i]; ord[i] = ord[j]; ord[j] = x; }
     }
     var marked = n > 0 && opts.every(function (t) { return /^[㉠㉡㉢㉣㉤]/.test(String(t)); }), text = [];
-    ord.forEach(function (o, pos) { text[o] = marked ? MARK_.charAt(pos) + " " + window.sthStripMark(opts[o]) : opts[o]; });
+    ord.forEach(function (o, pos) { text[o] = marked && !fixMarks ? MARK_.charAt(pos) + " " + window.sthStripMark(opts[o]) : opts[o]; });
     return { order: ord, text: text };
   };
 
@@ -231,7 +231,7 @@
              + '<p>' + opt.question + '</p><div class="opts"></div>';
     gate.innerHTML = html;
     var box = gate.querySelector(".opts");
-    var mix = window.sthShuffle(opt.options, opt.key + "|" + opt.question, opt.keepOrder), btn = [];
+    var mix = window.sthShuffle(opt.options, opt.key + "|" + opt.question, opt.keepOrder, true), btn = [];   /* 기호는 원래 것 그대로(결말 판정이 원래 기호를 본다) */
     opt.options.forEach(function (t0, i) {
       var t = mix.text[i];
       var b = document.createElement("button");
@@ -254,7 +254,7 @@
       var idx = -1;
       opt.options.forEach(function (t, i) { if (idx < 0 && window.sthStripMark(t) === window.sthStripMark(prev)) idx = i; });
       if (idx >= 0) {
-        btn[idx].classList.add("picked"); if (STATE[(opt.key || "pred") + "I"] == null) STATE[(opt.key || "pred") + "I"] = idx;
+        btn[idx].classList.add("picked"); STATE[(opt.key || "pred")] = opt.options[idx]; STATE[(opt.key || "pred") + "I"] = idx; store();
         gate.classList.add("done");
         if (veil) veil.hidden = true;
         if (typeof opt.onPick === "function") opt.onPick(idx, prev);

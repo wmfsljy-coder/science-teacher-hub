@@ -9,17 +9,17 @@
 | 10과탐1-01-01 | 과학사에서 패러다임의 전환을 가져온 결정적 실험을 따라 해 보고, 과학의 발전 과정에 관해 설명할 수 있다. | [과학탐구실험1 Ⅰ-1 01 빛보다 빠른 중성미자](https://wmfsljy-coder.github.io/science-inquiry-1/1-1/)<br>[과학탐구실험1 Ⅰ-1 02 보름달 금성](https://wmfsljy-coder.github.io/science-inquiry-1/1-1/)<br>[과학탐구실험1 Ⅰ-3 01 빗면 위의 종소리](https://wmfsljy-coder.github.io/science-inquiry-1/1-3/) | 15 |
 | 10과탐1-01-02 | 과학사의 다양한 사례들로부터 과학의 본성을 추론할 수 있다. | [과학탐구실험1 Ⅰ-1 01 빛보다 빠른 중성미자](https://wmfsljy-coder.github.io/science-inquiry-1/1-1/)<br>[과학탐구실험1 Ⅰ-3 01 빗면 위의 종소리](https://wmfsljy-coder.github.io/science-inquiry-1/1-3/)<br>[과학탐구실험1 Ⅰ-3 02 빗물을 재는 그릇](https://wmfsljy-coder.github.io/science-inquiry-1/1-3/)<br>[과학탐구실험1 Ⅰ-3 03 두 사람의 주기율표](https://wmfsljy-coder.github.io/science-inquiry-1/1-3/) | 20 |
 | 10과탐1-02-01 | 직접적인 관찰을 통한 탐구를 수행하고, 귀납적 탐구 방법을 설명할 수 있다. | [과학탐구실험1 Ⅰ-2 01 귀뚜라미 온도계](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-4 01 목이 휜 플라스크](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 7 |
-| 10과탐1-02-02 | 가설 설정을 포함한 과학사의 대표적인 탐구 실험을 수행하고, 연역적 탐구 방법의 특징을 예증할 수 있다. | [과학탐구실험1 Ⅰ-2 01 귀뚜라미 온도계](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-2 02 손을 씻으시오](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-4 01 목이 휜 플라스크](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/)<br>[과학탐구실험1 Ⅰ-4 02 두 번째 프리즘](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 18 |
-| 10과탐1-02-03 | 탐구 수행에서 얻은 정성적 혹은 정량적 데이터를 분석하고 그 결과를 다양하게 표상하고 소통할 수 있다. | [과학탐구실험1 Ⅰ-2 03 장미 도표](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-4 03 추운 겨울의 반론](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/)<br>[과학탐구실험1 Ⅰ-4 04 마늘 대 세균](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 10 |
-| 10과탐1-02-04 | 흥미와 호기심을 갖고 과학 탐구에 참여하고, 분야 간 협동 연구 등을 통해 협력적 탐구 활동을 수행할 수 있다. | [과학탐구실험1 Ⅰ-4 04 마늘 대 세균](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 6 |
+| 10과탐1-02-02 | 가설 설정을 포함한 과학사의 대표적인 탐구 실험을 수행하고, 연역적 탐구 방법의 특징을 예증할 수 있다. | [과학탐구실험1 Ⅰ-2 01 귀뚜라미 온도계](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-2 02 손을 씻으시오](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-4 01 목이 휜 플라스크](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/)<br>[과학탐구실험1 Ⅰ-4 02 두 번째 프리즘](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 19 |
+| 10과탐1-02-03 | 탐구 수행에서 얻은 정성적 혹은 정량적 데이터를 분석하고 그 결과를 다양하게 표상하고 소통할 수 있다. | [과학탐구실험1 Ⅰ-2 03 장미 도표](https://wmfsljy-coder.github.io/science-inquiry-1/1-2/)<br>[과학탐구실험1 Ⅰ-4 03 추운 겨울의 반론](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/)<br>[과학탐구실험1 Ⅰ-4 04 마늘 대 세균](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 11 |
+| 10과탐1-02-04 | 흥미와 호기심을 갖고 과학 탐구에 참여하고, 분야 간 협동 연구 등을 통해 협력적 탐구 활동을 수행할 수 있다. | [과학탐구실험1 Ⅰ-4 04 마늘 대 세균](https://wmfsljy-coder.github.io/science-inquiry-1/1-4/) | 5 |
 
 ## 과학탐구실험2
 
 | 성취기준 | 내용 | 다루는 이야기 | 문항 |
 | --- | --- | --- | --- |
-| 10과탐2-01-01 | 영화, 건축, 요리, 스포츠, 미디어 등 생활 속의 과학 원리를 실험 등을 통해 탐구하고, 과학 원리를 설명할 수 있다. | [과학탐구실험2 Ⅰ-1 01 비행기 안의 고요](https://wmfsljy-coder.github.io/science-inquiry-2/2-1/)<br>[과학탐구실험2 Ⅰ-2 01 우주로 가는 딸기](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 03 5층 건물만 크게 흔들렸다](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/) | 13 |
+| 10과탐2-01-01 | 영화, 건축, 요리, 스포츠, 미디어 등 생활 속의 과학 원리를 실험 등을 통해 탐구하고, 과학 원리를 설명할 수 있다. | [과학탐구실험2 Ⅰ-1 01 비행기 안의 고요](https://wmfsljy-coder.github.io/science-inquiry-2/2-1/)<br>[과학탐구실험2 Ⅰ-2 01 우주로 가는 딸기](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 03 5층 건물만 크게 흔들렸다](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/) | 14 |
 | 10과탐2-01-02 | 사회적 이슈나 생활 속에서 과학 탐구 문제를 발견하고, 이를 해결하기 위한 과학 탐구 활동을 계획하고 수행할 수 있다. | [과학탐구실험2 Ⅰ-1 02 목이 따가운 교실](https://wmfsljy-coder.github.io/science-inquiry-2/2-1/)<br>[과학탐구실험2 Ⅰ-2 01 우주로 가는 딸기](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 02 스마트폰을 태운 롤러코스터](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 04 동네 환경 탐사대](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/) | 15 |
-| 10과탐2-01-03 | 과학 개념을 적용하여 실생활 문제의 해결 방안을 창의적으로 고안하고, 필요한 도구를 설계·제작할 수 있다. | [과학탐구실험2 Ⅰ-2 01 우주로 가는 딸기](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 02 스마트폰을 태운 롤러코스터](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 03 5층 건물만 크게 흔들렸다](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/) | 9 |
+| 10과탐2-01-03 | 과학 개념을 적용하여 실생활 문제의 해결 방안을 창의적으로 고안하고, 필요한 도구를 설계·제작할 수 있다. | [과학탐구실험2 Ⅰ-2 01 우주로 가는 딸기](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 02 스마트폰을 태운 롤러코스터](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/)<br>[과학탐구실험2 Ⅰ-2 03 5층 건물만 크게 흔들렸다](https://wmfsljy-coder.github.io/science-inquiry-2/2-3/) | 8 |
 | 10과탐2-02-01 | 첨단 과학 기술 속의 과학 원리를 찾아내는 탐구 활동을 통해 과학 지식이 활용된 사례를 추론할 수 있다. | [과학탐구실험2 Ⅱ-1 01 고양이를 못 알아보는 인공지능](https://wmfsljy-coder.github.io/science-inquiry-2/2-2/)<br>[과학탐구실험2 Ⅱ-1 02 방학 동안의 화분](https://wmfsljy-coder.github.io/science-inquiry-2/2-2/)<br>[과학탐구실험2 Ⅱ-2 01 겨울 딸기 온실](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/)<br>[과학탐구실험2 Ⅱ-2 03 우주 개발 토론회](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/) | 24 |
 | 10과탐2-02-02 | 과학 원리가 적용된 첨단 과학 기술 및 탐구 산출물을 발표하고 공유하며, 이를 확산할 수 있다. | [과학탐구실험2 Ⅱ-1 01 고양이를 못 알아보는 인공지능](https://wmfsljy-coder.github.io/science-inquiry-2/2-2/)<br>[과학탐구실험2 Ⅱ-1 02 방학 동안의 화분](https://wmfsljy-coder.github.io/science-inquiry-2/2-2/)<br>[과학탐구실험2 Ⅱ-2 01 겨울 딸기 온실](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/)<br>[과학탐구실험2 Ⅱ-2 02 숨 막히는 5교시](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/) | 4 |
 | 10과탐2-02-03 | 탐구 활동 과정에서 지켜야 할 생명 존중, 연구 진실성, 지식 재산권 존중 등과 같은 연구 윤리를 준수할 수 있다. | [과학탐구실험2 Ⅱ-2 01 겨울 딸기 온실](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/)<br>[과학탐구실험2 Ⅱ-2 02 숨 막히는 5교시](https://wmfsljy-coder.github.io/science-inquiry-2/2-4/) | 4 |
@@ -28,21 +28,21 @@
 
 | 성취기준 | 내용 | 다루는 이야기 | 문항 |
 | --- | --- | --- | --- |
-| 10통과1-01-01 | 자연을 시간과 공간에서 기술할 수 있음을 알고, 길이와 시간 측정의 현대적 방법과 다양한 규모의 측정 사례를 조사할 수 있다. | [통합과학1 Ⅰ-1 01 단위를 잃어버린 우주선](https://wmfsljy-coder.github.io/integrated-science-1/1-1/)<br>[통합과학1 Ⅰ-1 02 10의 거듭제곱으로 걷기](https://wmfsljy-coder.github.io/integrated-science-1/1-1/) | 7 |
+| 10통과1-01-01 | 자연을 시간과 공간에서 기술할 수 있음을 알고, 길이와 시간 측정의 현대적 방법과 다양한 규모의 측정 사례를 조사할 수 있다. | [통합과학1 Ⅰ-1 01 단위를 잃어버린 우주선](https://wmfsljy-coder.github.io/integrated-science-1/1-1/)<br>[통합과학1 Ⅰ-1 02 10의 거듭제곱으로 걷기](https://wmfsljy-coder.github.io/integrated-science-1/1-1/) | 9 |
 | 10통과1-01-02 | 과학 탐구에서 중요한 기본량의 의미를 알고, 자연 현상을 기술하는 데 단위가 가지는 의미와 적용 사례를 설명할 수 있다. | [통합과학1 Ⅰ-1 01 단위를 잃어버린 우주선](https://wmfsljy-coder.github.io/integrated-science-1/1-1/)<br>[통합과학1 Ⅰ-1 03 0을 세다가 밤을 새운 보고서](https://wmfsljy-coder.github.io/integrated-science-1/1-1/) | 13 |
-| 10통과1-01-03 | 과학 탐구에서 측정과 어림의 의미를 알고, 일상생활의 여러 가지 상황에서 측정 표준의 유용성과 필요성을 논증할 수 있다. | [통합과학1 Ⅰ-2 01 과녁에 남은 자국](https://wmfsljy-coder.github.io/integrated-science-1/1-2/)<br>[통합과학1 Ⅰ-2 02 1미터를 다시 정하는 회의](https://wmfsljy-coder.github.io/integrated-science-1/1-2/) | 12 |
+| 10통과1-01-03 | 과학 탐구에서 측정과 어림의 의미를 알고, 일상생활의 여러 가지 상황에서 측정 표준의 유용성과 필요성을 논증할 수 있다. | [통합과학1 Ⅰ-2 01 과녁에 남은 자국](https://wmfsljy-coder.github.io/integrated-science-1/1-2/)<br>[통합과학1 Ⅰ-2 02 1미터를 다시 정하는 회의](https://wmfsljy-coder.github.io/integrated-science-1/1-2/) | 13 |
 | 10통과1-01-04 | 자연에서 일어나는 다양한 변화를 측정·분석하여 정보를 산출함을 알고, 이러한 정보를 디지털로 변환하는 기술이 현대 문명에 미친 영향을 인식한다. | [통합과학1 Ⅰ-2 03 30 cm 를 다투는 사람들](https://wmfsljy-coder.github.io/integrated-science-1/1-2/) | 7 |
 | 10통과1-02-01 | 천체에서 방출되는 빛의 스펙트럼을 분석하여 우주 초기에 형성된 원소와 천체의 구성 물질을 추론할 수 있다. | [통합과학1 Ⅱ-1 01 우주가 남긴 지문](https://wmfsljy-coder.github.io/integrated-science-1/2-1/)<br>[통합과학1 Ⅱ-1 03 존재비 저울](https://wmfsljy-coder.github.io/integrated-science-1/2-1/) | 8 |
-| 10통과1-02-02 | 우주 초기의 원소들로부터 태양계의 재료이면서 생명체를 구성하는 원소들이 형성되는 과정을 통해 지구와 생명의 역사가 우주 역사의 일부분임을 해석할 수 있다. | [통합과학1 Ⅱ-1 02 별의 부엌](https://wmfsljy-coder.github.io/integrated-science-1/2-1/)<br>[통합과학1 Ⅱ-1 03 존재비 저울](https://wmfsljy-coder.github.io/integrated-science-1/2-1/) | 11 |
+| 10통과1-02-02 | 우주 초기의 원소들로부터 태양계의 재료이면서 생명체를 구성하는 원소들이 형성되는 과정을 통해 지구와 생명의 역사가 우주 역사의 일부분임을 해석할 수 있다. | [통합과학1 Ⅱ-1 02 별의 부엌](https://wmfsljy-coder.github.io/integrated-science-1/2-1/)<br>[통합과학1 Ⅱ-1 03 존재비 저울](https://wmfsljy-coder.github.io/integrated-science-1/2-1/) | 13 |
 | 10통과1-02-03 | 세상을 구성하는 원소들의 성질이 주기성을 나타내는 현상을 통해 자연의 규칙성을 도출하고, 지구와 생명체를 구성하는 주요 원소들이 결합을 형성하는 이유를 해석할 수 있다. | [통합과학1 Ⅱ-2 01 빈칸이 있는 표](https://wmfsljy-coder.github.io/integrated-science-1/2-2/) | 5 |
 | 10통과1-02-04 | 인류의 생존에 필수적인 물, 산소, 소금 등이 만들어지는 결합의 차이를 이해하고 각 물질의 성질과 관련지어 설명할 수 있다. | [통합과학1 Ⅱ-2 02 녹이면 통한다](https://wmfsljy-coder.github.io/integrated-science-1/2-2/) | 5 |
 | 10통과1-02-05 | 지각과 생명체를 구성하는 물질들이 기본 단위체의 결합을 통해서 형성된다는 것을 규산염 광물, 단백질과 핵산의 예를 통해 설명할 수 있다. | [통합과학1 Ⅱ-2 03 같은 부품, 다른 물건](https://wmfsljy-coder.github.io/integrated-science-1/2-2/) | 5 |
 | 10통과1-02-06 | 지구를 구성하는 물질을 전기적 성질에 따라 구분할 수 있고, 물질의 전기적 성질이 다양한 소재로 활용됨을 인식한다. | [통합과학1 Ⅱ-2 04 거꾸로 가는 물질](https://wmfsljy-coder.github.io/integrated-science-1/2-2/) | 5 |
-| 10통과1-03-01 | 지구 시스템은 태양계라는 시스템의 구성요소임을 알고, 지구 시스템을 구성하는 권역들 간의 물질 순환과 에너지 흐름의 결과로 나타나는 현상을 논증할 수 있다. | [통합과학1 Ⅲ-1 01 모래 한 알의 여행](https://wmfsljy-coder.github.io/integrated-science-1/3-1/)<br>[통합과학1 Ⅲ-1 02 세 개의 난로](https://wmfsljy-coder.github.io/integrated-science-1/3-1/) | 10 |
+| 10통과1-03-01 | 지구 시스템은 태양계라는 시스템의 구성요소임을 알고, 지구 시스템을 구성하는 권역들 간의 물질 순환과 에너지 흐름의 결과로 나타나는 현상을 논증할 수 있다. | [통합과학1 Ⅲ-1 01 모래 한 알의 여행](https://wmfsljy-coder.github.io/integrated-science-1/3-1/)<br>[통합과학1 Ⅲ-1 02 세 개의 난로](https://wmfsljy-coder.github.io/integrated-science-1/3-1/) | 12 |
 | 10통과1-03-02 | 지권의 변화를 판구조론 관점에서 해석하고, 에너지 흐름의 결과로 발생하는 지권의 변화가 지구시스템에 미치는 영향을 추론할 수 있다. | [통합과학1 Ⅲ-1 03 갈라지는 땅](https://wmfsljy-coder.github.io/integrated-science-1/3-1/) | 6 |
 | 10통과1-03-03 | 중력의 작용으로 인한 지구 표면과 지구 주위의 다양한 운동을 설명할 수 있다. | [통합과학1 Ⅲ-2 01 피사에서 달까지](https://wmfsljy-coder.github.io/integrated-science-1/3-2/) | 7 |
 | 10통과1-03-04 | 상호작용이 없을 때 물체가 가속되지 않음을 알고, 충격량과 운동량의 관계를 충돌 관련 안전장치와 스포츠에 적용할 수 있다. | [통합과학1 Ⅲ-2 02 엘리베이터 저울](https://wmfsljy-coder.github.io/integrated-science-1/3-2/)<br>[통합과학1 Ⅲ-2 03 충돌 실험실](https://wmfsljy-coder.github.io/integrated-science-1/3-2/) | 12 |
-| 10통과1-03-05 | 생명 시스템을 유지하기 위해서 다양한 화학 반응과 물질 출입이 필요함을 이해하고, 일상생활에서 활용되는 화학 반응 사례를 조사하여 발표할 수 있다. | [통합과학1 Ⅲ-3 01 익지 않는 김치](https://wmfsljy-coder.github.io/integrated-science-1/3-3/)<br>[통합과학1 Ⅲ-3 02 빠진 살은 어디로 갔을까](https://wmfsljy-coder.github.io/integrated-science-1/3-3/) | 11 |
+| 10통과1-03-05 | 생명 시스템을 유지하기 위해서 다양한 화학 반응과 물질 출입이 필요함을 이해하고, 일상생활에서 활용되는 화학 반응 사례를 조사하여 발표할 수 있다. | [통합과학1 Ⅲ-3 01 익지 않는 김치](https://wmfsljy-coder.github.io/integrated-science-1/3-3/)<br>[통합과학1 Ⅲ-3 02 빠진 살은 어디로 갔을까](https://wmfsljy-coder.github.io/integrated-science-1/3-3/) | 13 |
 | 10통과1-03-06 | 생명 시스템의 유지에 필요한 세포 내 정보의 흐름을 유전자로부터 단백질이 만들어지는 과정을 중심으로 설명할 수 있다. | [통합과학1 Ⅲ-3 03 한 글자가 바뀌면](https://wmfsljy-coder.github.io/integrated-science-1/3-3/) | 7 |
 
 ## 통합과학2
@@ -50,13 +50,13 @@
 | 성취기준 | 내용 | 다루는 이야기 | 문항 |
 | --- | --- | --- | --- |
 | 10통과2-01-01 | 지질시대를 통해 지구 환경이 끊임없이 변화해 왔으며 이러한 환경 변화가 생물다양성에 미치는 영향을 추론할 수 있다. | [통합과학2 Ⅰ-1 01 1센티미터의 점토층](https://wmfsljy-coder.github.io/integrated-science-2/1-1/) | 7 |
-| 10통과2-01-02 | 변이의 발생과 자연선택 과정을 통해 생물의 진화가 일어나고, 진화의 과정을 통해 생물다양성이 형성되었음을 추론할 수 있다. | [통합과학2 Ⅰ-1 02 가뭄이 지나간 섬](https://wmfsljy-coder.github.io/integrated-science-2/1-1/)<br>[통합과학2 Ⅰ-1 03 한 가지만 심은 밭](https://wmfsljy-coder.github.io/integrated-science-2/1-1/) | 13 |
+| 10통과2-01-02 | 변이의 발생과 자연선택 과정을 통해 생물의 진화가 일어나고, 진화의 과정을 통해 생물다양성이 형성되었음을 추론할 수 있다. | [통합과학2 Ⅰ-1 02 가뭄이 지나간 섬](https://wmfsljy-coder.github.io/integrated-science-2/1-1/)<br>[통합과학2 Ⅰ-1 03 한 가지만 심은 밭](https://wmfsljy-coder.github.io/integrated-science-2/1-1/) | 15 |
 | 10통과2-01-03 | 자연과 인류의 역사에 큰 변화를 가져온 광합성, 화석 연료 사용, 철의 제련 등에서 공통점을 찾아 산화와 환원을 이해하고, 생활 주변의 다양한 변화를 산화와 환원의 특징과 규칙성으로 분석할 수 있다. | [통합과학2 Ⅰ-2 01 붉은 돌에서 철을 꺼내라](https://wmfsljy-coder.github.io/integrated-science-2/1-2/) | 7 |
-| 10통과2-01-04 | 대표적인 산·염기 물질의 특징을 알고, 산과 염기를 혼합할 때 나타나는 중화 반응을 생활 속에서 이용할 수 있다. | [통합과학2 Ⅰ-2 02 물고기가 사라진 호수](https://wmfsljy-coder.github.io/integrated-science-2/1-2/) | 7 |
+| 10통과2-01-04 | 대표적인 산·염기 물질의 특징을 알고, 산과 염기를 혼합할 때 나타나는 중화 반응을 생활 속에서 이용할 수 있다. | [통합과학2 Ⅰ-2 02 물고기가 사라진 호수](https://wmfsljy-coder.github.io/integrated-science-2/1-2/) | 8 |
 | 10통과2-01-05 | 생활 주변에서 에너지를 흡수하거나 방출하는 현상을 찾아 에너지의 흡수·방출이 우리 생활에 어떻게 이용되는지 토의할 수 있다. | [통합과학2 Ⅰ-2 03 불 없이 따뜻하게, 얼음 없이 차갑게](https://wmfsljy-coder.github.io/integrated-science-2/1-2/) | 7 |
 | 10통과2-02-01 | 생태계 구성요소를 이해하고 생물과 환경 사이의 상호 관계를 설명할 수 있다. | [통합과학2 Ⅱ-1 01 한 나무, 두 가지 잎](https://wmfsljy-coder.github.io/integrated-science-2/2-1/) | 6 |
 | 10통과2-02-02 | 먹이 관계와 생태 피라미드를 중심으로 생태계 평형이 유지되는 과정을 이해하고, 환경의 변화가 생태계에 미칠 수 있는 영향에 대해 협력적으로 소통할 수 있다. | [통합과학2 Ⅱ-1 02 늑대가 돌아왔다](https://wmfsljy-coder.github.io/integrated-science-2/2-1/) | 7 |
-| 10통과2-02-03 | 온실효과 강화로 인한 지구온난화의 메커니즘을 이해하고, 엘니뇨, 사막화 등과 같은 현상이 지구 환경과 인간 생활에 미치는 영향과 대처 방안을 분석할 수 있다. | [통합과학2 Ⅱ-1 03 2℃의 문턱](https://wmfsljy-coder.github.io/integrated-science-2/2-1/) | 7 |
+| 10통과2-02-03 | 온실효과 강화로 인한 지구온난화의 메커니즘을 이해하고, 엘니뇨, 사막화 등과 같은 현상이 지구 환경과 인간 생활에 미치는 영향과 대처 방안을 분석할 수 있다. | [통합과학2 Ⅱ-1 03 2℃의 문턱](https://wmfsljy-coder.github.io/integrated-science-2/2-1/) | 8 |
 | 10통과2-02-04 | 태양에서 수소 핵융합 반응을 통해 질량 일부가 에너지로 바뀌고, 그중 일부가 지구에서 에너지 흐름을 일으키며 다양한 에너지로 전환되는 과정을 추론할 수 있다. | [통합과학2 Ⅱ-2 01 태양은 석탄 덩어리일까](https://wmfsljy-coder.github.io/integrated-science-2/2-2/) | 7 |
 | 10통과2-02-05 | 발전기에서 운동 에너지가 전기 에너지로 전환되는 과정을 이해하고, 열원으로서 화석 연료, 핵에너지를 이용하는 발전소가 인간 생활에 미치는 영향을 조사·발표할 수 있다. | [통합과학2 Ⅱ-2 02 불 꺼진 섬](https://wmfsljy-coder.github.io/integrated-science-2/2-2/) | 7 |
 | 10통과2-02-06 | 에너지 효율의 의미와 중요성을 이해하고, 지속가능한 발전과 지구 환경 문제 해결에 신재생에너지 기술을 활용하는 방안을 탐색할 수 있다. | [통합과학2 Ⅱ-2 03 사라진 98](https://wmfsljy-coder.github.io/integrated-science-2/2-2/) | 7 |
@@ -96,7 +96,7 @@
 | 12기환01-03 | 기후변화가 생태계와 우리의 생활환경에 영향을 미친 사례를 조사하여 발표할 수 있다. | [기후변화와 환경생태 Ⅰ 03 실잠자리가 북쪽으로 온 까닭](https://wmfsljy-coder.github.io/climate-change-ecology/1/) | 6 |
 | 12기환02-01 | 기후위기가 일어나는 주요 원인을 이해하고, 기후위기의 심각성을 인식할 수 있다. | [기후변화와 환경생태 Ⅱ 01 녹는 땅, 차오르는 바다](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 2 |
 | 12기환02-02 | 빙상의 융해와 열팽창으로 인한 해수면 상승을 기후변화와 연계하여 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 01 녹는 땅, 차오르는 바다](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 4 |
-| 12기환02-03 | 극한 기상 현상의 종류와 원인을 이해하고, 극한 기상 현상이 환경생태에 미친 영향을 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 02 2100년의 일기 예보](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 4 |
+| 12기환02-03 | 극한 기상 현상의 종류와 원인을 이해하고, 극한 기상 현상이 환경생태에 미친 영향을 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 02 2100년의 일기 예보](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 5 |
 | 12기환02-04 | 기후변화 시나리오에 따른 미래 생태계 변화 예측 보고서를 찾아보고, 미래의 기후와 생태계를 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 02 2100년의 일기 예보](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 3 |
 | 12기환02-05 | 꽃의 개화 시기 변화 자료를 조사하고, 개화 시기 변화가 우리 생활에 끼치는 영향을 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 03 39만 봉군이 사라진 겨울](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 4 |
 | 12기환02-06 | 꿀벌을 비롯한 곤충의 개체 수 감소 원인을 기후변화와 연계하여 설명할 수 있다. | [기후변화와 환경생태 Ⅱ 03 39만 봉군이 사라진 겨울](https://wmfsljy-coder.github.io/climate-change-ecology/2/) | 2 |
@@ -131,28 +131,28 @@
 
 | 성취기준 | 내용 | 다루는 이야기 | 문항 |
 | --- | --- | --- | --- |
-| 12지구01-01 | 해수의 물리적, 화학적 성질을 이해하고, 실측 자료를 활용하여 해수의 온도, 염분, 밀도, 용존 산소량 등의 분포를 분석·해석할 수 있다. | [지구과학 Ⅰ-1 01 바람과 어긋난 부표](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 6 |
+| 12지구01-01 | 해수의 물리적, 화학적 성질을 이해하고, 실측 자료를 활용하여 해수의 온도, 염분, 밀도, 용존 산소량 등의 분포를 분석·해석할 수 있다. | [지구과학 Ⅰ-1 01 바람과 어긋난 부표](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 7 |
 | 12지구01-02 | 심층 순환의 발생 원리와 분포를 알고, 표층 순환 및 기후변화의 관련성을 추론할 수 있다. | [지구과학 Ⅰ-1 02 1,000년을 도는 물](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 5 |
-| 12지구01-03 | 중위도 저기압과 고기압이 통과할 때 날씨의 변화를 일기도, 위성 영상, 레이더 영상을 종합하여 예측할 수 있다. | [지구과학 Ⅰ-1 03 일기도 세 장](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 5 |
+| 12지구01-03 | 중위도 저기압과 고기압이 통과할 때 날씨의 변화를 일기도, 위성 영상, 레이더 영상을 종합하여 예측할 수 있다. | [지구과학 Ⅰ-1 03 일기도 세 장](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 6 |
 | 12지구01-04 | 태풍의 발생, 이동, 소멸 과정 및 태풍 영향권에서 날씨를 예측하고, 악기상의 생성 메커니즘과 대처 방안을 제시할 수 있다. | [지구과학 Ⅰ-1 04 매미가 오던 밤](https://wmfsljy-coder.github.io/earth-science-2/1-1/) | 5 |
 | 12지구01-05 | 해수의 용승과 침강, 엘니뇨-남방진동(ENSO)의 현상 진행 과정 및 관련 현상을 설명할 수 있다. | [지구과학 Ⅰ-2 01 멸치가 사라진 해](https://wmfsljy-coder.github.io/earth-science-2/1-2/) | 7 |
 | 12지구01-06 | 기후변화의 원인을 자연적·인위적 요인으로 구분하여 설명하고, 인간 활동에 의한 기후변화 문제를 해결하는 방법을 탐색할 수 있다. | [지구과학 Ⅰ-2 02 기후를 흔드는 것들](https://wmfsljy-coder.github.io/earth-science-2/1-2/)<br>[지구과학 Ⅰ-2 03 탄소를 줄이는 회의](https://wmfsljy-coder.github.io/earth-science-2/1-2/) | 11 |
 | 12지구02-01 | 지층 형성의 선후 관계를 결정짓는 법칙들을 활용하여 상대 연령을 비교하고, 절대 연령을 구할 수 있다. | [지구과학 Ⅱ-1 01 절벽에 적힌 순서](https://wmfsljy-coder.github.io/earth-science-2/2-1/)<br>[지구과학 Ⅱ-1 02 반으로, 또 반으로](https://wmfsljy-coder.github.io/earth-science-2/2-1/) | 11 |
-| 12지구02-02 | 지질시대를 기(紀) 수준에서 구분하고, 지층과 화석을 통해 생물과 환경 변화를 해석할 수 있다. | [지구과학 Ⅱ-1 03 다섯 번의 대멸종과 화석 달력](https://wmfsljy-coder.github.io/earth-science-2/2-1/) | 7 |
+| 12지구02-02 | 지질시대를 기(紀) 수준에서 구분하고, 지층과 화석을 통해 생물과 환경 변화를 해석할 수 있다. | [지구과학 Ⅱ-1 03 다섯 번의 대멸종과 화석 달력](https://wmfsljy-coder.github.io/earth-science-2/2-1/) | 9 |
 | 12지구02-03 | 변동대에서 마그마 생성과 조성에 따른 화성암 생성을 설명할 수 있다. | [지구과학 Ⅱ-2 01 같은 마그마, 다른 돌](https://wmfsljy-coder.github.io/earth-science-2/2-2/) | 6 |
-| 12지구02-04 | 변성작용의 종류와 지각 변동에 따른 구조를 변동대와 관련지어 설명하고, 암석 순환을 추론할 수 있다. | [지구과학 Ⅱ-2 02 돌 한 덩이의 일생](https://wmfsljy-coder.github.io/earth-science-2/2-2/) | 5 |
+| 12지구02-04 | 변성작용의 종류와 지각 변동에 따른 구조를 변동대와 관련지어 설명하고, 암석 순환을 추론할 수 있다. | [지구과학 Ⅱ-2 02 돌 한 덩이의 일생](https://wmfsljy-coder.github.io/earth-science-2/2-2/) | 7 |
 | 12지구02-05 | 지질공원의 지질학적 형성 과정을 추론하고, 지속가능한 발전방안을 제안할 수 있다. | [지구과학 Ⅱ-2 03 지질공원 해설사](https://wmfsljy-coder.github.io/earth-science-2/2-2/) | 6 |
 | 12지구03-01 | 태양-지구-달 시스템에서의 식 현상을 이해하고 모형으로 행성의 겉보기 운동을 설명할 수 있다. | [지구과학 Ⅲ-1 01 거꾸로 가는 별](https://wmfsljy-coder.github.io/earth-science-2/3-1/)<br>[지구과학 Ⅲ-1 02 해 지고 나서 한 시간](https://wmfsljy-coder.github.io/earth-science-2/3-1/)<br>[지구과학 Ⅲ-1 03 그림자가 지나간 자리](https://wmfsljy-coder.github.io/earth-science-2/3-1/) | 18 |
 | 12지구03-02 | 별의 분광형 결정 및 분류 과정을 이해하고, 흑체복사 법칙으로 별의 물리량을 추론할 수 있다. | [지구과학 Ⅲ-2 01 여자들의 별 목록](https://wmfsljy-coder.github.io/earth-science-2/3-2/) | 6 |
 | 12지구03-03 | 다양한 질량의 별 진화 과정을 H-R도에 나타내고 해석할 수 있다. | [지구과학 Ⅲ-2 02 질량이 정한 일생](https://wmfsljy-coder.github.io/earth-science-2/3-2/) | 6 |
 | 12지구03-04 | 허블의 은하 분류 체계에 따른 특징을 비교하고 특이 은하의 관측적 특징을 추론할 수 있다. | [지구과학 Ⅲ-2 03 은하 동물원](https://wmfsljy-coder.github.io/earth-science-2/3-2/) | 5 |
-| 12지구03-05 | 허블-르메트르 법칙으로 우주의 팽창을 이해하고 우주 진화의 다양한 설명 체계를 비교할 수 있다. | [지구과학 Ⅲ-2 04 팽창하는 우주](https://wmfsljy-coder.github.io/earth-science-2/3-2/) | 6 |
+| 12지구03-05 | 허블-르메트르 법칙으로 우주의 팽창을 이해하고 우주 진화의 다양한 설명 체계를 비교할 수 있다. | [지구과학 Ⅲ-2 04 팽창하는 우주](https://wmfsljy-coder.github.io/earth-science-2/3-2/) | 8 |
 
 ## 지구시스템과학1
 
 | 성취기준 | 내용 | 다루는 이야기 | 문항 |
 | --- | --- | --- | --- |
-| 12지시01-01 | 지구의 탄생 이후 지구 대기, 원시 바다, 생명체 탄생 등의 과정을 통한 지구시스템 각 권역의 형성 과정을 추론할 수 있다. | [지구시스템과학1 Ⅰ-1 01 세 행성의 갈림길](https://wmfsljy-coder.github.io/earth-system-1/1-1/)<br>[지구시스템과학1 Ⅰ-1 02 25억 년 된 줄무늬](https://wmfsljy-coder.github.io/earth-system-1/1-1/) | 8 |
+| 12지시01-01 | 지구의 탄생 이후 지구 대기, 원시 바다, 생명체 탄생 등의 과정을 통한 지구시스템 각 권역의 형성 과정을 추론할 수 있다. | [지구시스템과학1 Ⅰ-1 01 세 행성의 갈림길](https://wmfsljy-coder.github.io/earth-system-1/1-1/)<br>[지구시스템과학1 Ⅰ-1 02 25억 년 된 줄무늬](https://wmfsljy-coder.github.io/earth-system-1/1-1/) | 9 |
 | 12지시01-02 | 지구시스템이 진화해온 역사에서 물, 탄소, 산소의 순환 과정을 통해 지권, 수권, 기권이 변화해 왔음을 추적할 수 있다. | [지구시스템과학1 Ⅰ-1 02 25억 년 된 줄무늬](https://wmfsljy-coder.github.io/earth-system-1/1-1/)<br>[지구시스템과학1 Ⅰ-1 03 눈덩이 지구를 녹인 것](https://wmfsljy-coder.github.io/earth-system-1/1-1/) | 10 |
 | 12지시01-03 | 판구조론의 발달사와 관련지어 판을 움직이는 맨틀의 상부 운동과 플룸에 의한 구조 운동을 구분할 수 있다. | [지구시스템과학1 Ⅰ-2 01 대륙을 움직인 범인](https://wmfsljy-coder.github.io/earth-system-1/1-2/)<br>[지구시스템과학1 Ⅰ-2 02 굽은 화산 열](https://wmfsljy-coder.github.io/earth-system-1/1-2/) | 12 |
 | 12지시01-04 | 암석의 순환 과정에서 화산 활동의 역할과 화산 활동으로 생성되는 암석의 특성을 추론할 수 있다. | [지구시스템과학1 Ⅰ-2 03 한라산과 백두산](https://wmfsljy-coder.github.io/earth-system-1/1-2/) | 5 |
@@ -168,7 +168,7 @@
 | 12지시02-04 | 조석의 발생 과정을 이해하고 자료 해석을 통해 각 지역에서의 조석 양상을 설명할 수 있다. | [지구시스템과학 Ⅱ-1 04 바다가 갈라지는 날](https://wmfsljy-coder.github.io/earth-system-2/2-1/) | 6 |
 | 12지시03-01 | 대기를 구성하는 기체들이 선택적 흡수체임을 이해하고, 온실효과 및 태양 자외선 차단 효과, 물의 존재 등으로 지구 생명체 존재 조건을 추론할 수 있다. | [지구시스템과학 Ⅱ-2 01 달 기지 설계도](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 4 |
 | 12지시03-02 | 지표와 대기의 열 출입과 관련된 물리 과정 및 전 지구 평균 열수지를 해석할 수 있다. | [지구시스템과학 Ⅱ-2 01 달 기지 설계도](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 2 |
-| 12지시03-03 | 기온의 연직 분포와 대기의 안정도와의 관계를 이해하고, 단열변화를 통해 안개나 구름이 생성되는 과정 및 강수 과정을 분석할 수 있다. | [지구시스템과학 Ⅱ-2 02 산을 넘은 바람](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 7 |
+| 12지시03-03 | 기온의 연직 분포와 대기의 안정도와의 관계를 이해하고, 단열변화를 통해 안개나 구름이 생성되는 과정 및 강수 과정을 분석할 수 있다. | [지구시스템과학 Ⅱ-2 02 산을 넘은 바람](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 8 |
 | 12지시03-04 | 기압의 연직 분포로 정역학적 균형을 이해하고, 대기 중 연직 운동의 발생 원인을 추론할 수 있다. | [지구시스템과학 Ⅱ-2 03 하늘에 멈춰 선 기구](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 5 |
 | 12지시03-05 | 지균풍, 경도풍, 지상풍의 발생 원리와 관련된 힘의 작용을 설명할 수 있다. | [지구시스템과학 Ⅱ-2 04 제트 기류를 읽는 사람](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 3 |
 | 12지시03-06 | 행성파의 발달 과정을 이해하고, 지상 고·저기압 발달에서 편서풍 파동의 역할을 평가할 수 있다. | [지구시스템과학 Ⅱ-2 04 제트 기류를 읽는 사람](https://wmfsljy-coder.github.io/earth-system-2/2-2/) | 2 |
@@ -200,35 +200,35 @@
 
 ## 단원별 지도안
 
-- [통합과학1 Ⅰ-1 과학의 기본량](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 20
-- [통합과학1 Ⅰ-2 과학의 측정과 우리 사회](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 19
-- [통합과학1 Ⅱ-1 자연의 구성 원소](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 19
+- [통합과학1 Ⅰ-1 과학의 기본량](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 22
+- [통합과학1 Ⅰ-2 과학의 측정과 우리 사회](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 20
+- [통합과학1 Ⅱ-1 자연의 구성 원소](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 21
 - [통합과학1 Ⅱ-2 물질의 규칙성과 성질](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/2-2/LESSON.md) — 이야기 4편, 문항 20
-- [통합과학1 Ⅲ-1 지구시스템](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/3-1/LESSON.md) — 이야기 3편, 문항 16
+- [통합과학1 Ⅲ-1 지구시스템](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/3-1/LESSON.md) — 이야기 3편, 문항 18
 - [통합과학1 Ⅲ-2 역학 시스템](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/3-2/LESSON.md) — 이야기 3편, 문항 19
-- [통합과학1 Ⅲ-3 생명 시스템](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/3-3/LESSON.md) — 이야기 3편, 문항 18
-- [통합과학2 Ⅰ-1 지구 환경 변화와 생물다양성](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 20
-- [통합과학2 Ⅰ-2 화학 변화](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 21
-- [통합과학2 Ⅱ-1 생태계와 환경 변화](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 20
+- [통합과학1 Ⅲ-3 생명 시스템](https://github.com/wmfsljy-coder/integrated-science-1/blob/main/3-3/LESSON.md) — 이야기 3편, 문항 20
+- [통합과학2 Ⅰ-1 지구 환경 변화와 생물다양성](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 22
+- [통합과학2 Ⅰ-2 화학 변화](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 22
+- [통합과학2 Ⅱ-1 생태계와 환경 변화](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 21
 - [통합과학2 Ⅱ-2 에너지 전환과 활용](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/2-2/LESSON.md) — 이야기 3편, 문항 21
 - [통합과학2 Ⅲ-1 과학 기술의 활용](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/3-1/LESSON.md) — 이야기 2편, 문항 15
 - [통합과학2 Ⅲ-2 과학 기술의 발전과 쟁점](https://github.com/wmfsljy-coder/integrated-science-2/blob/main/3-2/LESSON.md) — 이야기 2편, 문항 14
-- [지구과학 Ⅰ-1 해수의 순환과 대기의 변화](https://github.com/wmfsljy-coder/earth-science-2/blob/main/1-1/LESSON.md) — 이야기 4편, 문항 21
+- [지구과학 Ⅰ-1 해수의 순환과 대기의 변화](https://github.com/wmfsljy-coder/earth-science-2/blob/main/1-1/LESSON.md) — 이야기 4편, 문항 23
 - [지구과학 Ⅰ-2 대기와 해양의 상호작용과 기후 변화](https://github.com/wmfsljy-coder/earth-science-2/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 18
-- [지구과학 Ⅱ-1 지구의 역사](https://github.com/wmfsljy-coder/earth-science-2/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 18
-- [지구과학 Ⅱ-2 한반도의 암석](https://github.com/wmfsljy-coder/earth-science-2/blob/main/2-2/LESSON.md) — 이야기 3편, 문항 17
+- [지구과학 Ⅱ-1 지구의 역사](https://github.com/wmfsljy-coder/earth-science-2/blob/main/2-1/LESSON.md) — 이야기 3편, 문항 20
+- [지구과학 Ⅱ-2 한반도의 암석](https://github.com/wmfsljy-coder/earth-science-2/blob/main/2-2/LESSON.md) — 이야기 3편, 문항 19
 - [지구과학 Ⅲ-1 태양계 행성의 겉보기 운동](https://github.com/wmfsljy-coder/earth-science-2/blob/main/3-1/LESSON.md) — 이야기 3편, 문항 18
-- [지구과학 Ⅲ-2 별과 우주의 진화](https://github.com/wmfsljy-coder/earth-science-2/blob/main/3-2/LESSON.md) — 이야기 4편, 문항 23
-- [지구시스템과학1 Ⅰ-1 지구의 탄생과 진화](https://github.com/wmfsljy-coder/earth-system-1/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 18
+- [지구과학 Ⅲ-2 별과 우주의 진화](https://github.com/wmfsljy-coder/earth-science-2/blob/main/3-2/LESSON.md) — 이야기 4편, 문항 25
+- [지구시스템과학1 Ⅰ-1 지구의 탄생과 진화](https://github.com/wmfsljy-coder/earth-system-1/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 19
 - [지구시스템과학1 Ⅰ-2 판 구조 운동과 지구 내부 구조](https://github.com/wmfsljy-coder/earth-system-1/blob/main/1-2/LESSON.md) — 이야기 4편, 문항 23
 - [지구시스템과학 Ⅱ-1 해수의 운동](https://github.com/wmfsljy-coder/earth-system-2/blob/main/2-1/LESSON.md) — 이야기 4편, 문항 23
-- [지구시스템과학 Ⅱ-2 강수 과정과 대기의 운동](https://github.com/wmfsljy-coder/earth-system-2/blob/main/2-2/LESSON.md) — 이야기 4편, 문항 23
+- [지구시스템과학 Ⅱ-2 강수 과정과 대기의 운동](https://github.com/wmfsljy-coder/earth-system-2/blob/main/2-2/LESSON.md) — 이야기 4편, 문항 24
 - [행성우주과학1 Ⅰ-1 우주 탐사와 태양 활동](https://github.com/wmfsljy-coder/planet-space-1/blob/main/1-1/LESSON.md) — 이야기 3편, 문항 17
 - [행성우주과학 Ⅰ-2 태양계 천체와 외계 행성](https://github.com/wmfsljy-coder/planet-space-1/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 18
 - [행성우주과학 Ⅱ-1 태양과 별의 관측](https://github.com/wmfsljy-coder/planet-space-2/blob/main/2-1/LESSON.md) — 이야기 4편, 문항 21
 - [행성우주과학 Ⅱ-2 은하와 우주](https://github.com/wmfsljy-coder/planet-space-2/blob/main/2-2/LESSON.md) — 이야기 4편, 문항 23
 - [기후변화와 환경생태 Ⅰ 기후와 환경생태의 특성](https://github.com/wmfsljy-coder/climate-change-ecology/blob/main/1/LESSON.md) — 이야기 3편, 문항 20
-- [기후변화와 환경생태 Ⅱ 기후위기와 환경생태 변화](https://github.com/wmfsljy-coder/climate-change-ecology/blob/main/2/LESSON.md) — 이야기 4편, 문항 26
+- [기후변화와 환경생태 Ⅱ 기후위기와 환경생태 변화](https://github.com/wmfsljy-coder/climate-change-ecology/blob/main/2/LESSON.md) — 이야기 4편, 문항 27
 - [기후변화와 환경생태 Ⅲ 기후위기에 대응하는 우리의 노력](https://github.com/wmfsljy-coder/climate-change-ecology/blob/main/3/LESSON.md) — 이야기 4편, 문항 23
 - [융합과학 탐구 Ⅰ 융합과학 탐구의 이해](https://github.com/wmfsljy-coder/convergence-science-inquiry/blob/main/1/LESSON.md) — 이야기 4편, 문항 22
 - [융합과학 탐구 Ⅱ 융합과학 탐구의 과정](https://github.com/wmfsljy-coder/convergence-science-inquiry/blob/main/2/LESSON.md) — 이야기 4편, 문항 23
@@ -239,7 +239,7 @@
 - [과학탐구실험1 Ⅰ-1 과학의 본성과 역사 속의 과학 탐구](https://github.com/wmfsljy-coder/science-inquiry-1/blob/main/1-1/LESSON.md) — 이야기 2편, 문항 17
 - [과학탐구실험1 Ⅰ-2 과학 탐구의 과정과 절차](https://github.com/wmfsljy-coder/science-inquiry-1/blob/main/1-2/LESSON.md) — 이야기 3편, 문항 19
 - [과학탐구실험1 Ⅰ-3 Ⅰ. 과학의 본성과 역사 속의 과학 탐구](https://github.com/wmfsljy-coder/science-inquiry-1/blob/main/1-3/LESSON.md) — 이야기 3편, 문항 18
-- [과학탐구실험1 Ⅰ-4 Ⅱ. 과학 탐구의 과정과 절차](https://github.com/wmfsljy-coder/science-inquiry-1/blob/main/1-4/LESSON.md) — 이야기 4편, 문항 22
+- [과학탐구실험1 Ⅰ-4 Ⅱ. 과학 탐구의 과정과 절차](https://github.com/wmfsljy-coder/science-inquiry-1/blob/main/1-4/LESSON.md) — 이야기 4편, 문항 23
 - [과학탐구실험2 Ⅰ-1 생활 속의 과학 탐구](https://github.com/wmfsljy-coder/science-inquiry-2/blob/main/2-1/LESSON.md) — 이야기 2편, 문항 16
 - [과학탐구실험2 Ⅱ-1 미래 사회와 첨단 과학 탐구](https://github.com/wmfsljy-coder/science-inquiry-2/blob/main/2-2/LESSON.md) — 이야기 2편, 문항 16
 - [과학탐구실험2 Ⅰ-2 Ⅰ. 생활 속의 과학 탐구](https://github.com/wmfsljy-coder/science-inquiry-2/blob/main/2-3/LESSON.md) — 이야기 4편, 문항 21
