@@ -261,8 +261,8 @@ function classAdd_(A, s, w) {
   var Q = s.quiz || {};
   Object.keys(Q).forEach(function (id) {
     var x = Q[id] || {}; if (!(x.r === 1 || x.n || x.sh)) return;
-    var q = A.quiz[id] || (A.quiz[id] = { n: 0, first: 0, later: 0 });
-    q.n++; if (x.r === 1 && !x.n && !x.sh) q.first++; else if (x.r === 1) q.later++;
+    var q = A.quiz[id] || (A.quiz[id] = { n: 0, first: 0, later: 0, ov: 0 });
+    q.n++; if (x.r === 1 && !x.n && !x.sh) q.first++; else { if (x.r === 1) q.later++; if (x.cf === 2) q.ov = (q.ov || 0) + 1; }
   });
   ['lab', 'real'].forEach(function (lk) {
     var L = s[lk] || {};

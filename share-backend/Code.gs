@@ -271,7 +271,7 @@ function doPost(e) {
       if (!ec || !eu) continue;
       var rr = {}; try { rr = JSON.parse(q[5] || '{}'); } catch (err2) {}
       var ak = eu + '\u0000' + ec;
-      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0, pc: {}, miss: {} };
+      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0, pc: {}, miss: {}, over: {} };
       var A = agg[ak]; A.n++;
       if (/응용 \d+\/\d+ 해결/.test(String(rr.rLab || '')) && !/응용 0\//.test(String(rr.rLab))) A.lab++;
       var s0 = String(rr._ev || '');
@@ -297,6 +297,8 @@ function doPost(e) {
             pcAdd_(A.pc, it);
           } else if (tag === 'x:') {
             if (/^[\w-]{1,8}$/.test(it)) A.miss[it] = (A.miss[it] || 0) + 1;    // 처음에 틀린 문항
+          } else if (tag === 'o:') {
+            if (/^[\w-]{1,8}$/.test(it)) A.over[it] = (A.over[it] || 0) + 1;    // 확실하다고 했는데 틀린 문항
           }
         });
       });
@@ -321,7 +323,7 @@ function doPost(e) {
       var w = sv[y];
       if (String(w[7]).trim() || String(w[1]) !== wc || String(w[3]) !== wu) continue;
       var wr = {}; try { wr = JSON.parse(w[5] || '{}'); } catch (err3) {}
-      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {}, x: [], r: null };
+      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {}, x: [], o: [], r: null };
       String(wr._ev || '').split('|').forEach(function (part) {
         var tag = part.slice(0, 2), body = part.slice(2);
         if (!body) return;
@@ -332,6 +334,7 @@ function doPost(e) {
           else if (tag === 'h:') { var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) one.h = [+hm[1], +hm[2], +hm[3]]; }
           else if (tag === 'p:') { var pm = PC_RE.exec(it); if (pm) one.p[pm[1]] = [pm[2], pm[3] == null ? null : +pm[3]]; }
           else if (tag === 'x:') { if (/^[\w-]{1,8}$/.test(it)) one.x.push(it); }
+          else if (tag === 'o:') { if (/^[\w-]{1,8}$/.test(it)) one.o.push(it); }
           else if (tag === 'r:') { var rm = /^(\d+)\/(\d+)$/.exec(it); if (rm) one.r = [+rm[1], +rm[2]]; }
         });
       });

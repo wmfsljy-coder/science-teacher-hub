@@ -383,6 +383,15 @@
       });
       b2.appendChild(ol);
     }
+    /* 확실하다고 했는데 틀린 문항(과신) — 학생이 답하기 전에 ‘확실’을 고르고 처음에 틀린 문항 */
+    var over = {}; L.forEach(function (s) { (s.o || []).forEach(function (id) { over[id] = (over[id] || 0) + 1; }); });
+    var otop = Object.keys(over).sort(function (a, b) { return over[b] - over[a] || (a < b ? -1 : 1); }).slice(0, 5);
+    if (otop.length) {
+      b2.appendChild(el("p", "q", "🎯 확실하다고 했는데 틀린 문항 — 오개념이 굳어 있을 수 있는 곳입니다."));
+      var ol3 = el("ol", "gl-list");
+      otop.forEach(function (id) { var q = IT.q[id], li = el("li"); li.appendChild(el("b", null, over[id] + "명 ")); li.appendChild(el("span", "m", id + (q ? " · " + (LV[q[0]] || "") + " · " + q[1] + " " : " "))); if (q) li.appendChild(document.createTextNode(q[2])); ol3.appendChild(li); });
+      b2.appendChild(ol3);
+    }
     box.appendChild(b2);
     /* 3) 멈춘 장면 — 이야기를 다 풀지 못한 학생이 처음 막힌 곳 */
     var st = {}, done = {}, tot = {};
