@@ -7,6 +7,8 @@
  *  시트 '설정'   : A1 '교사 열쇠' / B1 에 아무도 모르는 글자. 선생님 화면에서 이 열쇠를 넣어야
  *                  모든 반을 한눈에 볼 수 있다. 시트를 처음 쓸 때 저절로 만들어진다.
  *  시트 '반목록'(선택) : A열에 허용할 반 코드를 적으면 그 반만 받는다. 없으면 모두 받는다.
+ *  시트 '측정값' : 시각 | 반 | 별명 | 단원 | 측정 | 값(JSON {v:[숫자 1~3개], g:잰 자리}) | 숨김
+ *                  단원의 ‘우리 반 측정값’(선택 활동, assets/measure.js)이 올린다. 같은 반·별명·단원·측정은 덮어쓴다.
  *
  *  'share' 의 '숨김' 칸에 아무 글자나 적으면 그 줄은 학생 화면에 나오지 않는다.
  *  한 반을 통째로 지우려면 POST {action:'wipe', key, cls, confirm:'지움'} (되돌릴 수 없다).
@@ -15,6 +17,7 @@
 var SHEET = 'share';
 var LOG = '활동';
 var CONF = '설정';
+var MEASURE = '측정값';
 
 function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -22,6 +25,15 @@ function sheet_() {
   if (!sh) {
     sh = ss.insertSheet(SHEET);
     sh.appendRow(['시각', '반', '별명', '단원', '단원이름', '성과(JSON)', '한 문장', '숨김']);
+  }
+  return sh;
+}
+function measureSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(MEASURE);
+  if (!sh) {
+    sh = ss.insertSheet(MEASURE);
+    sh.appendRow(['시각', '반', '별명', '단원', '측정', '값(JSON)', '숨김']);
   }
   return sh;
 }
@@ -131,6 +143,21 @@ function doGet(e) {
     return out_({ ok: true, units: units });
   }
 
+  /* 한 반의 한 단원 · 한 측정 — 친구들이 올린 측정값 (숨김 칸에 글자가 있으면 빼고) */
+  if (p.action === 'measures') {
+    var mc = cut_(p.cls, 12), mu = cut_(p.unit, 24), mk = cut_(p.key, 12), mitems = [];
+    var msh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MEASURE);
+    var mv = msh ? msh.getDataRange().getValues() : [];
+    for (var mi = 1; mi < mv.length; mi++) {
+      var mr = mv[mi];
+      if (String(mr[1]) !== mc || String(mr[3]) !== mu || String(mr[4]) !== mk || String(mr[6]).trim()) continue;
+      var mo = {}; try { mo = JSON.parse(mr[5] || '{}'); } catch (err4) {}
+      if (mo instanceof Array) mo = { v: mo };
+      mitems.push({ nick: String(mr[2]), v: mo.v || [], g: String(mo.g || ''), t: ms_(mr[0]) });
+    }
+    return out_({ ok: true, items: mitems });
+  }
+
   /* 바로가기 탭 만들기 — 내용은 코드에 박힌 공개 링크뿐이라 열쇠 없이도 된다(이미 최신이면 아무것도 안 한다). */
   if (p.action === 'links') { ensureLinks_(false); return out_({ ok: true, ver: LINKS_VER, n: LINKS.length }); }
 
@@ -196,7 +223,7 @@ function doPost(e) {
   }
 
   /* 수업 효과 — 단원 × 반 마다 완료율·첫 추리 정답률·한 번에 맞힌 비율·막힌 장면. 교사 열쇠가 맞아야 한다.
-     학생 화면이 올린 results._ev ( g:키=1/0,… | e:이야기=푼/전체@막힌 장면,… | q:한 번에/손댄 ) 를 모은다. */
+     학생 화면이 올린 results._ev ( g:키=1/0,… | e:이야기=푼/전체@막힌 장면,… | q:한 번에/손댄 | x:처음에 틀린 문항,… ) 를 모은다. */
   if (d.action === 'evidence') {
     if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var ev = sheet_().getDataRange().getValues(), agg = {};
@@ -207,7 +234,7 @@ function doPost(e) {
       if (!ec || !eu) continue;
       var rr = {}; try { rr = JSON.parse(q[5] || '{}'); } catch (err2) {}
       var ak = eu + '\u0000' + ec;
-      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0, pc: {} };
+      if (!agg[ak]) agg[ak] = { unit: eu, label: String(q[4] || ''), cls: ec, n: 0, withEv: 0, g1: 0, gn: 0, gates: {}, eps: {}, q1: 0, qt: 0, lab: 0, pc: {}, miss: {} };
       var A = agg[ak]; A.n++;
       if (/응용 \d+\/\d+ 해결/.test(String(rr.rLab || '')) && !/응용 0\//.test(String(rr.rLab))) A.lab++;
       var s0 = String(rr._ev || '');
@@ -231,6 +258,8 @@ function doPost(e) {
             var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) { A.ls = (A.ls || 0) + +hm[1]; A.lt = (A.lt || 0) + +hm[2]; A.hs = (A.hs || 0) + +hm[3]; }
           } else if (tag === 'p:') {
             pcAdd_(A.pc, it);
+          } else if (tag === 'x:') {
+            if (/^[\w-]{1,8}$/.test(it)) A.miss[it] = (A.miss[it] || 0) + 1;    // 처음에 틀린 문항
           }
         });
       });
@@ -255,7 +284,7 @@ function doPost(e) {
       var w = sv[y];
       if (String(w[7]).trim() || String(w[1]) !== wc || String(w[3]) !== wu) continue;
       var wr = {}; try { wr = JSON.parse(w[5] || '{}'); } catch (err3) {}
-      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {} };
+      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {}, x: [] };
       String(wr._ev || '').split('|').forEach(function (part) {
         var tag = part.slice(0, 2), body = part.slice(2);
         if (!body) return;
@@ -265,6 +294,7 @@ function doPost(e) {
           else if (tag === 'q:') { var qm = /^(\d+)\/(\d+)$/.exec(it); if (qm) one.q = [+qm[1], +qm[2]]; }
           else if (tag === 'h:') { var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) one.h = [+hm[1], +hm[2], +hm[3]]; }
           else if (tag === 'p:') { var pm = PC_RE.exec(it); if (pm) one.p[pm[1]] = [pm[2], pm[3] == null ? null : +pm[3]]; }
+          else if (tag === 'x:') { if (/^[\w-]{1,8}$/.test(it)) one.x.push(it); }
         });
       });
       st.push(one);
@@ -297,7 +327,7 @@ function doPost(e) {
     var gone = 0;
     var lk = LockService.getScriptLock(); if (!lk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시 시도해 주세요' });
     try {
-      [sheet_(), logSheet_()].forEach(function (sh) {
+      [sheet_(), logSheet_(), measureSheet_()].forEach(function (sh) {
         var vs = sh.getDataRange().getValues();
         for (var r = vs.length - 1; r >= 1; r--) {
           if (String(vs[r][1]) === wc) { sh.deleteRow(r + 1); gone++; }
@@ -305,6 +335,32 @@ function doPost(e) {
       });
     } finally { lk.releaseLock(); }
     return out_({ ok: true, removed: gone });
+  }
+
+  /* 우리 반 측정값(선택 활동) — 숫자 1~3개만 받는다. 같은 반·별명·단원·측정은 덮어쓴다. */
+  if (d.action === 'measure') {
+    var qc = cut_(d.cls, 12), qn = cut_(d.nick, 12), qu = cut_(d.unit, 24), qk = cut_(d.key, 12);
+    if (!qc || !qn || !qu || !qk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
+    if (!allowed_(qc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
+    var qv = (d.v instanceof Array ? d.v : []).slice(0, 3).map(Number).filter(function (x) { return isFinite(x) && Math.abs(x) < 1e7; })
+      .map(function (x) { return Math.round(x * 1000) / 1000; });
+    if (!qv.length) return out_({ ok: false, error: '측정값이 없습니다' });
+    var qg = cut_(d.g, 10).replace(/[<>&"]/g, '');                 // (선택) 잰 자리 같은 무리 이름
+    var qrow = [new Date(), safe_(qc), safe_(qn), safe_(qu), safe_(qk), JSON.stringify(qg ? { v: qv, g: qg } : { v: qv }), ''], qa = false;
+    ensureTz_();
+    var ql = LockService.getScriptLock();
+    if (!ql.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
+    try {
+      var qsh = measureSheet_(), qr = qsh.getDataRange().getValues();
+      for (var qi = 1; qi < qr.length; qi++) {
+        if (String(qr[qi][1]) === qc && String(qr[qi][2]) === qn && String(qr[qi][3]) === qu && String(qr[qi][4]) === qk) {
+          qrow[6] = qr[qi][6];
+          qsh.getRange(qi + 1, 1, 1, qrow.length).setValues([qrow]); qa = true; break;
+        }
+      }
+      if (!qa) qsh.appendRow(qrow);
+    } finally { ql.releaseLock(); }
+    return out_({ ok: true, updated: qa });
   }
 
   if (d.action !== 'post') return out_({ ok: false, error: '알 수 없는 요청' });

@@ -66,6 +66,18 @@
   .steps { color: var(--mist); font-size: 13.5px; line-height: 1.9; margin: 10px 0 0; padding-left: 20px; }
   .steps b { color: var(--ink); }
   .steps code { background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+  .glance { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 12px; margin-top: 6px; }
+  .gl-box { border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--card); }
+  .gl-box h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--ink); }
+  .gl-box .q { font-size: 12.5px; color: var(--mist); line-height: 1.6; margin: 0 0 8px; }
+  .gl-opt { display: grid; grid-template-columns: 1fr 90px 46px; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink); padding: 3px 0; }
+  .gl-opt i { display: block; height: 8px; border-radius: 99px; background: var(--card-2); border: 1px solid var(--line); overflow: hidden; }
+  .gl-opt i b { display: block; height: 100%; background: var(--teal-dim); }
+  .gl-opt.ok { font-weight: 800; }
+  .gl-opt.ok i b { background: var(--brand); }
+  .gl-opt span:last-child { text-align: right; color: var(--mist); font-variant-numeric: tabular-nums; }
+  .gl-list { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.75; color: var(--ink); }
+  .gl-list .m { color: var(--mist); }
   @media (max-width: 780px) { .hero { padding: 34px 18px 8px; } .wrap { padding: 18px 18px 70px; } }
 </style>
 </head>
@@ -189,12 +201,13 @@
       return { unit: r.unit, label: r.label || r.unit, cls: r.cls, n: r.n, ev: r.withEv,
                pre: pct(r.g1, r.gn), preN: r.gn, done: pct(epDone, epN), q1: pct(r.q1, r.qt), qt: r.qt,
                lab: pct(r.lab, r.n), stuck: top ? top + " (" + stuck[top] + "명)" : "–",
-               gates: r.gates.map(function (g) { return g.k + " " + g.ok + "/" + g.n; }).join(" · ") };
+               gates: r.gates.map(function (g) { return g.k + " " + g.ok + "/" + g.n; }).join(" · "),
+               miss: Object.keys(r.miss || {}).sort(function (a, b) { return r.miss[b] - r.miss[a]; }).slice(0, 5).map(function (id) { return id + " " + r.miss[id] + "명"; }).join(" · ") || "–" };
     });
   }
   function csv() {
-    var head = ["단원", "단원이름", "반", "올린 학생", "효과 기록 학생", "첫 추리 정답률", "첫 추리 응답 수", "이야기 완주율", "수준별 문제 한 번에 맞힌 비율", "손댄 문항 수", "응용 실험실 1개 이상 해결", "가장 많이 멈춘 장면", "첫 추리 문항별(맞음/응답)"];
-    var lines = [head].concat(evRows().map(function (r) { return [r.unit, r.label, r.cls, r.n, r.ev, r.pre, r.preN, r.done, r.q1, r.qt, r.lab, r.stuck, r.gates]; }));
+    var head = ["단원", "단원이름", "반", "올린 학생", "효과 기록 학생", "첫 추리 정답률", "첫 추리 응답 수", "이야기 완주율", "수준별 문제 한 번에 맞힌 비율", "손댄 문항 수", "응용 실험실 1개 이상 해결", "가장 많이 멈춘 장면", "첫 추리 문항별(맞음/응답)", "처음에 많이 틀린 문항(10-09부터)"];
+    var lines = [head].concat(evRows().map(function (r) { return [r.unit, r.label, r.cls, r.n, r.ev, r.pre, r.preN, r.done, r.q1, r.qt, r.lab, r.stuck, r.gates, r.miss]; }));
     var txt = String.fromCharCode(0xFEFF) + lines.map(function (l) { return l.map(function (c) { c = String(c); return (c.indexOf(",") >= 0 || c.indexOf("\"") >= 0 || c.indexOf(String.fromCharCode(10)) >= 0) ? "\"" + c.split("\"").join("\"\"") + "\"" : c; }).join(","); }).join(String.fromCharCode(13, 10));
     var a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv;charset=utf-8" }));
@@ -302,9 +315,82 @@
       .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); grp.list = j.students || []; grp.err = ""; paint(); })
       .catch(function (e) { grp.err = "불러오지 못했습니다 (" + e.message + ")"; paint(); });
   }
+  /* 반 한눈에 — 불러온 학생별 기록으로 셈한다: 첫 추리에서 고른 보기, 처음에 틀린 문항, 멈춘 장면.
+     문장은 assets/unit-items-all.js(_tools/make_unit_items.js 가 만든 파일)에서 — 처음 쓸 때 한 번 불러온다. */
+  var ITEMS_ = null;
+  function needItems() {
+    if (ITEMS_ || window.STH_UNIT_ITEMS) { ITEMS_ = window.STH_UNIT_ITEMS; return; }
+    if (needItems.busy) return; needItems.busy = 1;
+    var sc = document.createElement("script"); sc.src = "../assets/unit-items-all.js";
+    sc.onload = function () { ITEMS_ = window.STH_UNIT_ITEMS || {}; paint(); };
+    sc.onerror = function () { ITEMS_ = {}; };
+    document.head.appendChild(sc);
+  }
+  function paintGlance(p, L, unit) {
+    needItems();
+    var IT = (ITEMS_ || {})[unit] || { g: {}, q: {} }, LV = ["", "기본", "발전", "심화"];
+    var h = el("h3", null, "반 한눈에 (" + L.length + "명)"); h.style.cssText = "font-size:15px;margin:16px 0 6px"; p.appendChild(h);
+    var box = el("div", "glance");
+    /* 1) 첫 추리 — 보기마다 고른 학생 수. 맞음(✓)으로 판정된 보기를 굵게 */
+    var keys = Object.keys(IT.g); L.forEach(function (s) { Object.keys(s.g).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
+    keys.forEach(function (k) {
+      var G = IT.g[k] || { t: k, q: "", o: [] }, cnt = [], okIdx = {}, n = 0, noIdx = 0;
+      L.forEach(function (s) { var g = s.g[k]; if (!g) return; n++; if (g[1] == null) { noIdx++; return; } cnt[g[1]] = (cnt[g[1]] || 0) + 1; if (g[0]) okIdx[g[1]] = 1; });
+      if (!n) return;
+      var b = el("div", "gl-box");
+      b.appendChild(el("h4", null, "첫 추리 · " + G.t));
+      if (G.q) b.appendChild(el("p", "q", G.q));
+      var nopt = Math.max(G.o.length, cnt.length);
+      for (var i = 0; i < nopt; i++) {
+        var c = cnt[i] || 0, r = el("div", "gl-opt" + (okIdx[i] ? " ok" : ""));
+        r.appendChild(el("span", null, (G.o[i] || MK.charAt(i)) + (okIdx[i] ? " ✓" : "")));
+        var tr = el("i"), f = el("b"); f.style.width = (n ? c / n * 100 : 0) + "%"; tr.appendChild(f); r.appendChild(tr);
+        r.appendChild(el("span", null, c + "명"));
+        b.appendChild(r);
+      }
+      if (noIdx) b.appendChild(el("p", "q", "고른 보기 기록이 없는 옛 올리기 " + noIdx + "명은 빼고 셌습니다."));
+      box.appendChild(b);
+    });
+    /* 2) 처음에 틀린 문항 — 많이 틀린 순 6개 */
+    var miss = {}, qn = 0;
+    L.forEach(function (s) { if (s.q && s.q[1]) qn++; (s.x || []).forEach(function (id) { miss[id] = (miss[id] || 0) + 1; }); });
+    var top = Object.keys(miss).sort(function (a, b) { return miss[b] - miss[a] || (a < b ? -1 : 1); }).slice(0, 6);
+    var b2 = el("div", "gl-box"); b2.appendChild(el("h4", null, "처음에 많이 틀린 문항"));
+    if (!top.length) b2.appendChild(el("p", "q", qn ? "수준별 문제를 푼 " + qn + "명 가운데 처음에 틀린 문항이 아직 없습니다. (이 기록은 10월 9일 이후 올리기부터 모입니다.)" : "아직 수준별 문제를 푼 기록이 없습니다."));
+    else {
+      b2.appendChild(el("p", "q", "수준별 문제를 푼 " + qn + "명 기준 · 해설을 먼저 본 것도 틀린 것으로 셉니다."));
+      var ol = el("ol", "gl-list");
+      top.forEach(function (id) {
+        var q = IT.q[id], li = el("li");
+        li.appendChild(el("b", null, miss[id] + "명 "));
+        li.appendChild(el("span", "m", id + (q ? " · " + (LV[q[0]] || "") + " · " + q[1] + " " : " ")));
+        if (q) li.appendChild(document.createTextNode(q[2]));
+        ol.appendChild(li);
+      });
+      b2.appendChild(ol);
+    }
+    box.appendChild(b2);
+    /* 3) 멈춘 장면 — 이야기를 다 풀지 못한 학생이 처음 막힌 곳 */
+    var st = {}, done = {}, tot = {};
+    L.forEach(function (s) { Object.keys(s.e).forEach(function (k) { var e = s.e[k]; tot[k] = (tot[k] || 0) + 1; if (e[0] >= e[1]) done[k] = (done[k] || 0) + 1; else if (e[2]) { var kk = k + "|" + e[2]; st[kk] = (st[kk] || 0) + 1; } }); });
+    var b3 = el("div", "gl-box"); b3.appendChild(el("h4", null, "이야기 진행 · 멈춘 장면"));
+    var ol2 = el("ol", "gl-list"); ol2.style.listStyle = "none"; ol2.style.paddingLeft = "0";
+    Object.keys(tot).sort().forEach(function (k) {
+      var nm = /^ep(\w+)$/.exec(k) ? "이야기 " + k.slice(2) : k;
+      var at = Object.keys(st).filter(function (x) { return x.split("|")[0] === k; }).sort(function (a, b) { return st[b] - st[a]; })
+        .map(function (x) { return x.split("|")[1] + "장면 " + st[x] + "명"; });
+      var li = el("li"); li.appendChild(el("b", null, nm + " "));
+      li.appendChild(el("span", "m", "끝까지 " + (done[k] || 0) + "/" + tot[k] + "명" + (at.length ? " · 멈춘 곳: " + at.join(", ") : "")));
+      ol2.appendChild(li);
+    });
+    if (!Object.keys(tot).length) b3.appendChild(el("p", "q", "이야기 기록이 없습니다."));
+    else b3.appendChild(ol2);
+    box.appendChild(b3);
+    p.appendChild(box);
+  }
   function paintGroups(evrows) {
     var p = el("div", "panel");
-    p.appendChild(el("h2", "display", "모둠 편성 · 먼저 가 볼 학생"));
+    p.appendChild(el("h2", "display", "반 한눈에 · 모둠 편성 · 먼저 가 볼 학생"));
     var sub = el("p", "sub");
     sub.innerHTML = "수업 흐름 예: 개인 탐구 15분 → 학생이 <b>우리 반</b> 탭에서 한 번 올리기 → 여기서 모둠 편성 → 모둠 20분 → 전체 공유 5분 → 개인 정리 10분. "
       + "첫 추리에서 <b>서로 다른 보기를 고른 학생</b>이 한 모둠에 섞이도록 나눕니다. 학생이 쓴 글은 불러오지 않습니다.";
@@ -329,6 +415,7 @@
     if (grp.list) {
       var L = grp.list;
       if (!L.length) { p.appendChild(el("p", "empty", "이 단원을 올린 학생이 없습니다.")); out.appendChild(p); return; }
+      paintGlance(p, L, grp.unit);
       /* 먼저 가 볼 학생: 이야기 진행이 가장 더딘 순, 힌트를 많이 본 순 */
       var slow = L.slice().sort(function (a, b) { return progress(a) - progress(b) || ((b.h || [0, 0, 0])[2] - (a.h || [0, 0, 0])[2]); }).slice(0, Math.min(5, L.length));
       var h3 = el("h3", null, "먼저 가 볼 학생"); h3.style.cssText = "font-size:15px;margin:16px 0 6px"; p.appendChild(h3);
@@ -357,7 +444,7 @@
         txt.push((i + 1) + "모둠: " + m.map(function (s) { return s.nick; }).join(", "));
       });
       p.appendChild(gg);
-      p.appendChild(el("p", "sub", "이름 옆 기호는 첫 추리 문항(" + G.keys.join(", ") + ")마다 고른 보기와 맞음(✓)·어긋남(✗)입니다. 보기 기호는 원래 순서 기준이라 학생 화면의 순서와 다를 수 있습니다."));
+      p.appendChild(el("p", "sub", "이름 옆 기호는 첫 추리 문항(" + G.keys.join(", ") + ")마다 고른 보기와 맞음(✓)·어긋남(✗)입니다. 보기는 학생마다 섞여 나오지만 기호(㉠㉡㉢)는 따라가므로 학생 화면의 기호와 같습니다."));
       var b3 = el("button", "btn", "📋 모둠 명단 복사"); b3.type = "button";
       b3.addEventListener("click", function () { var s = txt.join(String.fromCharCode(10)); try { navigator.clipboard.writeText(s); b3.textContent = "복사했습니다"; } catch (e) { window.prompt("복사하세요", s); } });
       p.appendChild(b3);
