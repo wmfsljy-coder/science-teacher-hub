@@ -11,7 +11,7 @@
    ========================================================================= */
 (function () {
   "use strict";
-  var KEY = "sth-acc", SYNC = "sth-accsync-", LOCK_TABS = /수준별 문제|응용 실험실|실제 자료|정리하기/;
+  var KEY = "sth-acc", SYNC = "sth-accsync-", LOCK_TABS = /수준별 문제|응용 실험실|실제 자료|교과서 실험|정리하기/;
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function get(st, k) { try { return JSON.parse(st.getItem(k) || "null"); } catch (e) { return null; } }
   function put(st, k, v) { try { if (v == null) st.removeItem(k); else st.setItem(k, JSON.stringify(v)); } catch (e) {} }
