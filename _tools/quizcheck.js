@@ -11,7 +11,7 @@
   if (!tab) return JSON.stringify({ fatal: "수준별 문제 탭 없음" });
   tab.click();
   await new Promise(function (r) { setTimeout(r, 150); });
-  var cards = Array.prototype.slice.call(document.querySelectorAll(".qz-card"));
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".qz-card:not(.qz-mini)"));
   if (!cards.length) return JSON.stringify({ fatal: "문제가 없음", errs: errs });
 
   /* 페이지의 목표·소단원 */

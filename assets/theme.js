@@ -10,6 +10,28 @@
   "use strict";
   var root = document.documentElement;
 
+  /* ---------- 학생 화면은 이 단원만 ----------
+     학생에게는 단원 밖으로 나가는 길(‘← 과목’ 링크, 과목의 단원 목록, 허브, 교사용 안내)을 보이지 않는다.
+     교사 허브를 한 번 연 기기(sth-teacher=1)와 교사 미리 보기 주소(?open=1)에서만 보인다.
+     CSS 가 기본으로 숨겨 두고, 교사 기기이면 <html class="sth-teacher"> 로 다시 보이게 한다. */
+  var TEACHER = false;
+  try { TEACHER = localStorage.getItem("sth-teacher") === "1"; } catch (e) {}
+  if (/[?&]open=1/.test(location.search)) TEACHER = true;
+  window.STH_TEACHER = TEACHER;
+  if (TEACHER) root.classList.add("sth-teacher");
+  /* 과목 첫 화면(단원 카드 목록)은 교사용: 학생에게는 안내만 남긴다 */
+  (function () {
+    function gate() {
+      if (TEACHER || !document.querySelector("a.unit-card") || document.querySelector(".gate-note")) return;
+      Array.prototype.forEach.call(document.body.children, function (c) { if (!c.classList.contains("theme-toggle") && c.tagName !== "SCRIPT") c.style.display = "none"; });
+      var n = document.createElement("div"); n.className = "gate-note";
+      n.innerHTML = "<div class='gate-card'><div class='eyebrow'>학생 안내</div><h1 class='display'>선생님이 알려 준 단원 주소로 들어가세요</h1>"
+        + "<p>이 화면은 선생님이 수업할 단원을 고르는 곳이에요. 수업 시간에 받은 단원 주소(링크)로 들어가면 바로 시작할 수 있어요.</p></div>";
+      document.body.insertBefore(n, document.body.firstChild);
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", gate); else gate();
+  })();
+
   /* ---------- 테마 ---------- */
   var STORE = "sth-theme";
   function saved() {
@@ -59,7 +81,7 @@
     var brand = document.querySelector(".rail .brand");
     if (!brand || brand.querySelector("a.hub")) return;
     /* 학생 기기에서는 과목 밖으로 나가는 길을 만들지 않는다. 교사 허브를 연 적이 있는 기기에서만 보인다. */
-    try { if (localStorage.getItem("sth-teacher") !== "1") return; } catch (e) { return; }
+    if (!TEACHER) return;
     var a = document.createElement("a");
     a.className = "home hub";
     a.href = "https://wmfsljy-coder.github.io/science-teacher-hub/";
@@ -355,4 +377,169 @@
       return this;
     };
   }
+  /* ---------- 한글 줄바꿈 ----------
+     word-break: keep-all 은 어절 가운데를 끊지 않지만, 괄호·가운뎃점·빗금 앞뒤에서는 줄을 바꿀 수 있어
+     ‘궤도선(Mars’ ‘수온·염분·밀도가’ 같은 한 덩어리가 두 줄로 갈린다. 이런 짧은 어절을 <span class="nw"> 로
+     묶어 한 줄에 둔다. 나중에 바뀌는 글(설명 칸·판정 글)도 따라가며 묶는다. 글자 내용(textContent)은 그대로다. */
+  (function () {
+    if (!window.MutationObserver || !document.createTreeWalker) return;
+    var SKIP = /^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|CANVAS|SVG|CODE|PRE|TITLE)$/i;
+    var WORD = /\S*[가-힣]\S*/g, MARK = /[()（）·∙\/℃°%‰–\-~…]/;
+    var PROSE = "p, li, dd, .say, .info-card, .detail-panel, .why, .hint, .q, .msg, .lab-task-t, .lab-hint, .pc-ans, .pc-s, .std-note, .miscon, .stage-head p, .qz-q, .qz-fb, .qz-ans";
+    function skip(p) {
+      for (var a = p; a && a !== document.body; a = a.parentNode) {
+        if (a.nodeType !== 1) continue;
+        if (SKIP.test(a.tagName) || a.isContentEditable) return true;
+        if (a.classList && (a.classList.contains("nw") || a.classList.contains("tok"))) return true;
+      }
+      return false;
+    }
+    function wrap(n) {
+      var t = n.nodeValue, p = n.parentNode;
+      if (!t || !p || p.nodeType !== 1 || !MARK.test(t) || !/[가-힣]/.test(t) || skip(p)) return;
+      var out = [], last = 0, m, any = false, lim = p.closest && p.closest("td, th") && !p.closest(".pc-tbl") ? 10 : 18;   /* 표 칸은 좁아 짧은 것만 */
+      WORD.lastIndex = 0;
+      while ((m = WORD.exec(t))) {
+        if (!MARK.test(m[0]) || m[0].length > lim) continue;
+        any = true; out.push(t.slice(last, m.index), [m[0]]); last = m.index + m[0].length;
+      }
+      if (!any) return;
+      out.push(t.slice(last));
+      var f = document.createDocumentFragment();
+      out.forEach(function (x) {
+        if (typeof x === "string") { if (x) f.appendChild(document.createTextNode(x)); return; }
+        var s = document.createElement("span"); s.className = "nw"; s.textContent = x[0]; f.appendChild(s);
+      });
+      p.replaceChild(f, n);
+    }
+    function scan(root) {
+      if (!root) return;
+      if (root.nodeType === 3) { wrap(root); return; }
+      if (root.nodeType !== 1 || skip(root)) return;
+      var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [], x;
+      while ((x = w.nextNode())) list.push(x);
+      list.forEach(wrap);
+      /* 문단 끝 외톨이 줄 막기: 마지막 낱말이 짧으면 그 앞 낱말과 묶는다(책에서 끝줄에 한 낱말만 남기지 않는 것처럼) */
+      var blocks = root.matches && root.matches(PROSE) ? [root] : [];
+      if (root.querySelectorAll) blocks = blocks.concat(Array.prototype.slice.call(root.querySelectorAll(PROSE)));
+      blocks.forEach(tail);
+      glue(root);
+    }
+    /* 강조 태그와 뒤에 붙은 조사가 다른 마디에 있을 때(<b>45°</b>로 · <b>감람석·운모·석영</b>은): 둘을 함께 묶는다 */
+    function glue(root) {
+      if (!root.querySelectorAll) return;
+      Array.prototype.forEach.call(root.querySelectorAll("b, strong, em, i, sub, sup"), function (e) {
+        var nx = e.nextSibling, tx = e.textContent;
+        if (!nx || nx.nodeType !== 3 || !tx || /\s$/.test(tx) || !MARK.test(tx) || skip(e)) return;
+        var m = /^[^\s]+/.exec(nx.nodeValue); if (!m || !/[가-힣]/.test(m[0] + tx) || tx.length + m[0].length > 20) return;
+        var s = document.createElement("span"); s.className = "nw";
+        e.parentNode.insertBefore(s, e); s.appendChild(e);
+        s.appendChild(document.createTextNode(m[0])); nx.nodeValue = nx.nodeValue.slice(m[0].length);
+      });
+    }
+    function tail(el) {
+      if (skip(el) || el.closest && el.closest("td, th") && !el.closest(".pc-tbl")) return;
+      var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), n = null, x;
+      while ((x = w.nextNode())) if (x.nodeValue.trim()) n = x;
+      if (!n || skip(n.parentNode)) return;
+      var t = n.nodeValue, m = /(\S+)(\s+)(\S+)(\s*)$/.exec(t);
+      if (!m || m[3].replace(/[^가-힣A-Za-z0-9]/g, "").length > 4 || (m[1] + m[3]).length > 20 || !/[가-힣]/.test(m[1] + m[3])) return;
+      var s = document.createElement("span"); s.className = "nw"; s.textContent = m[1] + m[2] + m[3];
+      var f = document.createDocumentFragment(), head = t.slice(0, m.index);
+      if (head) f.appendChild(document.createTextNode(head));
+      f.appendChild(s); if (m[4]) f.appendChild(document.createTextNode(m[4]));
+      n.parentNode.replaceChild(f, n);
+    }
+    var queue = [], busy = false;
+    function flush() { busy = false; var q = queue; queue = []; q.forEach(scan); }
+    function start() {
+      scan(document.body);
+      new MutationObserver(function (ms) {
+        ms.forEach(function (m) {
+          if (m.type === "characterData") queue.push(m.target);
+          else for (var i = 0; i < m.addedNodes.length; i++) queue.push(m.addedNodes[i]);
+        });
+        if (!busy && queue.length) { busy = true; (window.requestAnimationFrame || setTimeout)(flush); }
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  })();
+  /* ---------- 학생 입장 QR (교사 기기에서만) ----------
+     window.sthQR(주소, 제목, 작은 제목) — 화면 가득 QR 을 띄운다. 학생은 휴대폰 카메라로 찍어 그 단원에 바로 들어간다.
+     QR 도구(qrcode.js)는 이 파일과 같은 폴더에서 처음 누를 때만 불러온다.
+     · 단원 페이지: 왼쪽 메뉴에 ‘📱 학생 입장 QR’ 버튼(precheck.js 는 00 들어가기 탭에도 하나 둔다)
+     · 과목 첫 화면: 단원 카드마다 ‘📱 QR’ 버튼 */
+  (function () {
+    var SELF = (document.currentScript && document.currentScript.src) || "";
+    function load(cb) {
+      if (window.qrcode) { cb(); return; }
+      var s = document.createElement("script");
+      s.src = SELF ? SELF.replace(/theme\.js(\?.*)?$/, "qrcode.js") : "assets/qrcode.js";
+      s.onload = cb; s.onerror = function () { window.alert("QR 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); };
+      document.head.appendChild(s);
+    }
+    function clean(u) { var a = document.createElement("a"); a.href = u; return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, ""); }
+    function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+    window.sthQR = function (url, title, sub) {
+      url = clean(url || location.href);
+      load(function () {
+        var qr = window.qrcode(0, "M"); qr.addData(url); qr.make();
+        var o = document.createElement("div"); o.className = "qr-full"; o.setAttribute("role", "dialog"); o.setAttribute("aria-label", "학생 입장 QR");
+        o.innerHTML = "<div class='qf-box'><div class='qf-sub'>" + esc(sub) + "</div><div class='qf-title'>" + esc(title) + "</div>"
+          + "<div class='qf-code'>" + qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: "학생 입장 QR" }) + "</div>"
+          + "<div class='qf-url'>" + esc(url.replace(/^https?:\/\//, "")) + "</div>"
+          + "<p class='qf-hint'>휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.</p>"
+          + "<button type='button' class='btn qf-close'>닫기 (Esc)</button></div>";
+        function close() { o.remove(); document.removeEventListener("keydown", key); }
+        function key(e) { if (e.key === "Escape") close(); }
+        o.addEventListener("click", function (e) { if (e.target === o || e.target.classList.contains("qf-close")) close(); });
+        document.addEventListener("keydown", key);
+        document.body.appendChild(o);
+        o.querySelector(".qf-close").focus();
+      });
+    };
+    function unitTitle() {
+      var b = document.querySelector(".rail .brand"); if (!b) return ["", document.title];
+      var h = b.querySelector("h1"), ey = b.querySelector(".eyebrow"), home = b.querySelector("a.home:not(.hub)");
+      var subj = home ? home.textContent.replace(/^←\s*/, "") : "";
+      return [subj + (ey ? " · " + ey.textContent.trim() : ""), h ? (h.innerText || h.textContent).replace(/\s+/g, " ").trim() : document.title];
+    }
+    window.sthUnitQR = function () { var t = unitTitle(); window.sthQR(location.href, t[1], t[0]); };
+    function start() {
+      if (!TEACHER) return;
+      var brand = document.querySelector(".rail .brand");
+      if (brand && !brand.querySelector(".qr-btn")) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "qr-btn"; b.textContent = "📱 학생 입장 QR";
+        b.addEventListener("click", window.sthUnitQR); brand.appendChild(b);
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("a.unit-card"), function (c) {
+        if (c.querySelector(".qr-btn")) return;
+        var b = document.createElement("button"); b.type = "button"; b.className = "qr-btn"; b.textContent = "📱 QR";
+        var h = c.querySelector("h3");
+        b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.sthQR(c.href, h ? h.textContent.trim() : c.textContent.trim().slice(0, 40), document.title.split("—")[0].trim()); });
+        c.appendChild(b);
+      });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  })();
+  /* ---------- 움직이는 그림 ----------
+     window.sthAnimate(canvas, frame) — 캔버스가 화면에 보이는 동안만 frame(초) 을 계속 부른다.
+     탭을 옮기거나 화면 밖으로 나가면 멈추고(배터리), ‘동작 줄이기’를 켠 기기에서는 처음 한 장만 그린다.
+     판의 이동·맨틀 대류처럼 ‘흐르는’ 현상을 정지 그림 대신 움직임으로 보여 줄 때 쓴다. */
+  window.sthAnimate = function (canvas, frame) {
+    var raf = 0, vis = !("IntersectionObserver" in window), last = 0, t = 0;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function loop(now) {
+      raf = 0;
+      if (!vis || document.hidden) { last = 0; return; }
+      if (last) t += Math.min(0.1, (now - last) / 1000);
+      last = now; frame(t);
+      raf = window.requestAnimationFrame(loop);
+    }
+    function kick() { if (!raf && vis && !reduce && !document.hidden) raf = window.requestAnimationFrame(loop); }
+    if (!vis) new IntersectionObserver(function (es) { vis = es[es.length - 1].isIntersecting; kick(); }).observe(canvas);
+    document.addEventListener("visibilitychange", kick);
+    kick();
+    return { now: function () { return t; } };
+  };
 })();
