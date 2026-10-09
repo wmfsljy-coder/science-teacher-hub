@@ -207,6 +207,12 @@ function doPost(e) {
   try { d = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: '형식 오류' }); }
   /* 학생 로그인·학습 기록(accounts.gs) — action 이 acc 로 시작하는 요청 */
   if (/^acc[A-Z]/.test(String(d.action || ''))) return out_(accounts_(d));
+  /* 익명 돌려 읽기·동료 평가·궁금한 것 게시판(community.gs) — action 이 peer·q 로 시작하는 요청 */
+  if (/^(peer|q)[A-Z]/.test(String(d.action || ''))) return out_(community_(d));
+  /* '@학번' 이름은 로그인한 학생만 쓴다(투표·올리기·측정값) — 토큰이 그 학번과 맞아야 받는다 */
+  if (/^(vote|post|measure)$/.test(String(d.action || '')) && cut_(d.nick, 12).charAt(0) === '@') {
+    var aw = whoAmI_(d.t); if (!aw || '@' + aw.sid !== cut_(d.nick, 12)) return out_({ ok: false, error: '다시 로그인해 주세요' });
+  }
   /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
   if (d.action === 'teacher') {

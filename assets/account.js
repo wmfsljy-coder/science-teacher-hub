@@ -74,7 +74,9 @@
   /* ---- 내 로그인 ---- */
   function acc() { return get(localStorage, KEY) || get(sessionStorage, KEY); }
   function setAcc(o, remember) { put(localStorage, KEY, null); put(sessionStorage, KEY, null); if (o) put(remember ? localStorage : sessionStorage, KEY, o); paint(); }
-  window.sthAccount = { me: function () { var a = acc(); return a && a.me; }, on: ON };
+  window.sthAccount = { me: function () { var a = acc(); return a && a.me; }, on: ON,
+    /* 로그인한 학생을 반·이름으로 — 투표·돌려 읽기·질문 게시판이 쓴다. 이름은 '@학번', 서버는 토큰 t 로 확인한다 */
+    ident: function (unit) { var a = acc(); if (!a || !a.me || !a.me.sid) return null; var c = classOfUnit(a.me, unit || unitId()); return c ? { cls: c, nick: "@" + a.me.sid, t: a.t } : null; } };
 
   var CSS = false;
   function css() {
@@ -199,7 +201,7 @@
     menu.appendChild(el("p", null, pend ? "⏳ 아직 보내지 못한 기록이 있습니다 — 연결되면 저절로 보냅니다." : (sync && sync.at ? "✓ 이 단원 기록 저장됨 (" + new Date(sync.at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + ")" : "이 단원은 아직 기록이 없습니다.")));
     var b = el("button", "btn", "로그아웃"); b.type = "button";
     b.addEventListener("click", function () {
-      var t = a.t; flush(true);
+      var t = a.t; flushAll(true);
       /* 함께 쓰는 기기: 서버에 다 올라간 단원 기록은 이 기기에서 지운다(다음 사람이 이어받지 않게). 못 보낸 것은 남긴다 */
       try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf(SYNC) !== 0) return; var u = k.slice(SYNC.length), q = get(localStorage, k); if (q && q.raw === localStorage.getItem("sth-" + u)) { localStorage.removeItem("sth-" + u); localStorage.removeItem(k); } }); } catch (e) {}
       call({ action: "accLogout", t: t }).catch(function () {}); setAcc(null); menu.parentNode.removeChild(menu); menu = null; location.reload();
@@ -236,9 +238,13 @@
   /* ---- 동기화: theme.js 가 저장할 때마다 sthOnStore(단원, 상태, 답안) 를 부른다 ---- */
   function unitId() { return window.sthUnitId ? window.sthUnitId() : ""; }
   var timer = null, last = null;
-  function pending() { var u = unitId(); if (!u) return false; var q = get(localStorage, SYNC + u); var cur = localStorage.getItem("sth-" + u); return !!(acc() && cur && (!q || q.raw !== cur)); }
+  /* 지금 단원 + 이 과목의 간격 복습 기록('rv-묶음', review.js) + 다른 부품이 맡긴 기록(window.STH_SYNC_EXTRA) */
+  function syncUnits() { var a = [], u = unitId(); if (u) { a.push(u); var g = u.replace(/[0-9]*-.*$/, "").replace(/[0-9]+$/, ""); if (g && u !== "unit") a.push("rv-" + g); } (window.STH_SYNC_EXTRA || []).forEach(function (x) { if (/^[\w-]{2,24}$/.test(x) && a.indexOf(x) < 0) a.push(x); }); return a; }
+  function pendingU(u) { var q = get(localStorage, SYNC + u); var cur = localStorage.getItem("sth-" + u); return !!(acc() && cur && (!q || q.raw !== cur)); }
+  function pending() { return syncUnits().some(pendingU); }
+  function flushAll(keep) { syncUnits().forEach(function (u) { flush(keep, u); }); }
   var lastSent = 0;   /* 한 반이 한꺼번에 풀 때 서버가 밀리지 않게 — 바뀐 뒤 2.5초, 그리고 앞 전송에서 15초가 지난 뒤 보낸다 */
-  window.sthOnStore = function (unit) { if (!acc()) return; clearTimeout(timer); timer = setTimeout(flush, Math.max(2500, 15000 - (Date.now() - lastSent))); };
+  window.sthOnStore = function (unit) { if (!acc()) return; clearTimeout(timer); timer = setTimeout(flushAll, Math.max(2500, 15000 - (Date.now() - lastSent))); };
   function diff(a, b, pre, out, t) {   /* 바뀐 항목: [항목, 새 값, 시각] — s.키 / w.키, 객체는 한 단계 더 들어간다(문항별 기록 등) */
     a = a || {}; b = b || {};
     Object.keys(b).forEach(function (k) {
@@ -250,9 +256,9 @@
     Object.keys(a).forEach(function (k) { if (!(k in b)) out.push([pre + k, null, t]); });
     return out;
   }
-  function flush(keep) {
+  function flush(keep, u) {
     clearTimeout(timer);
-    var A = acc(), u = unitId(); if (!A || !u) return;
+    var A = acc(); u = u || unitId(); if (!A || !u) return;
     var raw = null; try { raw = localStorage.getItem("sth-" + u); } catch (e) {}
     if (!raw) return;
     var prev = get(localStorage, SYNC + u) || {}; if (prev.raw === raw) return;
@@ -266,27 +272,32 @@
       else if (j && j.relogin) { setAcc(null); lockAll(); }
     }, function () { /* 연결 안 됨 — 다음 저장·30초 뒤·다시 연결될 때 보낸다 */ });
   }
-  setInterval(function () { if (pending()) flush(); }, 30000);
-  window.addEventListener("online", function () { if (pending()) flush(); });
-  window.addEventListener("pagehide", function () { if (pending()) flush(true); });
+  setInterval(function () { if (pending()) flushAll(); }, 30000);
+  window.addEventListener("online", function () { if (pending()) flushAll(); });
+  window.addEventListener("pagehide", function () { if (pending()) flushAll(true); });
 
   /* ---- 다른 기기에서 한 기록 불러오기: 이 기기에 없는 항목만 채운다(이 기기의 것이 먼저) ---- */
   function pullNow(fromLogin) {
     var A = acc(), u = unitId(); if (!A || !u) return;
     var flag = "sth-accpulled-" + u; try { if (!fromLogin && sessionStorage.getItem(flag)) return; sessionStorage.setItem(flag, "1"); } catch (e) {}
-    call({ action: "accPull", t: A.t, units: [u] }).then(function (j) {
+    var list = syncUnits();
+    call({ action: "accPull", t: A.t, units: list }).then(function (j) {
       if (!j || !j.ok) { if (j && j.relogin) { setAcc(null); lockAll(); } return; }
       if (j.me) { A.me = j.me; setAcc(A, !!get(localStorage, KEY)); }
-      var srv = (j.units || {})[u]; if (!srv || !srv.d) { flush(); return; }
-      var loc = {}; try { loc = JSON.parse(localStorage.getItem("sth-" + u) || "{}"); } catch (e) {}
-      var s = loc.s || {}, w = loc.w || {}, added = 0;
-      Object.keys(srv.d.s || {}).forEach(function (k) { if (!(k in s)) { s[k] = srv.d.s[k]; added++; } });
-      Object.keys(srv.d.w || {}).forEach(function (k) { if (!(k in w) || !String(w[k] || "").trim()) { if (String(srv.d.w[k] || "").trim()) { w[k] = srv.d.w[k]; added++; } } });
-      if (added) {
-        try { localStorage.setItem("sth-" + u, JSON.stringify({ s: s, w: w })); } catch (e) {}
-        try { if (!sessionStorage.getItem("sth-accreload-" + u)) { sessionStorage.setItem("sth-accreload-" + u, "1"); location.reload(); return; } } catch (e) {}
-      }
-      flush();
+      var reload = false;
+      list.forEach(function (uu) {
+        var srv = (j.units || {})[uu]; if (!srv || !srv.d) return;
+        var loc = {}; try { loc = JSON.parse(localStorage.getItem("sth-" + uu) || "{}"); } catch (e) {}
+        var s = loc.s || {}, w = loc.w || {}, added = 0;
+        Object.keys(srv.d.s || {}).forEach(function (k) { if (!(k in s)) { s[k] = srv.d.s[k]; added++; } });
+        Object.keys(srv.d.w || {}).forEach(function (k) { if (!(k in w) || !String(w[k] || "").trim()) { if (String(srv.d.w[k] || "").trim()) { w[k] = srv.d.w[k]; added++; } } });
+        if (!added) return;
+        try { localStorage.setItem("sth-" + uu, JSON.stringify({ s: s, w: w })); } catch (e) {}
+        if (uu === u) reload = true;
+        else { try { window.dispatchEvent(new CustomEvent("sth-pulled", { detail: uu })); } catch (e) {} }
+      });
+      if (reload) { try { if (!sessionStorage.getItem("sth-accreload-" + u)) { sessionStorage.setItem("sth-accreload-" + u, "1"); location.reload(); return; } } catch (e) {} }
+      flushAll();
     }, function () {});
   }
 

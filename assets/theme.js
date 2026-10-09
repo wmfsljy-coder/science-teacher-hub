@@ -274,7 +274,7 @@
     mix.order.forEach(function (o) { box.appendChild(btn[o]); });
     /* ---- 짝과 이야기한 뒤 다시 고르기 · 우리 반 투표 ----
        처음 고른 보기(첫 추리 기록·결말 판정에 쓰임)는 그대로 두고, 다시 고른 보기는 따로 적어 둔다(키 + "_2I"). */
-    var K = opt.key || "pred", again = false;
+    var K = opt.key || "pred", again = false, VSENT = "sth-vsent-" + String(UNIT || "") + "-" + (opt.key || "pred");
     var rv = document.createElement("div"); rv.className = "gate-rv"; gate.appendChild(rv);
     function mark(i) { var t = mix.text[i] || ""; return t.length > 30 ? t.slice(0, 29) + "…" : t; }
     function paintRv() {
@@ -293,6 +293,8 @@
         : "<span class='rv-msg'>" + (typeof second === "number" ? "처음 <b>" + mark(first) + "</b> → 다시 <b>" + mark(second) + "</b>" : "고른 보기: <b>" + mark(first) + "</b>") + "</span>"
           + "<button type='button' class='btn rv-again'>💬 짝과 이야기한 뒤 다시 고르기</button>";
       var me = {}; try { me = JSON.parse(localStorage.getItem("sth-me") || "{}"); } catch (e) {}
+      /* 로그인한 학생은 반·별명을 따로 저장하지 않아도 로그인으로 투표한다 */
+      if (!(me.cls && me.nick) && window.sthAccount && window.sthAccount.ident) { var li = window.sthAccount.ident(String(UNIT || "").replace(/^sth-/, "")); if (li) me = li; }
       var url = String(window.STH_SHARE_URL || "").trim(), hosts = window.STH_SHARE_HOSTS;
       if (url && hosts && hosts.length && hosts.indexOf(location.hostname) < 0 && location.protocol !== "file:") url = "";
       if (url && !again) h += me.cls && me.nick ? "<button type='button' class='btn rv-send'>📣 우리 반 투표에 보내기</button><span class='rv-st'></span>"
@@ -300,14 +302,19 @@
       rv.innerHTML = h;
       var b1 = rv.querySelector(".rv-again"), b2 = rv.querySelector(".rv-done"), b3 = rv.querySelector(".rv-send");
       if (b1) b1.addEventListener("click", function () { again = true; paintRv(); });
-      if (b2) b2.addEventListener("click", function () { again = false; paintRv(); });
+      if (b2) b2.addEventListener("click", function () {
+        again = false; paintRv();
+        /* 처음 투표를 보냈던 학생은 다시 고른 것도 저절로 보낸다 */
+        var sent = false; try { sent = sessionStorage.getItem(VSENT) === "1"; } catch (e) {}
+        var b4 = rv.querySelector(".rv-send"); if (sent && b4) b4.click();
+      });
       if (b3) b3.addEventListener("click", function () {
         var stx = rv.querySelector(".rv-st"); b3.disabled = true; stx.textContent = "보내는 중…";
         fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "vote", cls: me.cls, nick: me.nick, unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
+          body: JSON.stringify({ action: "vote", cls: me.cls, nick: me.nick, t: me.t || "", unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
                                  a: STATE[K + "I"], b: typeof STATE[K + "_2I"] === "number" ? STATE[K + "_2I"] : "" }) })
           .then(function (r) { return r.json(); })
-          .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); stx.textContent = "✓ 보냈습니다"; })
+          .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); stx.textContent = "✓ 보냈습니다"; try { sessionStorage.setItem(VSENT, "1"); } catch (e) {} })
           .catch(function (e) { stx.textContent = "보내지 못했습니다 (" + e.message + "). 잠시 뒤 다시 눌러 보세요."; })
           .then(function () { b3.disabled = false; });
       });

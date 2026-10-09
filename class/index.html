@@ -88,7 +88,8 @@
   .vb-col h3 { font-size: 16px; color: var(--mist); margin: 6px 0 8px; }
   .gl-opt.big { grid-template-columns: 1fr 34% 64px; font-size: clamp(15px, 1.6vw, 19px); padding: 6px 0; }
   .gl-opt.big i { height: 18px; }
-  .vb-note { font-size: 13px; color: var(--mist); margin: 14px 0 0; }
+  .vb-gain{font-size:26px;font-weight:900;text-align:center;margin:14px 0 4px;color:var(--brand-700)}
+    .vb-note { font-size: 13px; color: var(--mist); margin: 14px 0 0; }
   @media (max-width: 780px) { .hero { padding: 34px 18px 8px; } .wrap { padding: 18px 18px 70px; } }
 </style>
 </head>
@@ -452,6 +453,11 @@
       var c1 = el("div", "vb-col"); c1.appendChild(el("h3", null, "처음 고른 보기 · " + V.n + "명")); voteBars(c1, G, V, "a", showOk, true); cols.appendChild(c1);
       if (V.nb) { var c2 = el("div", "vb-col"); c2.appendChild(el("h3", null, "짝과 이야기한 뒤 · " + V.nb + "명 (생각을 바꾼 학생 " + V.moved + "명)")); voteBars(c2, G, V, "b", showOk, true); cols.appendChild(c2); }
       card.appendChild(cols);
+      if (showOk && V.okIdx) {
+        var okN = function (arr) { var t = 0; Object.keys(V.okIdx).forEach(function (i) { t += arr[i] || 0; }); return t; };
+        var pa = V.n ? Math.round(okN(V.a) / V.n * 100) : 0, pb = V.nb ? Math.round(okN(V.b) / V.nb * 100) : null;
+        card.appendChild(el("p", "vb-gain", "정답을 고른 학생 · 처음 " + pa + "%" + (pb === null ? "" : " → 짝과 이야기한 뒤 " + pb + "%" + (pb > pa ? " ▲" : (pb < pa ? " ▼" : "")))));
+      }
       if (showOk && !V.okIdx) card.appendChild(el("p", "vb-q", "정답 기록이 아직 없습니다(학생이 ‘우리 반에 올리기’를 하면 생깁니다). 이야기 결말에서 정답을 확인해 주세요."));
       card.appendChild(el("p", "vb-note", "학생 화면: 첫 추리를 고르고 📣 투표 보내기 → 짝과 이야기 → 💬 다시 고르기 → 📣 다시 보내기. 이 화면은 10초마다 새로 고칩니다."));
       ov.appendChild(card);
@@ -497,6 +503,98 @@
         box.appendChild(bx);
       });
       p.appendChild(box);
+    }
+    out.appendChild(p);
+  }
+  /* ---- 익명 돌려 읽기(동료 평가) · 궁금한 것 게시판 — community.gs 의 peerAll · qAll. 선생님 화면에는 글쓴이가 보이고, 📺 크게 띄우기에는 보이지 않는다. ---- */
+  var cm = { unit: null, peer: null, q: null, err: "" };
+  var CM_RUB = ["핵심 개념어", "이야기와 이음", "까닭·근거"];
+  function cmCall(action, extra) {
+    var b = { action: action, key: ($("key").value || "").trim(), cls: pick, unit: cm.unit };
+    Object.keys(extra || {}).forEach(function (x) { b[x] = extra[x]; });
+    return fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(b) }).then(function (r) { return r.json(); });
+  }
+  function loadCm(quiet) {
+    if (!pick || !cm.unit) return;
+    if (!quiet) { cm.err = "불러오는 중…"; paint(); }
+    Promise.all([cmCall("peerAll"), cmCall("qAll")]).then(function (r) {
+      if (!r[0].ok) throw new Error(r[0].error || "오류");
+      cm.peer = r[0].items || []; cm.q = r[1].ok ? r[1].items || [] : []; cm.err = ""; paint();
+    }).catch(function (e) { cm.err = "불러오지 못했습니다 (" + e.message + ")"; paint(); });
+  }
+  function cmBig(title, rows) {
+    var ov = el("div", "vote-big");
+    function close() { ov.remove(); document.removeEventListener("keydown", esc); }
+    function esc(e) { if (e.key === "Escape") close(); }
+    var card = el("div", "vb-card"), top = el("div", "vb-top");
+    top.appendChild(el("span", "vb-k", pick + "반 · " + uname(cm.unit)));
+    var b2 = el("button", "btn", "닫기 (Esc)"); b2.type = "button"; b2.addEventListener("click", close); top.appendChild(b2);
+    card.appendChild(top); card.appendChild(el("h2", "display", title));
+    rows.forEach(function (r) { var p = el("p", "vb-q"); p.style.fontSize = r.big ? "28px" : "20px"; p.style.lineHeight = "1.6"; p.textContent = r.t; card.appendChild(p); });
+    ov.appendChild(card); document.body.appendChild(ov); document.addEventListener("keydown", esc);
+  }
+  function paintCommunity() {
+    var p = el("div", "panel");
+    p.appendChild(el("h2", "display", "익명 돌려 읽기 · 궁금한 것 게시판"));
+    var sub = el("p", "sub");
+    sub.innerHTML = "학생이 ‘우리 반’ 탭에서 <b>정리하기의 한 문장</b>을 돌려 읽기에 내면, 친구 두 명씩 이름 없이 읽고 점검(" + CM_RUB.join(" · ") + ")과 좋은 점·고칠 점을 남깁니다. "
+      + "<b>궁금한 것 게시판</b>은 첫 이야기 끝에서 모으고 정리하기에서 ‘이제 답할 수 있어요’로 돌아봅니다. 알맞지 않은 글은 <b>숨기기</b>를 누르세요(학생 화면에서 사라집니다). 📺 크게 띄우기에는 이름이 나오지 않습니다.";
+    p.appendChild(sub);
+    if (!pick) { p.appendChild(el("p", "empty", "위에서 반 카드를 하나 누르면 시작할 수 있습니다.")); out.appendChild(p); return; }
+    var row = el("div", "keyrow"), l1 = el("label", null, "단원"), s1 = document.createElement("select");
+    var list = UL.filter(function (r) { return !subj || r[1] === subj; });
+    list.forEach(function (r) { var o = document.createElement("option"); o.value = r[0]; o.textContent = (subj ? "" : r[1] + " · ") + r[2]; if (cm.unit === r[0]) o.selected = true; s1.appendChild(o); });
+    if (!cm.unit || !list.some(function (r) { return r[0] === cm.unit; })) cm.unit = list.length ? list[0][0] : null;
+    s1.addEventListener("change", function () { cm.unit = s1.value; cm.peer = cm.q = null; paint(); });
+    l1.appendChild(s1); row.appendChild(l1);
+    var b = el("button", "btn primary", cm.peer ? "다시 불러오기" : "불러오기"); b.type = "button"; b.addEventListener("click", function () { loadCm(); }); row.appendChild(b);
+    if (cm.err) row.appendChild(el("span", "msg", cm.err));
+    p.appendChild(row);
+    if (cm.peer) {
+      p.appendChild(el("h3", null, "🔁 돌려 읽기 — 낸 글 " + cm.peer.length + "편"));
+      if (!cm.peer.length) p.appendChild(el("p", "empty", "이 단원에서 돌려 읽기에 낸 글이 아직 없습니다."));
+      var box = el("div", "glance");
+      cm.peer.slice().sort(function (a, c) { return c.n - a.n; }).forEach(function (it) {
+        var bx = el("div", "gl-box"); if (it.hide) bx.style.opacity = ".5";
+        bx.appendChild(el("h4", null, it.nick + " · 평가 " + it.n + "명" + (it.hide ? " · 숨김" : "")));
+        var tx = el("p", "q"); tx.style.color = "var(--ink)"; tx.style.fontSize = "14px"; tx.textContent = it.text; bx.appendChild(tx);
+        if (it.n) bx.appendChild(el("p", "q", CM_RUB.map(function (t, i) { return t + " " + it.sum[i] + "/" + it.n; }).join(" · ")));
+        if (it.good.length || it.fix.length) {
+          var dt = document.createElement("details"); dt.appendChild(el("summary", null, "친구들의 한 줄 (" + (it.good.length + it.fix.length) + ")"));
+          it.good.forEach(function (g) { dt.appendChild(el("p", "q", "👍 " + g)); }); it.fix.forEach(function (f) { dt.appendChild(el("p", "q", "🔧 " + f)); });
+          bx.appendChild(dt);
+        }
+        var br = el("div", "btn-row");
+        var hb = el("button", "btn", it.hide ? "다시 보이기" : "숨기기"); hb.type = "button";
+        hb.addEventListener("click", function () { hb.disabled = true; cmCall("peerHide", { id: it.id, hide: !it.hide }).then(function () { loadCm(true); }); });
+        var bb = el("button", "btn", "📺 크게 띄우기"); bb.type = "button";
+        bb.addEventListener("click", function () { cmBig("함께 고쳐 쓰기", [{ t: it.text, big: true }, { t: "점검: " + CM_RUB.join(" · ") + " — 무엇을 더하면 더 좋은 글이 될까요?" }]); });
+        br.appendChild(hb); br.appendChild(bb); bx.appendChild(br);
+        box.appendChild(bx);
+      });
+      p.appendChild(box);
+    }
+    if (cm.q) {
+      var qs = cm.q.slice().sort(function (a, c) { return (c.same - a.same) || (a.t - c.t); });
+      var h3 = el("h3", null, "❓ 궁금한 것 게시판 — 질문 " + qs.length + "개");
+      p.appendChild(h3);
+      if (!qs.length) p.appendChild(el("p", "empty", "이 단원에서 남긴 질문이 아직 없습니다."));
+      else {
+        var big = el("button", "btn", "📺 질문 크게 띄우기"); big.type = "button";
+        big.addEventListener("click", function () { cmBig("우리 반이 궁금한 것", qs.filter(function (q) { return !q.hide; }).slice(0, 10).map(function (q) { return { t: "🙋 " + (q.same + 1) + "  " + q.text + (q.solved ? "  (✓ " + q.solved + ")" : "") }; })); });
+        p.appendChild(big);
+        var ul = el("div", "feed");
+        qs.forEach(function (q) {
+          var r = el("div", "feed-row"); if (q.hide) r.style.opacity = ".5";
+          r.appendChild(el("span", "who", q.nick));
+          r.appendChild(el("span", "u", q.text));
+          r.appendChild(el("span", null, "🙋 " + (q.same + 1) + " · ✓ " + q.solved + (q.hide ? " · 숨김" : "")));
+          var hb2 = el("button", "btn", q.hide ? "다시 보이기" : "숨기기"); hb2.type = "button";
+          hb2.addEventListener("click", function () { hb2.disabled = true; cmCall("qHide", { id: q.id, hide: !q.hide }).then(function () { loadCm(true); }); });
+          r.appendChild(hb2); ul.appendChild(r);
+        });
+        p.appendChild(ul);
+      }
     }
     out.appendChild(p);
   }
@@ -685,6 +783,7 @@
     p3.appendChild(feed);
     out.appendChild(p3);
     paintVotes();
+    paintCommunity();
     paintEv();
   }
 
