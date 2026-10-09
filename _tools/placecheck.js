@@ -18,7 +18,7 @@
       await sleep(500);
       var d = fr.contentDocument, W = fr.contentWindow, errs = [];
       W.addEventListener("error", function (e) { errs.push(e.message); });
-      var P = Array.prototype.slice.call(d.querySelectorAll("[data-place]"));
+      var P = Array.prototype.slice.call(d.querySelectorAll("[data-place],[data-view]"));
       for (var k = 0; k < P.length; k++) {
         var n = P[k], pn = n.closest("[data-panel]");
         if (pn) { var tb = d.querySelector('.tab-btn[data-tab="' + pn.getAttribute("data-panel") + '"]'); if (tb) tb.click(); await sleep(150); }
