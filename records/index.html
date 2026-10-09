@@ -74,7 +74,7 @@
   var SUBJ = { "지구과학": ["지구과학"], "지구시스템": ["지구시스템과학1", "지구시스템과학2"], "행성우주": ["행성우주과학1", "행성우주과학2"], "기후환경": ["기후변화와 환경생태"], "융합탐구": ["융합과학 탐구"], "과학사": ["과학의 역사와 문화"] };
   function unitsFor(c) {
     if (/^1-/.test(c)) return UNITS.filter(function (u) { return u[3] === "1학년"; });
-    var m = /^2-(.+?)[AB]?$/.exec(c), s = m && SUBJ[m[1]];
+    var m = /^2-(.+?)(?:[AB]|\d{3})?$/.exec(c), s = m && SUBJ[m[1]];
     return s ? UNITS.filter(function (u) { return s.indexOf(u[1]) >= 0; }) : UNITS;
   }
   function classes() { var o = {}; ROSTER.forEach(function (s) { (s.classes.length ? s.classes : [s.cls]).forEach(function (c) { if (c) o[c] = 1; }); }); return Object.keys(o).sort(); }

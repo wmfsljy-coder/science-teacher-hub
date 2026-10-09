@@ -279,7 +279,14 @@ function accImportOnce_(d) {
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
   if (h !== ACC_IMPORT_ONCE) return { ok: false, error: '열쇠가 맞지 않습니다' };
   d.key = teacherKey_(); d.action = 'accImport'; d.confirm = '명단';
-  return accounts_(d);
+  var res = accounts_(d);
+  if (res.ok && d.classes && d.classes.length) {   /* 반목록 탭에 없는 반 코드를 덧붙인다(우리 반 올리기가 받게) */
+    var cs = classSheet_(), have = cs.getLastRow() ? cs.getRange(1, 1, cs.getLastRow(), 1).getValues().map(function (r) { return String(r[0]).trim(); }) : [];
+    var add = d.classes.filter(function (c) { return c && c[0] && have.indexOf(String(c[0])) < 0; }).map(function (c) { return [cut_(c[0], 16), cut_(c[1], 40)]; });
+    if (add.length) { var at = cs.getLastRow() + 1; cs.getRange(at, 1, add.length, 1).setNumberFormat('@'); cs.getRange(at, 1, add.length, 2).setValues(add); }
+    res.classesAdded = add.length;
+  }
+  return res;
 }
 
 /** '학습' 탭에서 test(학번, 단원) 이 참인 줄만 꺼낸다 — 학번·단원 두 칸만 먼저 읽고, 상태(JSON)는 고른 줄만 읽는다.

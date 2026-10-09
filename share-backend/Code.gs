@@ -89,7 +89,7 @@ var CLASSES = (function () {
   var out = [], i, subj = [['지구과학', '지구과학'], ['지구시스템', '지구시스템과학'], ['행성우주', '행성우주과학'],
     ['기후환경', '기후변화와 환경생태'], ['융합탐구', '융합과학 탐구'], ['과학사', '과학의 역사와 문화']];
   for (i = 1; i <= 7; i++) out.push(['1-' + i, '1학년 ' + i + '반 (통합과학·과학탐구실험)']);
-  subj.forEach(function (s) { ['A', 'B'].forEach(function (b) { out.push(['2-' + s[0] + b, '2학년 ' + s[1] + ' ' + b + '반']); }); });
+  subj.forEach(function (s) { (s[0] === '지구시스템' ? ['201', '207'] : ['A', 'B']).forEach(function (b) { out.push(['2-' + s[0] + b, '2학년 ' + s[1] + ' ' + b + '반']); }); });
   return out;
 })();
 function classSheet_() {
