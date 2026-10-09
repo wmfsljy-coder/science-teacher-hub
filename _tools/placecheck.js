@@ -25,6 +25,12 @@
         /* 아직 안 연 장면 안의 지명은 검사할 때만 잠깐 보이게 한다 */
         var hid = []; for (var a = n; a && a !== d.body; a = a.parentElement) if (a.hidden) { a.hidden = false; hid.push(a); }
         n.scrollIntoView({ block: "start" }); await sleep(50);
+        /* 새 창으로만 여는 단추(out:)는 window.open 이 불렸는지만 본다 */
+        if (/^out:/.test(n.getAttribute("data-view") || "")) {
+          var opened = null, wo = W.open; W.open = function (u) { opened = u; return null; };
+          n.click(); await sleep(50); W.open = wo; hid.forEach(function (h) { h.hidden = true; });
+          res.push((opened ? "✅ " : "✗ ") + n.textContent + (opened ? " (새 창)" : " (새 창이 안 열림)")); continue;
+        }
         n.click(); await sleep(150);
         var pop = n._pop, r1 = n.getBoundingClientRect();
         if (!pop) { res.push(n.textContent + ": 안 펼쳐짐"); continue; }
