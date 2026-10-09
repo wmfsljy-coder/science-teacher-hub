@@ -11,13 +11,15 @@
   if (!tab) return JSON.stringify({ fatal: "수준별 문제 탭 없음" });
   tab.click();
   await new Promise(function (r) { setTimeout(r, 150); });
-  var cards = Array.prototype.slice.call(document.querySelectorAll(".qz-card:not(.qz-mini)"));
+  /* 소단원 끝 확인 문제(secq-)는 같은 문제를 다시 보여 주는 것이라 따로 센다 */
+  var secCards = Array.prototype.slice.call(document.querySelectorAll("[id^='secq-'] .qz-card"));
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".qz-card")).filter(function (c) { return secCards.indexOf(c) < 0; });
   if (!cards.length) return JSON.stringify({ fatal: "문제가 없음", errs: errs });
 
   /* 페이지의 목표·소단원 */
   var STD = {}, SEC = {};
   Array.prototype.forEach.call(document.querySelectorAll(".std-note"), function (d) {
-    var re = /\[([^\]]+)\]<\/b>/g, m; while ((m = re.exec(d.innerHTML))) STD[m[1]] = 1;
+    var re = /\[([^\]]+)\](?:<\/span>)?<\/b>/g, m; while ((m = re.exec(d.innerHTML))) STD[m[1]] = 1;
   });
   Array.prototype.forEach.call(document.querySelectorAll(".tab-btn .num"), function (n) { SEC[n.textContent.trim()] = 1; });
 
