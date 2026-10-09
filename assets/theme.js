@@ -201,6 +201,7 @@
   function store() {
     try { localStorage.setItem(UNIT, JSON.stringify({ s: STATE, w: FIELDS })); }
     catch (e) { /* 시크릿 모드 등에서는 저장이 막힌다 */ }
+    if (window.sthOnStore) { try { window.sthOnStore(UNIT); } catch (e) {} }   /* account.js — 로그인했으면 서버로 */
     paintRecap();
   }
   function restore() {

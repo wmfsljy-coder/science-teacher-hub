@@ -7,3 +7,6 @@ window.STH_SHARE_HOSTS = ["wmfsljy-coder.github.io", "localhost", "127.0.0.1"];
 /* 현장 보기(위성 사진)를 쪽 안에 띄우는 Google Maps Embed API 키. 비워 두면 구글 지도를 새 창으로 연다.
    이 키는 누구나 볼 수 있으므로, Google Cloud 에서 'Maps Embed API' 하나만 허용하고 HTTP 리퍼러를 위 Pages 주소(예: https://wmfsljy-coder.github.io/*)로 제한한다. */
 window.STH_MAPS_KEY = "AIzaSyBnD1Aqg-Lwqv0D5HwHKoSdSubKag9TKNE";
+
+/* 학생 로그인(학번·이름·PIN) — 뒷단 accounts.gs 를 배포하고 명단을 넣은 뒤 true 로 바꾼다. 켜면 문제 풀이 탭은 로그인해야 열린다. */
+window.STH_LOGIN = false;

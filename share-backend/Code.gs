@@ -205,6 +205,8 @@ function doGet(e) {
 function doPost(e) {
   var d;
   try { d = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: '형식 오류' }); }
+  /* 학생 로그인·학습 기록(accounts.gs) — action 이 acc 로 시작하는 요청 */
+  if (/^acc[A-Z]/.test(String(d.action || ''))) return out_(accounts_(d));
   /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
   if (d.action === 'teacher') {

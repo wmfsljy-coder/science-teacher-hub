@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>학생 기록 — 교사용</title>
+<link rel="stylesheet" href="../assets/theme.css">
+<style>
+  .hero { padding: 36px 30px 4px; max-width: 1320px; margin: 0 auto; }
+  .hero .back { display: inline-block; margin-bottom: 10px; font-size: 13px; color: var(--mist); text-decoration: none; font-weight: 700; }
+  .hero h1 { font-size: clamp(26px, 4vw, 34px); margin: 6px 0 8px; font-weight: 400; }
+  .hero p { color: var(--mist); font-size: 14px; line-height: 1.75; max-width: 980px; margin: 0; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 16px 30px 80px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+  .bar input, .bar select { border: 2px solid var(--line); border-radius: 10px; padding: 7px 10px; font: inherit; font-size: 14px; background: var(--card); color: var(--ink); }
+  .tabs2 { display: flex; gap: 6px; margin: 16px 0 8px; }
+  .tabs2 button { border: 2px solid var(--line); border-radius: 999px; padding: 6px 14px; font: inherit; font-weight: 800; background: var(--card); color: var(--ink); cursor: pointer; }
+  .tabs2 button.on { border-color: var(--brand); background: var(--brand-100); color: var(--brand-700); }
+  .msg { font-size: 13px; color: var(--mist); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; background: var(--panel); }
+  th, td { border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top; color: var(--ink); line-height: 1.55; }
+  th { background: var(--card-2); color: var(--mist); position: sticky; top: 0; }
+  td.n { text-align: center; white-space: nowrap; }
+  .ok { color: var(--teal-700); font-weight: 800; } .no { color: var(--rose); font-weight: 800; } .mid { color: var(--amber); font-weight: 800; }
+  .det td { background: var(--card-2); }
+  .det h4 { margin: 6px 0 4px; font-size: 13.5px; }
+  .det ul { margin: 0 0 6px; padding-left: 18px; }
+  .det .w { white-space: pre-wrap; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; margin: 3px 0 8px; }
+  .pill { display: inline-block; border-radius: 6px; padding: 0 6px; margin: 1px 2px; font-size: 12px; font-weight: 800; background: var(--card-2); }
+  .mockbar { background: var(--amber); color: #000; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 10px; display: inline-block; margin-top: 8px; }
+  .note { font-size: 12.5px; color: var(--mist); line-height: 1.7; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <a class="back" href="../">← 교사용 허브</a>
+  <h1 class="display">🗂 학생 기록 — 로그인한 학생</h1>
+  <p>학번·이름·PIN 으로 로그인한 학생의 단원 기록입니다. 학생 기기에서 바뀔 때마다 저절로 올라옵니다. 첫 추리(처음 고른 보기와 바꾼 보기), 이야기 장면 진행, 수준별 문제(한 번에 맞힘·다시 맞힘·틀림·해설 먼저), 응용 실험실·실제 자료, 정리하기 글을 볼 수 있고 CSV 로 내려받아 수행평가 자료로 쓸 수 있습니다. 학생 PIN 을 잊으면 ‘명단·로그인’에서 초기화합니다.</p>
+  <div id="mock"></div>
+</div>
+<div class="wrap">
+  <div class="bar"><label>교사 열쇠 <input id="key" type="password" autocomplete="off" style="width:220px"></label><button class="btn primary" id="go" type="button">열기</button><span class="msg" id="msg"></span></div>
+  <div class="tabs2" id="tabs" hidden><button type="button" data-t="rec" class="on">학습 기록</button><button type="button" data-t="ros">명단 · 로그인</button></div>
+  <div id="rec" hidden>
+    <div class="bar"><label>반 <select id="cls"></select></label><label>단원 <select id="unit"></select></label><button class="btn primary" id="load" type="button">불러오기</button><button class="btn" id="csv" type="button">⬇ CSV (이 단원)</button><button class="btn" id="csvAll" type="button">⬇ CSV (이 반 모든 단원)</button><span class="msg" id="rmsg"></span></div>
+    <div class="scroll"><table id="rt"></table></div>
+    <p class="note">첫 추리 ✓/✗ 는 처음 고른 보기 기준입니다(짝과 이야기한 뒤 바꾼 보기는 → 로 함께 보입니다). 수준별 문제의 ‘한 번에’는 틀리지 않고 해설도 먼저 보지 않고 맞힌 문항입니다. 학생 이름을 누르면 자세한 기록과 바뀐 차례(시각별)가 열립니다.</p>
+  </div>
+  <div id="ros" hidden>
+    <div class="bar"><label>반 <select id="cls2"></select></label><span class="msg" id="smsg"></span></div>
+    <div class="scroll"><table id="st"></table></div>
+  </div>
+</div>
+<script src="../assets/theme.js"></script>
+<script src="../assets/share-config.js"></script>
+<script src="../assets/precheck-all.js"></script>
+<script src="../assets/unit-items-all.js"></script>
+<script>window.STH_ACC_NOUI = true;</script>
+<script src="../assets/account.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); }, call = window.sthAccCall, KEY = "sth-teacher-key";
+  var UNITS = window.STH_UNITS || [], ITEMS = window.STH_UNIT_ITEMS || {}, ROSTER = [], DATA = null;
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function when(t) { if (!t) return ""; var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate() + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+  if (!window.sthAccount || !window.sthAccount.on) { $("msg").textContent = "공유 주소가 설정되지 않아 쓸 수 없습니다."; return; }
+  if (window.sthAccMock) { $("mock").innerHTML = "<span class='mockbar'>미리보기 — 이 브라우저 안의 연습용 명단입니다. 교사 열쇠는 mock</span>"; $("key").value = "mock"; }
+  else try { $("key").value = localStorage.getItem(KEY) || ""; } catch (e) {}
+  function key() { return $("key").value.trim(); }
+  /* 반 코드 → 그 반이 배우는 과목 */
+  var SUBJ = { "지구과학": ["지구과학"], "지구시스템": ["지구시스템과학1", "지구시스템과학2"], "행성우주": ["행성우주과학1", "행성우주과학2"], "기후환경": ["기후변화와 환경생태"], "융합탐구": ["융합과학 탐구"], "과학사": ["과학의 역사와 문화"] };
+  function unitsFor(c) {
+    if (/^1-/.test(c)) return UNITS.filter(function (u) { return u[3] === "1학년"; });
+    var m = /^2-(.+?)[AB]?$/.exec(c), s = m && SUBJ[m[1]];
+    return s ? UNITS.filter(function (u) { return s.indexOf(u[1]) >= 0; }) : UNITS;
+  }
+  function classes() { var o = {}; ROSTER.forEach(function (s) { (s.classes.length ? s.classes : [s.cls]).forEach(function (c) { if (c) o[c] = 1; }); }); return Object.keys(o).sort(); }
+  function fillCls() {
+    [$("cls"), $("cls2")].forEach(function (sel) { var v = sel.value; sel.innerHTML = ""; classes().forEach(function (c) { var o = el("option", null, c); o.value = c; sel.appendChild(o); }); if (v) sel.value = v; });
+    fillUnits();
+  }
+  function fillUnits() { var sel = $("unit"), v = sel.value; sel.innerHTML = ""; unitsFor($("cls").value).forEach(function (u) { var o = el("option", null, u[1] + " · " + u[2]); o.value = u[0]; sel.appendChild(o); }); if (v) sel.value = v; }
+  $("cls").addEventListener("change", fillUnits);
+  $("go").addEventListener("click", function () {
+    $("msg").textContent = "여는 중…";
+    call({ action: "accRoster", key: key() }).then(function (j) {
+      if (!j.ok) { $("msg").textContent = j.error || "열지 못했습니다"; return; }
+      if (!window.sthAccMock) try { localStorage.setItem(KEY, key()); } catch (e) {}
+      ROSTER = j.students || []; $("msg").textContent = "명단 " + ROSTER.length + "명 · 로그인해 본 학생 " + ROSTER.filter(function (s) { return s.pin; }).length + "명";
+      $("tabs").hidden = false; $("rec").hidden = false; fillCls(); paintRoster();
+    }, function () { $("msg").textContent = "연결하지 못했습니다"; });
+  });
+  Array.prototype.forEach.call($("tabs").children, function (b) { b.addEventListener("click", function () { Array.prototype.forEach.call($("tabs").children, function (x) { x.classList.toggle("on", x === b); }); $("rec").hidden = b.getAttribute("data-t") !== "rec"; $("ros").hidden = b.getAttribute("data-t") !== "ros"; }); });
+
+  /* ---- 한 학생 · 한 단원 요약 ---- */
+  function summarize(unit, d) {
+    var s = (d && d.s) || {}, w = (d && d.w) || {}, it = ITEMS[unit] || {}, o = { g: [], gOk: 0, gN: 0, ep: [], q1: 0, q2: 0, qx: 0, qn: 0, qd: [], lab: 0, labN: 0, labd: [], w: [], wLen: 0 };
+    Object.keys(it.g || {}).concat(Object.keys(s).filter(function (k) { return /OK$/.test(k); }).map(function (k) { return k.slice(0, -2); })).forEach(function (k) {
+      if (o.g.some(function (x) { return x.k === k; }) || s[k + "I"] == null) return;
+      var ok = s[k + "OK"], i1 = s[k + "I"], i2 = s[k + "_2I"], g = (it.g || {})[k] || {}, opt = g.o || [];
+      o.g.push({ k: k, t: g.t || k, q: g.q || "", ok: ok, a: opt[i1] || s[k] || "", b: typeof i2 === "number" ? opt[i2] || "" : "" });
+      if (ok === "맞음" || ok === "어긋남") { o.gN++; if (ok === "맞음") o.gOk++; }
+    });
+    Object.keys(s).forEach(function (k) { var v = s[k]; if (v && typeof v === "object" && v.c && v.c.length !== undefined) { var n = 0; v.c.forEach(function (x) { if (x) n++; }); o.ep.push({ k: k, n: n, tot: v.c.length, done: !!v.done }); } });
+    var Q = s.quiz || {}, QT = it.q || {};
+    Object.keys(Q).forEach(function (id) { var x = Q[id] || {}; if (!(x.r === 1 || x.n || x.sh)) return; o.qn++; var st = x.r === 1 && !x.n && !x.sh ? "한 번에" : (x.r === 1 ? (x.sh && !x.n ? "해설 본 뒤 맞힘" : "다시 맞힘") : (x.sh ? "해설 봄" : "아직 틀림"));
+      if (st === "한 번에") o.q1++; else if (x.r === 1) o.q2++; else o.qx++; o.qd.push({ id: id, st: st, n: x.n || 0, lv: (QT[id] || [])[0], t: (QT[id] || [])[2] || "" }); });
+    o.qd.sort(function (a, b) { return a.id < b.id ? -1 : 1; });
+    ["lab", "real"].forEach(function (lk) { var L = s[lk] || {}; Object.keys(L).forEach(function (c) { var x = L[c] || {}; if (x.p == null) return; o.labN++; if (x.ok) o.lab++; o.labd.push({ k: (lk === "lab" ? "응용 " : "실제 자료 ") + c, ok: !!x.ok, n: x.n || 0, p: x.p, a: x.a || x.line || "" }); }); });
+    Object.keys(w).forEach(function (k) { var t = String(w[k] || "").trim(); if (t) { o.w.push({ k: k, t: t }); o.wLen += t.length; } });
+    return o;
+  }
+  function pct(a, b) { return b ? Math.round(a / b * 100) + "%" : "–"; }
+
+  $("load").addEventListener("click", load);
+  function load() {
+    var c = $("cls").value, u = $("unit").value; $("rmsg").textContent = "불러오는 중…";
+    return call({ action: "accRecords", key: key(), cls: c, unit: u }).then(function (j) {
+      if (!j.ok) { $("rmsg").textContent = j.error || "불러오지 못했습니다"; return; }
+      DATA = { cls: c, unit: u, j: j }; paintRec(); $("rmsg").textContent = j.records.length + "명의 기록 / 이 반 " + j.students.length + "명";
+    }, function () { $("rmsg").textContent = "연결하지 못했습니다"; });
+  }
+  function paintRec() {
+    var t = $("rt"), j = DATA.j, by = {}; t.innerHTML = "";
+    j.records.forEach(function (r) { by[r.sid] = r; });
+    var h = el("tr"); ["학번", "이름", "마지막", "첫 추리", "이야기 장면", "수준별 문제", "실험실·실제 자료", "정리하기 글"].forEach(function (x) { h.appendChild(el("th", null, x)); }); t.appendChild(h);
+    j.students.slice().sort(function (a, b) { return a.sid < b.sid ? -1 : 1; }).forEach(function (st) {
+      var r = by[st.sid], tr = el("tr");
+      tr.appendChild(el("td", "n", st.sid));
+      var nm = el("td"); var a = el("a", null, st.name); a.href = "#"; nm.appendChild(a); tr.appendChild(nm);
+      if (!r) { var td = el("td", "msg", "아직 기록 없음"); td.colSpan = 6; tr.appendChild(el("td", "n", "")); tr.appendChild(td); t.appendChild(tr); return; }
+      var o = summarize(DATA.unit, r.d);
+      tr.appendChild(el("td", "n", when(r.at)));
+      var g = el("td"); o.g.forEach(function (x) { var p = el("span", "pill " + (x.ok === "맞음" ? "ok" : x.ok === "어긋남" ? "no" : ""), (x.ok === "맞음" ? "✓" : x.ok === "어긋남" ? "✗" : "·") + " " + x.k); p.title = x.q + "\n처음: " + x.a + (x.b ? "\n다시: " + x.b : ""); g.appendChild(p); }); tr.appendChild(g);
+      tr.appendChild(el("td", null, o.ep.map(function (e) { return e.k + " " + e.n + "/" + e.tot + (e.done ? " ✓" : ""); }).join(" · ") || "–"));
+      var q = el("td"); q.innerHTML = o.qn ? "<span class='ok'>한 번에 " + o.q1 + "</span> · <span class='mid'>다시 " + o.q2 + "</span> · <span class='no'>아직 " + o.qx + "</span> <span class='msg'>(" + o.qn + "문항, 한 번에 " + pct(o.q1, o.qn) + ")</span>" : "–"; tr.appendChild(q);
+      tr.appendChild(el("td", "n", o.labN ? o.lab + "/" + o.labN + " 해결" : "–"));
+      tr.appendChild(el("td", null, o.w.length ? o.w.length + "칸 · " + o.wLen + "자" : "–"));
+      t.appendChild(tr);
+      var open = null;
+      a.addEventListener("click", function (e) { e.preventDefault(); if (open) { open.parentNode.removeChild(open); open = null; return; } open = detail(st, r, o); tr.parentNode.insertBefore(open, tr.nextSibling); });
+    });
+  }
+  function detail(st, r, o) {
+    var tr = el("tr", "det"), td = el("td"); td.colSpan = 8; tr.appendChild(td);
+    function sec(title) { td.appendChild(el("h4", null, title)); var ul = el("ul"); td.appendChild(ul); return ul; }
+    var g = sec("첫 추리"); o.g.forEach(function (x) { var li = el("li"); li.innerHTML = "<b>" + x.t + "</b> — " + x.q + "<br>처음: " + x.a + (x.b ? " → 다시: " + x.b : "") + " <span class='" + (x.ok === "맞음" ? "ok" : "no") + "'>" + (x.ok || "") + "</span>"; g.appendChild(li); }); if (!o.g.length) g.appendChild(el("li", "msg", "없음"));
+    var q = sec("수준별 문제"); o.qd.forEach(function (x) { var li = el("li"); li.innerHTML = "<span class='" + (x.st === "한 번에" ? "ok" : /맞힘/.test(x.st) ? "mid" : "no") + "'>" + x.st + "</span>" + (x.n ? " (틀린 횟수 " + x.n + ")" : "") + " · " + x.id + (x.lv ? " · 수준 " + x.lv : "") + " — " + x.t; q.appendChild(li); }); if (!o.qd.length) q.appendChild(el("li", "msg", "없음"));
+    var l = sec("응용 실험실 · 실제 자료"); o.labd.forEach(function (x) { l.appendChild(el("li", null, x.k + " — " + (x.ok ? "해결" : "아직") + (x.n ? " (힌트 " + Math.min(2, x.n) + "단계)" : "") + (x.a ? " · " + x.a : ""))); }); if (!o.labd.length) l.appendChild(el("li", "msg", "없음"));
+    td.appendChild(el("h4", null, "정리하기 · 쓴 글")); o.w.forEach(function (x) { td.appendChild(el("div", "msg", x.k)); td.appendChild(el("div", "w", x.t)); }); if (!o.w.length) td.appendChild(el("p", "msg", "없음"));
+    var b = el("button", "btn", "🕒 바뀐 차례 보기 (시각별)"); b.type = "button"; td.appendChild(b);
+    var box = el("div"); td.appendChild(box);
+    b.addEventListener("click", function () { box.textContent = "불러오는 중…"; call({ action: "accLog", key: key(), sid: st.sid, unit: DATA.unit }).then(function (j) {
+      box.innerHTML = ""; var ul = el("ul"); (j.rows || []).forEach(function (r2) { ul.appendChild(el("li", null, when(r2[0]) + "  " + r2[2] + " = " + String(r2[3]).slice(0, 140))); }); if (!(j.rows || []).length) ul.appendChild(el("li", "msg", "없음")); box.appendChild(ul); }); });
+    return tr;
+  }
+
+  /* ---- CSV ---- */
+  function csvCell(v) { v = String(v == null ? "" : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function rowsFor(unit, students, recs) {
+    var by = {}, out = []; recs.forEach(function (r) { if (r.unit === unit) by[r.sid] = r; });
+    students.forEach(function (st) {
+      var r = by[st.sid], u = UNITS.filter(function (x) { return x[0] === unit; })[0] || [unit, "", unit];
+      if (!r) { out.push([st.sid, st.name, u[1], u[2], "", "", "", "", "", "", "", "", ""]); return; }
+      var o = summarize(unit, r.d);
+      out.push([st.sid, st.name, u[1], u[2], when(r.at), o.gOk + "/" + o.gN, o.ep.map(function (e) { return e.k + " " + e.n + "/" + e.tot; }).join(" "), o.q1, o.q2, o.qx, o.lab + "/" + o.labN, o.wLen, o.w.map(function (x) { return x.t; }).join(" / ")]);
+    });
+    return out;
+  }
+  function download(name, rows) {
+    var head = ["학번", "이름", "과목", "단원", "마지막", "첫 추리 맞음/전체", "이야기 장면", "문제 한 번에", "문제 다시 맞힘", "문제 아직", "실험실·자료 해결/손댐", "정리하기 글자 수", "정리하기 글"];
+    var txt = "﻿" + [head].concat(rows).map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+    var a = el("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "text/csv;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  }
+  function csvOne() { if (DATA) download(DATA.cls + "_" + DATA.unit + ".csv", rowsFor(DATA.unit, DATA.j.students, DATA.j.records)); }
+  $("csv").addEventListener("click", function () { if (!DATA || DATA.cls !== $("cls").value || DATA.unit !== $("unit").value) load().then(csvOne); else csvOne(); });
+  $("csvAll").addEventListener("click", function () {
+    var c = $("cls").value; $("rmsg").textContent = "모든 단원을 모으는 중…";
+    call({ action: "accRecords", key: key(), cls: c, unit: "" }).then(function (j) {
+      if (!j.ok) { $("rmsg").textContent = j.error; return; }
+      var rows = []; unitsFor(c).forEach(function (u) { rows = rows.concat(rowsFor(u[0], j.students, j.records)); });
+      download(c + "_모든단원.csv", rows); $("rmsg").textContent = "내려받았습니다 (" + rows.length + "줄)";
+    });
+  });
+
+  /* ---- 명단 · 로그인 ---- */
+  $("cls2").addEventListener("change", paintRoster);
+  function paintRoster() {
+    var c = $("cls2").value, t = $("st"); t.innerHTML = "";
+    var h = el("tr"); ["학번", "이름", "반", "수업 반", "PIN", "최근 로그인", "로그인 기기", "", ""].forEach(function (x) { h.appendChild(el("th", null, x)); }); t.appendChild(h);
+    var list = ROSTER.filter(function (s) { return s.cls === c || s.classes.indexOf(c) >= 0; });
+    $("smsg").textContent = list.length + "명 · PIN 정함 " + list.filter(function (s) { return s.pin; }).length + "명";
+    list.forEach(function (s) {
+      var tr = el("tr");
+      [s.sid, s.name, s.cls, s.classes.join(", ")].forEach(function (x) { tr.appendChild(el("td", null, x)); });
+      tr.appendChild(el("td", "n " + (s.pin ? "ok" : "msg"), s.pin ? "정함" : "아직"));
+      tr.appendChild(el("td", "n", when(s.last)));
+      tr.appendChild(el("td", "n", s.devices ? s.devices + "대" : ""));
+      tr.appendChild(el("td", "n " + (s.locked ? "no" : ""), s.locked ? "잠김" : (s.fails ? "틀림 " + s.fails : "")));
+      var td = el("td"); var b = el("button", "btn", "PIN 초기화"); b.type = "button"; b.disabled = !s.pin && !s.locked;
+      b.addEventListener("click", function () { if (!confirm(s.sid + " " + s.name + " 학생의 PIN 을 지우고 모든 기기에서 로그아웃합니다. 기록은 그대로 남습니다. 할까요?")) return;
+        call({ action: "accPinReset", key: key(), sid: s.sid }).then(function (j) { if (j.ok) { s.pin = false; s.locked = false; s.fails = 0; s.devices = 0; paintRoster(); } else alert(j.error || "하지 못했습니다"); }); });
+      td.appendChild(b); tr.appendChild(td); t.appendChild(tr);
+    });
+  }
+})();
+</script>
+</body>
+</html>

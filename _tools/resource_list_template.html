@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>진짜 보기 자료 목록 — 교사용</title>
+<link rel="stylesheet" href="../assets/theme.css">
+<style>
+  .hero { padding: 40px 30px 6px; max-width: 1320px; margin: 0 auto; }
+  .hero .back { display: inline-block; margin-bottom: 10px; font-size: 13px; color: var(--mist); text-decoration: none; font-weight: 700; }
+  .hero h1 { font-size: clamp(26px, 4vw, 36px); margin: 8px 0 8px; font-weight: 400; }
+  .hero p { color: var(--mist); font-size: 14.5px; line-height: 1.75; max-width: 900px; margin: 0; }
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 18px 30px 80px; }
+  .row-h { font-size: 12px; font-weight: 800; color: var(--mist); margin: 10px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { border: 2px solid var(--line); border-radius: 999px; padding: 5px 12px; font: inherit; font-weight: 800; font-size: 12.5px; background: var(--card); color: var(--ink); cursor: pointer; }
+  .chip span { color: var(--mist); font-weight: 700; }
+  .chip.on { border-color: var(--brand); background: var(--brand-100); color: var(--brand-700); }
+  .search { margin: 12px 0; }
+  .search input { width: min(420px, 100%); border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; font: inherit; font-size: 14px; background: var(--card-2); color: var(--ink); }
+  .count { font-size: 12.5px; color: var(--mist); margin-left: 8px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 1000px; font-size: 13px; background: var(--panel); }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; vertical-align: top; text-align: left; line-height: 1.6; color: var(--ink); }
+  th { background: var(--card-2); color: var(--mist); position: sticky; top: 0; z-index: 1; }
+  .sub { font-size: 12px; color: var(--mist); margin-top: 2px; }
+  .sub2 { font-size: 12.5px; color: var(--mist); max-width: 360px; }
+  td a { color: var(--brand-700); font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <a class="back" href="../">← 교사용 허브</a>
+  <h1 class="display">🔎 진짜 보기 자료 — 한눈에 보기</h1>
+  <p>단원 본문에 붙인 단추와 상자를 모두 모았습니다. 모두 {{N}}곳입니다. 학생은 본문에서 낱말을 누르거나, 문단 아래 ‘더 해 보기’ 상자를 엽니다. 단원 이름을 누르면 그 단원으로, 오른쪽 이름을 누르면 그 자료로 바로 갑니다. 기록·채점은 없고, 몇몇 단추는 먼저 한 줄 예측을 받습니다(오른쪽 칸).</p>
+</div>
+<div class="wrap">
+  <div class="row-h">과목</div>
+  <div class="chips" id="subj"><button class="chip on" data-k="s" data-v="">전체</button>{{SUBJ}}</div>
+  <div class="row-h">종류</div>
+  <div class="chips" id="grp"><button class="chip on" data-k="g" data-v="">전체</button>{{GROUPS}}</div>
+  <div class="search"><input type="search" id="q" placeholder="낱말·단원·자료 이름으로 찾기 (예: 뉴턴, 해구, 온실)"><span class="count" id="cnt"></span></div>
+  <div class="scroll"><table>
+    <thead><tr><th>과목</th><th>단원 · 탭</th><th>종류</th><th>본문 낱말 · 붙인 자리</th><th>열리는 것</th><th>먼저 묻는 질문 · 해 볼 것 · 카드 한 줄 설명</th></tr></thead>
+    <tbody>{{ROWS}}</tbody>
+  </table></div>
+</div>
+<script>
+(function () {
+  var f = { s: "", g: "" }, q = document.getElementById("q"), rows = Array.prototype.slice.call(document.querySelectorAll("tbody tr"));
+  function apply() {
+    var t = (q.value || "").trim(), n = 0;
+    rows.forEach(function (tr) {
+      var ok = (!f.s || tr.getAttribute("data-s") === f.s) && (!f.g || tr.getAttribute("data-g") === f.g) && (!t || tr.textContent.indexOf(t) >= 0);
+      tr.hidden = !ok; if (ok) n++;
+    });
+    document.getElementById("cnt").textContent = n + "곳";
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".chip"), function (c) {
+    c.addEventListener("click", function () {
+      var k = c.getAttribute("data-k"); f[k] = c.getAttribute("data-v");
+      Array.prototype.forEach.call(c.parentNode.children, function (x) { x.classList.toggle("on", x === c); });
+      apply();
+    });
+  });
+  q.addEventListener("input", apply);
+  /* 주소 끝 #PhET · #인물 카드 처럼 종류 이름을 붙이면 그 종류만 보여 줌 */
+  var h = decodeURIComponent((location.hash || "").slice(1));
+  if (h) Array.prototype.forEach.call(document.querySelectorAll('#grp .chip'), function (c) { if (c.getAttribute("data-v") === h) c.click(); });
+  apply();
+})();
+</script>
+</body>
+</html>
