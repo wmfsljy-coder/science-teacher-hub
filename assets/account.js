@@ -76,7 +76,10 @@
   function setAcc(o, remember) { put(localStorage, KEY, null); put(sessionStorage, KEY, null); if (o) put(remember ? localStorage : sessionStorage, KEY, o); paint(); }
   window.sthAccount = { me: function () { var a = acc(); return a && a.me; }, on: ON,
     /* 로그인한 학생을 반·이름으로 — 투표·돌려 읽기·질문 게시판이 쓴다. 이름은 '@학번', 서버는 토큰 t 로 확인한다 */
-    ident: function (unit) { var a = acc(); if (!a || !a.me || !a.me.sid) return null; var c = classOfUnit(a.me, unit || unitId()); return c ? { cls: c, nick: "@" + a.me.sid, t: a.t } : null; } };
+    ident: function (unit) { var a = acc(); if (!a || !a.me || !a.me.sid) return null; var c = classOfUnit(a.me, unit || unitId()); return c ? { cls: c, nick: "@" + a.me.sid, t: a.t } : null; },
+    /* 소단원 안 카드(교과서 실험·실제 자료)가 쓴다: 열어도 되는지, 안 되면 로그인 창 */
+    need: function () { return !ON || TEACHER || !!acc(); },
+    login: function (then) { dialog(then); } };
 
   var CSS = false;
   function css() {
