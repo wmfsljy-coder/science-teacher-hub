@@ -7,6 +7,8 @@
  *  시트 '설정'   : A1 '교사 열쇠' / B1 에 아무도 모르는 글자. 선생님 화면에서 이 열쇠를 넣어야
  *                  모든 반을 한눈에 볼 수 있다. 시트를 처음 쓸 때 저절로 만들어진다.
  *  시트 '반목록'(선택) : A열에 허용할 반 코드를 적으면 그 반만 받는다. 없으면 모두 받는다.
+ *  시트 '투표'   : 시각 | 반 | 별명 | 단원 | 첫 추리 열쇠 | 처음 고른 보기 | 다시 고른 보기 | 숨김
+ *                  첫 추리에서 학생이 ‘우리 반 투표에 보내기’를 누르면 쌓인다(같은 반·별명·단원·열쇠는 덮어쓴다).
  *  시트 '측정값' : 시각 | 반 | 별명 | 단원 | 측정 | 값(JSON {v:[숫자 1~3개], g:잰 자리}) | 숨김
  *                  단원의 ‘우리 반 측정값’(선택 활동, assets/measure.js)이 올린다. 같은 반·별명·단원·측정은 덮어쓴다.
  *
@@ -18,6 +20,7 @@ var SHEET = 'share';
 var LOG = '활동';
 var CONF = '설정';
 var MEASURE = '측정값';
+var VOTE = '투표';
 
 function sheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -25,6 +28,15 @@ function sheet_() {
   if (!sh) {
     sh = ss.insertSheet(SHEET);
     sh.appendRow(['시각', '반', '별명', '단원', '단원이름', '성과(JSON)', '한 문장', '숨김']);
+  }
+  return sh;
+}
+function voteSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(VOTE);
+  if (!sh) {
+    sh = ss.insertSheet(VOTE);
+    sh.appendRow(['시각', '반', '별명', '단원', '첫 추리 열쇠', '처음 고른 보기', '다시 고른 보기', '숨김']);
   }
   return sh;
 }
@@ -158,6 +170,23 @@ function doGet(e) {
     return out_({ ok: true, items: mitems });
   }
 
+  /* 한 반의 한 단원에서 처음에 많이 틀린 문항 — 별명 없이 문항별 인원만(학생 화면의 ‘다시 풀기’가 쓴다) */
+  if (p.action === 'classmiss') {
+    var xc = cut_(p.cls, 12), xu = cut_(p.unit, 24), xr = sheet_().getDataRange().getValues(), cnt = {}, ns = 0;
+    for (var xi = 1; xi < xr.length; xi++) {
+      var xw = xr[xi];
+      if (String(xw[1]) !== xc || String(xw[3]) !== xu || String(xw[7]).trim()) continue;
+      var xres = {}; try { xres = JSON.parse(xw[5] || '{}'); } catch (err5) {}
+      var xe = String(xres._ev || ''); if (!xe) continue; ns++;
+      xe.split('|').forEach(function (part) {
+        if (part.slice(0, 2) !== 'x:') return;
+        part.slice(2).split(',').forEach(function (id) { if (/^[\w-]{1,8}$/.test(id)) cnt[id] = (cnt[id] || 0) + 1; });
+      });
+    }
+    var top = Object.keys(cnt).map(function (id) { return { id: id, n: cnt[id] }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 10);
+    return out_({ ok: true, students: ns, items: top });
+  }
+
   /* 바로가기 탭 만들기 — 내용은 코드에 박힌 공개 링크뿐이라 열쇠 없이도 된다(이미 최신이면 아무것도 안 한다). */
   if (p.action === 'links') { ensureLinks_(false); return out_({ ok: true, ver: LINKS_VER, n: LINKS.length }); }
 
@@ -284,7 +313,7 @@ function doPost(e) {
       var w = sv[y];
       if (String(w[7]).trim() || String(w[1]) !== wc || String(w[3]) !== wu) continue;
       var wr = {}; try { wr = JSON.parse(w[5] || '{}'); } catch (err3) {}
-      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {}, x: [] };
+      var one = { nick: String(w[2]), t: ms_(w[0]), g: {}, e: {}, q: null, h: null, p: {}, x: [], r: null };
       String(wr._ev || '').split('|').forEach(function (part) {
         var tag = part.slice(0, 2), body = part.slice(2);
         if (!body) return;
@@ -295,6 +324,7 @@ function doPost(e) {
           else if (tag === 'h:') { var hm = /^(\d+)\/(\d+)\/(\d+)$/.exec(it); if (hm) one.h = [+hm[1], +hm[2], +hm[3]]; }
           else if (tag === 'p:') { var pm = PC_RE.exec(it); if (pm) one.p[pm[1]] = [pm[2], pm[3] == null ? null : +pm[3]]; }
           else if (tag === 'x:') { if (/^[\w-]{1,8}$/.test(it)) one.x.push(it); }
+          else if (tag === 'r:') { var rm = /^(\d+)\/(\d+)$/.exec(it); if (rm) one.r = [+rm[1], +rm[2]]; }
         });
       });
       st.push(one);
@@ -327,7 +357,7 @@ function doPost(e) {
     var gone = 0;
     var lk = LockService.getScriptLock(); if (!lk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시 시도해 주세요' });
     try {
-      [sheet_(), logSheet_(), measureSheet_()].forEach(function (sh) {
+      [sheet_(), logSheet_(), measureSheet_(), voteSheet_()].forEach(function (sh) {
         var vs = sh.getDataRange().getValues();
         for (var r = vs.length - 1; r >= 1; r--) {
           if (String(vs[r][1]) === wc) { sh.deleteRow(r + 1); gone++; }
@@ -335,6 +365,46 @@ function doPost(e) {
       });
     } finally { lk.releaseLock(); }
     return out_({ ok: true, removed: gone });
+  }
+
+  /* 첫 추리 투표 — 처음 고른 보기와 (짝과 이야기한 뒤) 다시 고른 보기의 번호만 받는다. 같은 반·별명·단원·열쇠는 덮어쓴다. */
+  if (d.action === 'vote') {
+    var vc = cut_(d.cls, 12), vn = cut_(d.nick, 12), vu = cut_(d.unit, 24), vk = cut_(d.key, 12);
+    if (!vc || !vn || !vu || !vk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
+    if (!allowed_(vc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
+    var va = parseInt(d.a, 10), vb = d.b == null || d.b === '' ? '' : parseInt(d.b, 10);
+    if (!(va >= 0 && va < 8) || (vb !== '' && !(vb >= 0 && vb < 8))) return out_({ ok: false, error: '보기 번호가 맞지 않습니다' });
+    var vrow = [new Date(), safe_(vc), safe_(vn), safe_(vu), safe_(vk), va, vb, ''], vdone = false;
+    ensureTz_();
+    var vl = LockService.getScriptLock();
+    if (!vl.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
+    try {
+      var vsh = voteSheet_(), vr = vsh.getDataRange().getValues();
+      for (var vi = 1; vi < vr.length; vi++) {
+        if (String(vr[vi][1]) === vc && String(vr[vi][2]) === vn && String(vr[vi][3]) === vu && String(vr[vi][4]) === vk) {
+          vrow[7] = vr[vi][7]; vsh.getRange(vi + 1, 1, 1, vrow.length).setValues([vrow]); vdone = true; break;
+        }
+      }
+      if (!vdone) vsh.appendRow(vrow);
+    } finally { vl.releaseLock(); }
+    return out_({ ok: true, updated: vdone });
+  }
+
+  /* 첫 추리 투표 모아 보기 — 교사 열쇠가 맞아야 한다. 보기마다 처음·다시 인원(별명은 보내지 않는다). */
+  if (d.action === 'votes') {
+    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    var wc2 = cut_(d.cls, 12), wu2 = cut_(d.unit, 24), gs = {};
+    var vs2 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VOTE), vv = vs2 ? vs2.getDataRange().getValues() : [];
+    for (var vj = 1; vj < vv.length; vj++) {
+      var q2 = vv[vj];
+      if (String(q2[1]) !== wc2 || String(q2[3]) !== wu2 || String(q2[7]).trim()) continue;
+      var gk = String(q2[4]), G = gs[gk] || (gs[gk] = { k: gk, n: 0, a: [], b: [], nb: 0, moved: 0, last: null });
+      var a1 = +q2[5], b1 = q2[6] === '' ? null : +q2[6];
+      G.n++; G.a[a1] = (G.a[a1] || 0) + 1;
+      if (b1 !== null) { G.nb++; G.b[b1] = (G.b[b1] || 0) + 1; if (b1 !== a1) G.moved++; }
+      var tq = ms_(q2[0]); if (tq !== null && (G.last === null || tq > G.last)) G.last = tq;
+    }
+    return out_({ ok: true, gates: Object.keys(gs).map(function (k5) { var G2 = gs[k5]; for (var z = 0; z < 8; z++) { G2.a[z] = G2.a[z] || 0; G2.b[z] = G2.b[z] || 0; } return G2; }) });
   }
 
   /* 우리 반 측정값(선택 활동) — 숫자 1~3개만 받는다. 같은 반·별명·단원·측정은 덮어쓴다. */

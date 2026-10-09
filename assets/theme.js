@@ -217,6 +217,7 @@
     restore();
     return { state: STATE, fields: FIELDS };
   };
+  window.sthUnitId = function () { return String(UNIT || "").replace(/^sth-/, ""); };
   window.sthState = function (k, v) {
     if (arguments.length === 1) return STATE[k];
     STATE[k] = v; store(); return v;
@@ -270,6 +271,54 @@
       btn[i] = b;
     });
     mix.order.forEach(function (o) { box.appendChild(btn[o]); });
+    /* ---- 짝과 이야기한 뒤 다시 고르기 · 우리 반 투표 ----
+       처음 고른 보기(첫 추리 기록·결말 판정에 쓰임)는 그대로 두고, 다시 고른 보기는 따로 적어 둔다(키 + "_2I"). */
+    var K = opt.key || "pred", again = false;
+    var rv = document.createElement("div"); rv.className = "gate-rv"; gate.appendChild(rv);
+    function mark(i) { var t = mix.text[i] || ""; return t.length > 30 ? t.slice(0, 29) + "…" : t; }
+    function paintRv() {
+      var first = STATE[K + "I"], second = STATE[K + "_2I"];
+      Array.prototype.forEach.call(box.children, function (o) {
+        var i = +o.getAttribute("data-i");
+        o.classList.toggle("picked", !again && i === first);
+        o.classList.toggle("again", again && i === second);
+        o.classList.toggle("first-ghost", again && i === first);
+      });
+      if (typeof first !== "number") { rv.hidden = true; return; }
+      rv.hidden = false;
+      var h = again
+        ? "<span class='rv-msg'>💬 짝과 이야기했나요? 지금 생각하는 보기를 다시 고르세요. <b>처음 고른 것(흐린 테두리)은 기록에 그대로 남습니다.</b></span>"
+          + "<button type='button' class='btn rv-done'>다 골랐어요</button>"
+        : "<span class='rv-msg'>" + (typeof second === "number" ? "처음 <b>" + mark(first) + "</b> → 다시 <b>" + mark(second) + "</b>" : "고른 보기: <b>" + mark(first) + "</b>") + "</span>"
+          + "<button type='button' class='btn rv-again'>💬 짝과 이야기한 뒤 다시 고르기</button>";
+      var me = {}; try { me = JSON.parse(localStorage.getItem("sth-me") || "{}"); } catch (e) {}
+      var url = String(window.STH_SHARE_URL || "").trim(), hosts = window.STH_SHARE_HOSTS;
+      if (url && hosts && hosts.length && hosts.indexOf(location.hostname) < 0 && location.protocol !== "file:") url = "";
+      if (url && !again) h += me.cls && me.nick ? "<button type='button' class='btn rv-send'>📣 우리 반 투표에 보내기</button><span class='rv-st'></span>"
+                                             : "<span class='rv-st'>‘우리 반’ 탭에서 반과 별명을 저장하면 투표를 보낼 수 있어요.</span>";
+      rv.innerHTML = h;
+      var b1 = rv.querySelector(".rv-again"), b2 = rv.querySelector(".rv-done"), b3 = rv.querySelector(".rv-send");
+      if (b1) b1.addEventListener("click", function () { again = true; paintRv(); });
+      if (b2) b2.addEventListener("click", function () { again = false; paintRv(); });
+      if (b3) b3.addEventListener("click", function () {
+        var stx = rv.querySelector(".rv-st"); b3.disabled = true; stx.textContent = "보내는 중…";
+        fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: "vote", cls: me.cls, nick: me.nick, unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
+                                 a: STATE[K + "I"], b: typeof STATE[K + "_2I"] === "number" ? STATE[K + "_2I"] : "" }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (!j.ok) throw new Error(j.error || "오류"); stx.textContent = "✓ 보냈습니다"; })
+          .catch(function (e) { stx.textContent = "보내지 못했습니다 (" + e.message + "). 잠시 뒤 다시 눌러 보세요."; })
+          .then(function () { b3.disabled = false; });
+      });
+    }
+    /* 다시 고르는 동안에는 처음 고른 보기를 바꾸지 않는다 — 단추의 원래 동작보다 먼저 가로챈다 */
+    box.addEventListener("click", function (e) {
+      if (!again) return;
+      var o = e.target.closest ? e.target.closest(".opt") : null; if (!o) return;
+      e.stopPropagation(); e.preventDefault();
+      STATE[K + "_2I"] = +o.getAttribute("data-i"); store(); paintRv();
+    }, true);
+    box.addEventListener("click", function () { if (!again) setTimeout(paintRv, 0); });
     /* 이미 고른 적이 있으면 그대로 복원한다 */
     var prev = STATE[opt.key || "pred"];
     if (prev) {
@@ -282,6 +331,7 @@
         if (typeof opt.onPick === "function") opt.onPick(idx, prev);
       }
     }
+    paintRv();
   };
 
   /* ---- 산출물 ----

@@ -455,3 +455,11 @@ html:not(.sth-teacher) a.unit-card { visibility: hidden; }
 .qf-url { font-family: ui-monospace, Menlo, monospace; font-size: clamp(13px, 2vw, 18px); margin: 12px 0 4px; word-break: break-all; color: #10202e; }
 .qf-hint { font-size: 13.5px; color: #5b6b7b; margin: 4px 0 14px; }
 @media print { .qr-btn { display: none !important; } }
+
+/* 첫 추리 — 짝과 이야기한 뒤 다시 고르기 · 우리 반 투표 (theme.js sthGate) */
+.gate-rv { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--mist); }
+.gate-rv .rv-msg b { color: var(--ink); }
+.gate-rv .btn { padding: 6px 13px; font-size: 12.5px; }
+.gate-rv .rv-st { font-size: 12.5px; }
+.gate .opt.again { border-color: var(--violet); background: var(--violet-100); color: var(--violet-700); }
+.gate .opt.first-ghost { outline: 2px dashed var(--line); outline-offset: 2px; }
