@@ -9,4 +9,4 @@ window.STH_SHARE_HOSTS = ["wmfsljy-coder.github.io", "localhost", "127.0.0.1"];
 window.STH_MAPS_KEY = "AIzaSyBnD1Aqg-Lwqv0D5HwHKoSdSubKag9TKNE";
 
 /* 학생 로그인(학번·이름·PIN) — 뒷단 accounts.gs 를 배포하고 명단을 넣은 뒤 true 로 바꾼다. 켜면 문제 풀이 탭은 로그인해야 열린다. */
-window.STH_LOGIN = false;
+window.STH_LOGIN = true;

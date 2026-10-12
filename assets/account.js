@@ -73,7 +73,12 @@
 
   /* ---- 내 로그인 ---- */
   function acc() { return get(localStorage, KEY) || get(sessionStorage, KEY); }
-  function setAcc(o, remember) { put(localStorage, KEY, null); put(sessionStorage, KEY, null); if (o) put(remember ? localStorage : sessionStorage, KEY, o); paint(); }
+  function setAcc(o, remember) {
+    var was = acc(), wt = was && was.t;
+    put(localStorage, KEY, null); put(sessionStorage, KEY, null); if (o) put(remember ? localStorage : sessionStorage, KEY, o); paint();
+    /* 로그인·로그아웃이 바뀌면 알린다 — 질문 게시판·돌려 읽기가 새로 고침 없이 바로 쓸 수 있게(qboard.js · peer.js) */
+    if ((o && o.t) !== wt) { try { window.dispatchEvent(new CustomEvent("sth-login", { detail: !!o })); } catch (e) {} }
+  }
   window.sthAccount = { me: function () { var a = acc(); return a && a.me; }, on: ON,
     /* 로그인한 학생을 반·이름으로 — 투표·돌려 읽기·질문 게시판이 쓴다. 이름은 '@학번', 서버는 토큰 t 로 확인한다 */
     ident: function (unit) { var a = acc(); if (!a || !a.me || !a.me.sid) return null; var c = classOfUnit(a.me, unit || unitId()); return c ? { cls: c, nick: "@" + a.me.sid, t: a.t } : null; },
@@ -183,7 +188,7 @@
   /* ---- 오른쪽 위 칩 ---- */
   var chip = null, menu = null;
   function paint() {
-    if (!ON || !document.body) return;
+    if (!ON || !document.body || !unitId()) return;   /* 단원이 없는 쪽(선생님 화면 등)에는 학생 로그인 칩을 두지 않는다 */
     css();
     if (!chip) { chip = el("button", "acc-chip"); chip.type = "button"; document.body.appendChild(chip); chip.addEventListener("click", toggleMenu); if (MOCK) document.body.appendChild(el("div", "acc-mock", "미리보기 — 연습용 명단(실제 기록 아님)")); }
     var a = acc();
@@ -192,6 +197,7 @@
   }
   function pendingChip(label) {   /* 서버 확인을 기다리는 동안 칩 */
     if (!chip) paint();
+    if (!chip) return;
     if (label) { chip.classList.add("in"); chip.textContent = "⏳ " + label + " 확인 중"; } else paint();
   }
   function toggleMenu() {

@@ -443,7 +443,7 @@
     if (!window.MutationObserver || !document.createTreeWalker) return;
     var SKIP = /^(SCRIPT|STYLE|TEXTAREA|INPUT|SELECT|OPTION|CANVAS|SVG|CODE|PRE|TITLE)$/i;
     var WORD = /\S*[가-힣]\S*/g, MARK = /[()（）·∙\/℃°%‰–\-~…]/;
-    var PROSE = "p, li, dd, .say, .info-card, .detail-panel, .why, .hint, .q, .msg, .lab-task-t, .lab-hint, .pc-ans, .pc-s, .std-note, .miscon, .stage-head p, .qz-q, .qz-fb, .qz-ans";
+    var PROSE = "p, li, dd, .say, .info-card, .detail-panel, .why, .hint, .q, .msg, .lab-task-t, .lab-hint, .pc-ans, .pc-s, .std-note, .miscon, .stage-head p, .qz-q, .qz-fb, .qz-ans, .case-file";
     function skip(p) {
       for (var a = p; a && a !== document.body; a = a.parentNode) {
         if (a.nodeType !== 1) continue;
@@ -459,6 +459,7 @@
       WORD.lastIndex = 0;
       while ((m = WORD.exec(t))) {
         if (!MARK.test(m[0]) || m[0].length > lim) continue;
+        if (m[0].length > 12 && !/[()（）\/℃°%‰–\-~…]/.test(m[0])) continue;   /* 가운뎃점만 있는 긴 덩어리는 · 뒤에서 줄을 바꿔도 자연스럽다(좁은 칸에서 넘치지 않게) */
         any = true; out.push(t.slice(last, m.index), [m[0]]); last = m.index + m[0].length;
       }
       if (!any) return;
@@ -499,10 +500,34 @@
       if (skip(el) || el.closest && el.closest("td, th") && !el.closest(".pc-tbl")) return;
       var w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), n = null, x;
       while ((x = w.nextNode())) if (x.nodeValue.trim()) n = x;
-      if (!n || skip(n.parentNode)) return;
-      var t = n.nodeValue, m = /(\S+)(\s+)(\S+)(\s*)$/.exec(t);
-      if (!m || m[3].replace(/[^가-힣A-Za-z0-9]/g, "").length > 4 || (m[1] + m[3]).length > 20 || !/[가-힣]/.test(m[1] + m[3])) return;
-      var s = document.createElement("span"); s.className = "nw"; s.textContent = m[1] + m[2] + m[3];
+      if (!n) return;
+      var p = n.parentNode, t = n.nodeValue, m;
+      function short(a, b) { return b.replace(/[^가-힣A-Za-z0-9]/g, "").length <= 4 && (a + b).length <= 20 && /[가-힣0-9]/.test(a + b); }
+      /* 끝 낱말이 이미 묶음(.nw) 안이면 그 앞 낱말을 묶음 안으로 들인다 — ‘일까요? (정수로)’ */
+      if (p.nodeType === 1 && p.classList.contains("nw")) {
+        var pv = p.previousSibling, pe = pv && pv.previousSibling;
+        if (p.classList.contains("nwt") || p.lastChild !== n || !pv || pv.nodeType !== 3 || !p.parentNode || skip(p.parentNode)) return;
+        /* 앞 낱말도 묶음이면(‘(지수만 쓰세요)’) 두 묶음을 하나로 */
+        if (!pv.nodeValue.trim() && pe && pe.nodeType === 1 && /^(SPAN|B|STRONG|EM|I|SUB|SUP)$/.test(pe.tagName) && !/\s/.test(pe.textContent) && short(pe.textContent, p.textContent)) {
+          var g2 = document.createElement("span"); g2.className = "nw nwt"; p.parentNode.insertBefore(g2, pe); g2.appendChild(pe); g2.appendChild(pv); g2.appendChild(p);
+          return;
+        }
+        m = /(\S+)(\s+)$/.exec(pv.nodeValue); if (!m || !short(m[1], p.textContent)) return;
+        pv.nodeValue = pv.nodeValue.slice(0, m.index); p.insertBefore(document.createTextNode(m[1] + m[2]), p.firstChild); p.classList.add("nwt");
+        return;
+      }
+      if (skip(p)) return;
+      m = /(\S+)(\s+)(\S+)(\s*)$/.exec(t);
+      if (!m) {
+        /* 끝 낱말만 글자 마디에 남고 앞 낱말이 강조·묶음 태그 안이면 둘을 함께 묶는다 — ‘<b>(이)라고</b> 한다.’ */
+        var e = n.previousSibling, mm = /^(\s+)(\S+)(\s*)$/.exec(t);
+        if (!mm || !e || e.nodeType !== 1 || !/^(SPAN|B|STRONG|EM|I|SUB|SUP)$/.test(e.tagName) || /\s/.test(e.textContent) || !short(e.textContent, mm[2])) return;
+        var g = document.createElement("span"); g.className = "nw nwt"; p.insertBefore(g, e); g.appendChild(e); g.appendChild(document.createTextNode(mm[1] + mm[2]));
+        if (mm[3]) n.nodeValue = mm[3]; else p.removeChild(n);
+        return;
+      }
+      if (!short(m[1], m[3])) return;
+      var s = document.createElement("span"); s.className = "nw nwt"; s.textContent = m[1] + m[2] + m[3];
       var f = document.createDocumentFragment(), head = t.slice(0, m.index);
       if (head) f.appendChild(document.createTextNode(head));
       f.appendChild(s); if (m[4]) f.appendChild(document.createTextNode(m[4]));

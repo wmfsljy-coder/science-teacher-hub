@@ -60,7 +60,7 @@ function badPin_(pin, sid) {
   if (sid && pin.indexOf(sid) >= 0) return '학번이 들어간 PIN 은 쓸 수 없습니다';
   return '';
 }
-function profile_(r) { return { sid: String(r[0]), name: String(r[1]), grade: String(r[2] || ''), cls: String(r[3] || ''), classes: String(r[4] || '').split(/[,\s]+/).filter(String) }; }
+function profile_(r) { return { sid: String(r[0]), name: String(r[1]), grade: String(r[2] || ''), cls: clsv_(r[3] || ''), classes: (r[4] instanceof Date ? clsv_(r[4]) : String(r[4] || '')).split(/[,\s]+/).filter(String) }; }
 /** 토큰 → 학번 (기기 시트). 마지막 시각을 고친다. */
 function whoAmI_(t) {
   t = String(t || ''); if (t.length < 20) return null;
@@ -192,7 +192,7 @@ function accounts_(d) {
       for (var m = 1; m < old.length; m++) keep[String(old[m][0])] = old[m];
       var rows = (d.rows || []).slice(0, 3000).map(function (x) {
         var s3 = sid_(x[0]), o = keep[s3] || [];
-        return [s3, safe_(cut_(x[1], 20)), cut_(x[2], 4), cut_(x[3], 12), cut_(x[4], 200), o[5] || '', o[6] || 0, o[7] || '', o[8] || '', o[9] || '', safe_(cut_(x[5] || o[10] || '', 60))];
+        return [s3, safe_(cut_(x[1], 20)), txt_(cut_(x[2], 4)), txt_(cut_(x[3], 12)), txt_(cut_(x[4], 200)), o[5] || '', o[6] || 0, o[7] || '', o[8] || '', o[9] || '', safe_(cut_(x[5] || o[10] || '', 60))];
       }).filter(function (x) { return x[0] && x[1]; });
       if (!rows.length) return { ok: false, error: '넣을 줄이 없습니다' };
       if (d.append) {   /* 덧붙이기 — 이미 있는 학번은 건너뛴다 */
@@ -200,7 +200,7 @@ function accounts_(d) {
         var at = rs3.getLastRow() + 1; rs3.getRange(at, 1, rows.length, 1).setNumberFormat('@'); rs3.getRange(at, 1, rows.length, 11).setValues(rows);
         return { ok: true, n: rows.length, append: 1 };
       }
-      var cset = {}; rows.forEach(function (x) { cset[x[3]] = 1; String(x[4]).split(/[,\s]+/).forEach(function (c) { if (c) cset[c] = 1; }); }); CacheService.getScriptCache().removeAll(Object.keys(cset).map(function (c) { return 'mem:' + c; }));
+      var cset = {}; rows.forEach(function (x) { cset[clsv_(x[3])] = 1; clsv_(x[4]).split(/[,\s]+/).forEach(function (c) { if (c) cset[c] = 1; }); }); CacheService.getScriptCache().removeAll(Object.keys(cset).map(function (c) { return 'mem:' + c; }));
       if (rs3.getLastRow() > 1) rs3.getRange(2, 1, rs3.getLastRow() - 1, 11).clearContent();
       rs3.getRange(2, 1, rows.length, 1).setNumberFormat('@');
       rs3.getRange(2, 1, rows.length, 11).setValues(rows);

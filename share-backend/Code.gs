@@ -83,6 +83,11 @@ function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').tri
 /** 학생이 보낸 글이 = + - @ 로 시작하면 시트가 수식으로 실행한다(=IMPORTXML 로 자료를 빼돌릴 수도 있다).
  *  앞에 ' 를 붙여 글자로만 저장한다. 시트에서 읽으면 ' 는 빠진 채로 돌아온다. */
 function safe_(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
+/** 반 코드·별명처럼 글자 그대로 남아야 하는 값. 시트는 '1-1' 을 날짜(1월 1일)로, '0101' 을 숫자(101)로 바꿔 버리므로
+ *  숫자·날짜처럼 보이면 앞에 ' 를 붙여 글자로 저장한다(읽으면 ' 는 빠진다). 그러지 않으면 1학년 반(1-1~1-7)의 기록이 제 반을 찾지 못한다. */
+function txt_(s) { s = safe_(s); return /^[\d\s.,\/:-]*\d[\d\s.,\/:-]*$/.test(s) ? "'" + s : s; }
+/** 시트에서 읽은 반 코드 — 이미 날짜로 바뀐 것은 '월-일' 로 되돌린다(heal_ 과 같은 규칙). */
+function clsv_(x) { return x instanceof Date ? (x.getMonth() + 1) + '-' + x.getDate() : String(x == null ? '' : x).trim().replace(/^'/, ''); }
 function ms_(v) { var t = v instanceof Date ? v.getTime() : Date.parse(v); return isNaN(t) ? null : t; }
 /** 반목록 기본값 — 시트에 '반목록' 탭이 없을 때 준비하기가 만든다. 고칠 때는 시트의 탭을 고치면 된다(A열 코드만 본다). */
 var CLASSES = (function () {
@@ -109,6 +114,26 @@ function heal_(sh) {
   v = v.map(function (r) { var x = r[0]; if (x instanceof Date) { bad = true; return [(x.getMonth() + 1) + '-' + x.getDate()]; } return [x]; });
   if (bad) { rg.setNumberFormat('@'); rg.setValues(v); }
   return sh;
+}
+/** 반 코드 칸에 날짜로 바뀌어 들어간 값('1-1' → 1월 1일)을 모든 기록 탭에서 '월-일' 글자로 되돌린다.
+ *  txt_ 를 쓰기 전에 쌓인 기록을 고치는 것 — 시트를 열 때와, 요청이 올 때 6시간에 한 번 저절로 돈다. */
+function healCls_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), fixed = 0;
+  [[SHEET, [2]], [LOG, [2]], [VOTE, [2]], [MEASURE, [2]], ['돌려읽기', [2]], ['동료평가', [2]], ['질문', [2]], ['명단', [4, 5]]].forEach(function (t) {
+    var sh = ss.getSheetByName(t[0]), n = sh ? sh.getLastRow() - 1 : 0; if (n < 1) return;
+    t[1].forEach(function (col) {
+      var rg = sh.getRange(2, col, n, 1), v = rg.getValues(), bad = false;
+      /* 다시 쓸 때 글자는 모두 txt_ 로 — 그대로 쓰면 이미 글자로 있던 '1-2' 도 날짜로 바뀐다 */
+      v = v.map(function (r) { if (r[0] instanceof Date) { bad = true; fixed++; return [txt_(clsv_(r[0]))]; } return [typeof r[0] === 'string' ? txt_(r[0]) : r[0]]; });
+      if (bad) rg.setValues(v);
+    });
+  });
+  return fixed;
+}
+function healClsOnce_() {
+  var c = CacheService.getScriptCache(); if (c.get('clsHeal')) return;
+  var lk = LockService.getScriptLock(); if (!lk.tryLock(5000)) return;
+  try { healCls_(); c.put('clsHeal', '1', 21600); } catch (e) {} finally { lk.releaseLock(); }
 }
 function allowed_(cls) {
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('반목록');
@@ -205,6 +230,7 @@ function doGet(e) {
 function doPost(e) {
   var d;
   try { d = JSON.parse(e.postData.contents); } catch (err) { return out_({ ok: false, error: '형식 오류' }); }
+  healClsOnce_();
   /* 학생 로그인·학습 기록(accounts.gs) — action 이 acc 로 시작하는 요청 */
   if (/^acc[A-Z]/.test(String(d.action || ''))) return out_(accounts_(d));
   /* 익명 돌려 읽기·동료 평가·궁금한 것 게시판(community.gs) — action 이 peer·q 로 시작하는 요청 */
@@ -349,7 +375,7 @@ function doPost(e) {
     ensureTz_();
     var ilk = LockService.getScriptLock(); if (!ilk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시' });
     try {
-      var fix = function (r, n) { var o = []; for (var c = 0; c < n; c++) { var v = r[c]; o.push(c === 0 ? new Date(+v || Date.parse(v) || Date.now()) : safe_(v == null ? '' : v)); } return o; };
+      var fix = function (r, n) { var o = []; for (var c = 0; c < n; c++) { var v = r[c]; o.push(c === 0 ? new Date(+v || Date.parse(v) || Date.now()) : (c <= 2 ? txt_ : safe_)(v == null ? '' : v)); } return o; };
       var A1 = (d.rows || []).slice(0, 5000).map(function (r) { return fix(r, 8); });
       var A2 = (d.logs || []).slice(0, 20000).map(function (r) { return fix(r, 7); });
       if (A1.length) { var s1 = sheet_(); s1.getRange(s1.getLastRow() + 1, 1, A1.length, 8).setValues(A1); }
@@ -385,14 +411,14 @@ function doPost(e) {
     if (!allowed_(vc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
     var va = parseInt(d.a, 10), vb = d.b == null || d.b === '' ? '' : parseInt(d.b, 10);
     if (!(va >= 0 && va < 8) || (vb !== '' && !(vb >= 0 && vb < 8))) return out_({ ok: false, error: '보기 번호가 맞지 않습니다' });
-    var vrow = [new Date(), safe_(vc), safe_(vn), safe_(vu), safe_(vk), va, vb, ''], vdone = false;
+    var vrow = [new Date(), txt_(vc), txt_(vn), safe_(vu), safe_(vk), va, vb, ''], vdone = false;
     ensureTz_();
     var vl = LockService.getScriptLock();
     if (!vl.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
     try {
       var vsh = voteSheet_(), vr = vsh.getDataRange().getValues();
       for (var vi = 1; vi < vr.length; vi++) {
-        if (String(vr[vi][1]) === vc && String(vr[vi][2]) === vn && String(vr[vi][3]) === vu && String(vr[vi][4]) === vk) {
+        if (clsv_(vr[vi][1]) === vc && String(vr[vi][2]) === vn && String(vr[vi][3]) === vu && String(vr[vi][4]) === vk) {
           vrow[7] = vr[vi][7]; vsh.getRange(vi + 1, 1, 1, vrow.length).setValues([vrow]); vdone = true; break;
         }
       }
@@ -427,14 +453,14 @@ function doPost(e) {
       .map(function (x) { return Math.round(x * 1000) / 1000; });
     if (!qv.length) return out_({ ok: false, error: '측정값이 없습니다' });
     var qg = cut_(d.g, 10).replace(/[<>&"]/g, '');                 // (선택) 잰 자리 같은 무리 이름
-    var qrow = [new Date(), safe_(qc), safe_(qn), safe_(qu), safe_(qk), JSON.stringify(qg ? { v: qv, g: qg } : { v: qv }), ''], qa = false;
+    var qrow = [new Date(), txt_(qc), txt_(qn), safe_(qu), safe_(qk), JSON.stringify(qg ? { v: qv, g: qg } : { v: qv }), ''], qa = false;
     ensureTz_();
     var ql = LockService.getScriptLock();
     if (!ql.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
     try {
       var qsh = measureSheet_(), qr = qsh.getDataRange().getValues();
       for (var qi = 1; qi < qr.length; qi++) {
-        if (String(qr[qi][1]) === qc && String(qr[qi][2]) === qn && String(qr[qi][3]) === qu && String(qr[qi][4]) === qk) {
+        if (clsv_(qr[qi][1]) === qc && String(qr[qi][2]) === qn && String(qr[qi][3]) === qu && String(qr[qi][4]) === qk) {
           qrow[6] = qr[qi][6];
           qsh.getRange(qi + 1, 1, 1, qrow.length).setValues([qrow]); qa = true; break;
         }
@@ -451,7 +477,7 @@ function doPost(e) {
   var res = {}, keys = Object.keys(d.results || {}).slice(0, 12);
   keys.forEach(function (k) { res[cut_(k, 8)] = cut_(d.results[k], 300); });
   var label = cut_(d.unitLabel, 60);
-  var row = [new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), JSON.stringify(res), safe_(cut_(d.line, 300)), ''];
+  var row = [new Date(), txt_(cls), txt_(nick), safe_(unit), safe_(label), JSON.stringify(res), safe_(cut_(d.line, 300)), ''];
   var again = false;
 
   ensureTz_();
@@ -460,7 +486,7 @@ function doPost(e) {
   try {
     var sh = sheet_(), rows = sh.getDataRange().getValues();
     for (var i = 1; i < rows.length; i++) {
-      if (String(rows[i][1]) === cls && String(rows[i][2]) === nick && String(rows[i][3]) === unit) {
+      if (clsv_(rows[i][1]) === cls && String(rows[i][2]) === nick && String(rows[i][3]) === unit) {
         row[7] = rows[i][7];                                   // 숨김 표시는 유지
         sh.getRange(i + 1, 1, 1, row.length).setValues([row]);
         again = true;
@@ -469,7 +495,7 @@ function doPost(e) {
     }
     if (!again) sh.appendRow(row);
     /* 활동 기록은 덮어쓰지 않고 쌓는다 */
-    logSheet_().appendRow([new Date(), safe_(cls), safe_(nick), safe_(unit), safe_(label), keys.filter(function (k) { return k !== '_ev'; }).length, again ? '다시' : '처음']);
+    logSheet_().appendRow([new Date(), txt_(cls), txt_(nick), safe_(unit), safe_(label), keys.filter(function (k) { return k !== '_ev'; }).length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
   return out_({ ok: true, updated: again });
 }
@@ -484,6 +510,7 @@ function onOpen() {
   SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기')
     .addItem('생각 점검 표 새로 만들기', '생각점검').addItem('과목별 보기 새로 만들기 (반별 명단 · 과목 탭)', '과목별보기메뉴').addToUi();
   try { ensureLinks_(false); } catch (e) {}
+  try { healCls_(); } catch (e) {}
   try { 과목별보기(true); } catch (e) {}                          /* 열 때마다 반별 명단·과목 탭을 최신으로 */
 }
 function 바로가기() { ensureLinks_(true); SpreadsheetApp.getActiveSpreadsheet().setActiveSheet(SpreadsheetApp.getActiveSpreadsheet().getSheetByName('바로가기')); }

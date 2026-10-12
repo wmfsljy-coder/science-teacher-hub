@@ -91,7 +91,7 @@ function community_(d) {
     if (text.length < 10) return { ok: false, error: '10자 이상 써 주세요' };
     var lk = LockService.getScriptLock(); if (!lk.tryLock(20000)) return { ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' };
     try {
-      var sh = peerSheet_(), v = sh.getDataRange().getValues(), row = [new Date(), safe_(W.cls), safe_(W.unit), safe_(W.nick), safe_(text), ''], upd = false;
+      var sh = peerSheet_(), v = sh.getDataRange().getValues(), row = [new Date(), txt_(W.cls), safe_(W.unit), txt_(W.nick), safe_(text), ''], upd = false;
       for (var r = 1; r < v.length; r++) if (String(v[r][1]) === W.cls && String(v[r][2]) === W.unit && String(v[r][3]) === W.nick) { row[5] = v[r][5]; sh.getRange(r + 1, 1, 1, 6).setValues([row]); upd = true; break; }
       if (!upd) sh.appendRow(row);
     } finally { lk.releaseLock(); }
@@ -134,7 +134,7 @@ function community_(d) {
     if (writer === W.nick) return { ok: false, error: '내 글은 평가할 수 없습니다' };
     var lk3 = LockService.getScriptLock(); if (!lk3.tryLock(20000)) return { ok: false, error: '잠시 뒤 다시 눌러 주세요' };
     try {
-      var rs = rateSheet_(), rvv = rs.getDataRange().getValues(), rrow = [new Date(), safe_(W.cls), safe_(W.unit), safe_(writer), safe_(W.nick), JSON.stringify(c), safe_(good), safe_(fix), ''], up3 = false;
+      var rs = rateSheet_(), rvv = rs.getDataRange().getValues(), rrow = [new Date(), txt_(W.cls), safe_(W.unit), txt_(writer), txt_(W.nick), JSON.stringify(c), safe_(good), safe_(fix), ''], up3 = false;
       for (var y = 1; y < rvv.length; y++) if (String(rvv[y][1]) === W.cls && String(rvv[y][2]) === W.unit && String(rvv[y][3]) === writer && String(rvv[y][4]) === W.nick) { rrow[8] = rvv[y][8]; rs.getRange(y + 1, 1, 1, 9).setValues([rrow]); up3 = true; break; }
       if (!up3) rs.appendRow(rrow);
     } finally { lk3.releaseLock(); }
@@ -152,7 +152,7 @@ function community_(d) {
         var all = qsh.getDataRange().getValues(), mineN = 0;
         for (var z = 1; z < all.length; z++) if (String(all[z][1]) === W.cls && String(all[z][2]) === W.unit && String(all[z][3]) === W.nick) mineN++;
         if (mineN >= 5) return { ok: false, error: '한 단원에 질문은 다섯 개까지 남길 수 있습니다' };
-        qsh.appendRow([new Date(), safe_(W.cls), safe_(W.unit), safe_(W.nick), safe_(qt), '[]', '[]', '', Utilities.getUuid().replace(/-/g, '').slice(0, 10)]);
+        qsh.appendRow([new Date(), txt_(W.cls), safe_(W.unit), txt_(W.nick), safe_(qt), '[]', '[]', '', Utilities.getUuid().replace(/-/g, '').slice(0, 10)]);
       } finally { lk4.releaseLock(); }
     }
     if (a === 'qMark') {
