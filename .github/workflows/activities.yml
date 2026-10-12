@@ -1,0 +1,43 @@
+# 과학허브 활동 목록(시트가 IMPORTDATA 로 읽는 data/*.tsv)을 12과목 저장소의 지금 코드에서 다시 뽑는다.
+# 20분마다 돌고, 바뀐 것이 있을 때만 커밋한다. 손으로 돌리려면 Actions 탭 → 활동 목록 갱신 → Run workflow.
+name: 활동 목록 갱신
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+  push:
+    paths: ["_tools/activities/**", ".github/workflows/activities.yml"]
+permissions:
+  contents: write
+concurrency:
+  group: activities
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: hub
+      - name: 과목 저장소 받기
+        run: |
+          for r in integrated-science-1 integrated-science-2 earth-science-2 earth-system-1 earth-system-2 planet-space-1 planet-space-2 climate-change-ecology convergence-science-inquiry science-history-culture science-inquiry-1 science-inquiry-2; do
+            git clone -q --depth 1 "https://github.com/${{ github.repository_owner }}/$r.git" "$r"
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 목록 뽑기
+        run: node hub/_tools/activities/build.js . hub/data
+      - name: 바뀌었으면 커밋
+        run: |
+          cd hub
+          if [ -n "$(git status --porcelain data)" ]; then
+            git config user.name "activities-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data
+            git commit -q -m "활동 목록 자동 갱신 ($(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M'))"
+            git push -q
+          else
+            echo "바뀐 것 없음"
+          fi
