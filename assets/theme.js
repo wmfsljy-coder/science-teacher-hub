@@ -105,8 +105,22 @@
   });
 
   /* ---------- 유틸 ---------- */
-  window.cssVar = function (name) {
+  /* 그림 색: 이야기 단원(.episode 가 있는 쪽)의 캔버스는 어두운 '무대' 색(theme.css 의 .sth-stage)으로 그린다.
+     화면 글자 색이 필요하면 cssVarPage 를 쓴다. 무대를 끄려면 <html data-stage="off"> */
+  var stageEl = null;
+  window.cssVarPage = function (name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  };
+  window.cssVar = function (name) {
+    if (stageEl === null) {
+      stageEl = false;
+      if (document.body && document.querySelector(".episode") && document.documentElement.getAttribute("data-stage") !== "off") {
+        stageEl = document.createElement("div"); stageEl.className = "sth-stage"; stageEl.hidden = true;
+        document.body.appendChild(stageEl);
+      }
+    }
+    var v = stageEl ? getComputedStyle(stageEl).getPropertyValue(name).trim() : "";
+    return v || window.cssVarPage(name);
   };
 
   /* ---------- 캔버스 ----------------------------------------------------

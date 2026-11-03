@@ -463,3 +463,45 @@ html:not(.sth-teacher) a.unit-card { visibility: hidden; }
 .gate-rv .rv-st { font-size: 12.5px; }
 .gate .opt.again { border-color: var(--violet); background: var(--violet-100); color: var(--violet-700); }
 .gate .opt.first-ghost { outline: 2px dashed var(--line); outline-offset: 2px; }
+
+/* 그림 무대 색 — 이야기 단원의 캔버스는 라이트·다크 모드와 관계없이 이 어두운 무대 색으로 그린다(theme.js cssVar). */
+.sth-stage {
+  --bg: #070a1f;
+  --card: #111a3d;
+  --card-2: #17214a;
+--rail: #0c1c28;
+  --ink: #e8ecff;
+  --mist: #9fb0e0;
+  --line: #2b3768;
+--brand: #4fc3ec;
+--brand-dim: #7fd4f2;
+--brand-100: #10323f;
+--brand-700: #8ad9f5;
+--teal: #2ed3bd;
+--teal-100: #0e332f;
+--teal-700: #74e2d1;
+--coral: #ff9d63;
+--coral-100: #3a2415;
+--coral-700: #ffbb91;
+--violet: #a288f5;
+--violet-100: #241d3d;
+--violet-700: #c5b4fb;
+--amber: #ffc42e;
+--amber-100: #3a2f0e;
+--amber-700: #ffda7c;
+--rose: #ff86a6;
+--rose-100: #3a1c26;
+--rose-700: #ffafc4;
+--green: #63c97a;
+--green-100: #16301d;
+--green-700: #99e0a8;
+--on-accent: #06202c;
+--glass: rgba(16, 34, 47, .85);
+--thumb-ring: #10222f;
+--shadow-card: 0 10px 24px -8px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .35);
+--shadow-pop: 0 16px 34px -10px rgba(0, 0, 0, .7);
+--shadow-brand: 0 6px 14px -4px rgba(79, 195, 236, .35);
+
+  --panel: #0d1431;
+  --panel-2: #141c42;
+}
