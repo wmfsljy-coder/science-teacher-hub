@@ -586,7 +586,7 @@
         o.innerHTML = "<div class='qf-box'><div class='qf-sub'>" + esc(sub) + "</div><div class='qf-title'>" + esc(title) + "</div>"
           + "<div class='qf-code'>" + qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: "학생 입장 QR" }) + "</div>"
           + "<div class='qf-url'>" + esc(url.replace(/^https?:\/\//, "")) + "</div>"
-          + "<p class='qf-hint'>" + (/[?&]sec=/.test(url) ? "휴대폰 카메라로 찍으면 이 소단원이 바로 열립니다. 학생 화면에는 이번 수업 범위만 보입니다." : "휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.") + "</p>"
+          + "<p class='qf-hint'>" + (/[?&]sec=/.test(url) ? "휴대폰 카메라로 찍으면 이 소단원이 바로 열립니다. 다른 소단원으로도 옮겨 갈 수 있습니다." : "휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.") + "</p>"
           + "<button type='button' class='btn qf-close'>닫기 (Esc)</button></div>";
         function close() { o.remove(); document.removeEventListener("keydown", key); }
         function key(e) { if (e.key === "Escape") close(); }
