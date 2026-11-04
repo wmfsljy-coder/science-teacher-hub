@@ -62,7 +62,7 @@
     var groups = list(scene, ".seg, [data-group]");                 // 묶음 선택은 하나만 무작위로
     groups.forEach(function (g) { var bs = list(g, "button"); if (bs.length) bs[Math.floor(Math.random() * bs.length)].click(); });
     var btns = list(scene, "button").filter(function (b) {
-      if (/ep-dot|ep-reset|next|tab-btn/.test(b.className)) return false;
+      if (/ep-dot|ep-reset|next|tab-btn|cv-big|hero-zoom/.test(b.className)) return false;
       if (/opt/.test(b.className) || /-copy$|-wipe$/.test(b.id)) return false;
       if (groups.some(function (g) { return g.contains(b); })) return false;
       return !/처음|초기화|다시|리셋|지우기/.test(b.textContent || "");              // 되돌리기 버튼은 누르지 않는다

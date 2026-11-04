@@ -139,7 +139,7 @@
     if (canvas._dprSet) return ctx;
 
     var W = canvas.width, H = canvas.height;          // 논리 좌표계 (지금까지의 900×H)
-    var dpr = Math.min(window.devicePixelRatio || 1, 2);   // 저사양 태블릿 메모리 보호
+    var dpr = 2;   // 늘 2배로 그린다 — 크게 보기(교실 화면 1배율 포함)에서도 선명하게. 3배율 휴대폰도 2배로 묶어 메모리를 아낀다
 
     canvas.style.width = "100%";                      // 표시 크기는 컨테이너가 정한다
     canvas.style.height = "auto";
@@ -160,6 +160,7 @@
     canvas._w = W;
     canvas._h = H;
     canvases.push(canvas);
+    if (window.sthAddBig) setTimeout(function () { window.sthAddBig(canvas); }, 0);
     return ctx;
   };
 
@@ -621,6 +622,121 @@
       });
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+  })();
+  /* ---------- 크게 보기 ----------
+     휴대폰에서는 가로 900 기준 그림이 3분의 1로 줄어 그림 속 글자를 읽기 어렵다.
+     · 그림 칸마다 ‘🔍 크게 보기’: 그림과 조작 칸을 그 자리에서 화면 가득 펼친다(요소를 옮기지 않아 조작·움직임이 그대로 이어진다).
+       휴대폰에서는 되는 기기면 가로로 돌리고, 안 되면 돌리라고 알린다. 넓은 화면에서는 세로에 맞춘다.
+     · 대표 그림(.hero-art): 누르면 그림과 설명을 크게.
+     닫기: ✕ · Esc · 휴대폰 뒤로 가기. */
+  (function () {
+    var cur = null, skipPop = false;
+    function make(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+    function backAware(close) {          /* 뒤로 가기는 단원을 떠나지 않고 닫기만 */
+      var pushed = false;
+      try { history.pushState({ sthBig: 1 }, ""); pushed = true; } catch (e) {}
+      cur = { close: close, pushed: pushed, y: window.pageYOffset };
+      root.classList.add("sth-big-on");
+      document.addEventListener("keydown", onKey);
+    }
+    function finish(fromPop) {
+      if (!cur) return;
+      var c = cur; cur = null;
+      document.removeEventListener("keydown", onKey);
+      root.classList.remove("sth-big-on");
+      c.close();
+      window.scrollTo(0, c.y);
+      if (c.pushed && !fromPop) { skipPop = true; try { history.back(); } catch (e) { skipPop = false; } }
+    }
+    function onKey(e) { if (e.key === "Escape") finish(false); }
+    window.addEventListener("popstate", function () { if (skipPop) { skipPop = false; return; } finish(true); });
+
+    function goFull() {
+      var fs = root.requestFullscreen;
+      if (!fs) return;
+      try {
+        var p = fs.call(root);
+        if (p && p.then) p.then(function () {
+          if (window.innerWidth < window.innerHeight && screen.orientation && screen.orientation.lock) { var q = screen.orientation.lock("landscape"); if (q && q.catch) q.catch(function () {}); }
+        }).catch(function () {});
+      } catch (e) {}
+    }
+    function leaveFull() {
+      try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) {}
+      if (document.fullscreenElement && document.exitFullscreen) { var p = document.exitFullscreen(); if (p && p.catch) p.catch(function () {}); }
+    }
+    function openBig(host) {
+      if (cur) return;
+      var bar = make("div", "big-bar"), hint = make("span", "big-hint"), x = make("button", "btn big-close", "✕ 닫기");
+      x.type = "button"; bar.appendChild(hint); bar.appendChild(x);
+      function fit() {
+        var w = window.innerWidth, h = window.innerHeight;
+        hint.textContent = w < 600 && w < h ? "휴대폰을 가로로 돌리면 글자가 더 커집니다. 두 손가락으로 확대해도 됩니다." : "";
+        Array.prototype.forEach.call(host.querySelectorAll(".canvas-wrap"), function (wrap) {
+          var c = wrap.querySelector("canvas");
+          /* 넓은 화면은 그림이 한눈에 들어오게 세로에 맞추고, 낮은 화면(가로 휴대폰)은 폭을 다 쓴다 */
+          wrap.style.maxWidth = c && c._w && h >= 600 ? Math.floor((h - 64) * c._w / c._h) + "px" : "";
+        });
+      }
+      function onFs() { if (!document.fullscreenElement && cur) finish(false); }
+      host.classList.add("sth-big");
+      host.insertBefore(bar, host.firstChild);
+      backAware(function () {
+        host.classList.remove("sth-big");
+        Array.prototype.forEach.call(host.querySelectorAll(".canvas-wrap"), function (wrap) { wrap.style.maxWidth = ""; });
+        bar.remove();
+        window.removeEventListener("resize", fit);
+        document.removeEventListener("fullscreenchange", onFs);
+        leaveFull();
+        if (host._bigBtn) host._bigBtn.focus();
+      });
+      x.addEventListener("click", function () { finish(false); });
+      fit();
+      window.addEventListener("resize", fit);
+      goFull();
+      setTimeout(function () { if (cur) document.addEventListener("fullscreenchange", onFs); }, 400);
+      host.scrollTop = 0;
+      x.focus();
+    }
+    /* 그림 칸에 단추 붙이기 — setupCanvas 가 부른다. 조그만 그림은 뺀다 */
+    window.sthAddBig = function (canvas) {
+      if (!canvas.closest || canvas._w < 500) return;
+      var wrap = canvas.closest(".canvas-wrap"), host = canvas.closest(".stage-card") || wrap;
+      if (!host || !wrap || host._bigBtn) return;
+      var row = make("div", "cv-big-row"), b = make("button", "cv-big-btn", "🔍 크게 보기");
+      b.type = "button"; b.addEventListener("click", function () { openBig(host); });
+      row.appendChild(b);
+      host._bigBtn = b;
+      if (wrap === host) host.parentNode.insertBefore(row, host.nextSibling);
+      else wrap.parentNode.insertBefore(row, wrap.nextSibling);
+    };
+
+    function openArt(fig) {
+      if (cur) return;
+      var img = fig.querySelector("img"), cap = fig.querySelector("figcaption");
+      var o = make("div", "art-full"), bar = make("div", "art-bar"), x = make("button", "btn", "✕ 닫기"), big = document.createElement("img");
+      o.setAttribute("role", "dialog"); o.setAttribute("aria-label", "그림 크게 보기");
+      x.type = "button"; bar.appendChild(x); o.appendChild(bar);
+      big.src = img.getAttribute("src"); big.alt = img.alt; o.appendChild(big);
+      if (cap) { var c = make("div", "art-cap"); c.innerHTML = cap.innerHTML; o.appendChild(c); }
+      document.body.appendChild(o);
+      backAware(function () { o.remove(); if (fig._zoom) fig._zoom.focus(); });
+      x.addEventListener("click", function () { finish(false); });
+      o.addEventListener("click", function (e) { if (e.target === o) finish(false); });
+      x.focus();
+    }
+    function addArt() {
+      Array.prototype.forEach.call(document.querySelectorAll(".hero-art"), function (fig) {
+        var img = fig.querySelector("img");
+        if (!img || fig._zoom) return;
+        var b = make("button", "hero-zoom", "🔍 크게");
+        b.type = "button"; b.setAttribute("aria-label", "그림 크게 보기");
+        b.addEventListener("click", function () { openArt(fig); });
+        img.addEventListener("click", function () { openArt(fig); });
+        fig.appendChild(b); fig._zoom = b;
+      });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addArt); else addArt();
   })();
   /* ---------- 움직이는 그림 ----------
      window.sthAnimate(canvas, frame) — 캔버스가 화면에 보이는 동안만 frame(초) 을 계속 부른다.

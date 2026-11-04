@@ -52,6 +52,8 @@ for u in UNITS:
         title, cap = c.groups()
         if not src.startswith('img/') or not src.endswith('.webp'):
             problems.append((u, '그림은 img/*.webp 여야 함: ' + src))
+        if 'width="900"' not in rest or 'height="900"' not in rest:
+            problems.append((u, 'img 에 width="900" height="900" 없음(읽는 중 화면이 밀림)'))
         if 'loading="lazy"' not in rest:
             problems.append((u, 'loading="lazy" 없음'))
         if len(alt) < 20:

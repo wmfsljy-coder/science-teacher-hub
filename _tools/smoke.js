@@ -65,7 +65,7 @@
       var sels = scope.querySelectorAll("select");
       for (var s2 = 0; s2 < sels.length; s2++) { for (var o = 0; o < sels[s2].options.length; o++) { sels[s2].selectedIndex = o; sels[s2].dispatchEvent(new Event("change", { bubbles: true })); } }
       var btns = Array.prototype.slice.call(scope.querySelectorAll("button")).filter(function (b) {
-        return !/ep-dot|ep-reset|next|tab-btn/.test(b.className) && !/-copy$|-wipe$/.test(b.id) && !b.disabled;
+        return !/ep-dot|ep-reset|next|tab-btn|cv-big|hero-zoom/.test(b.className) && !/-copy$|-wipe$/.test(b.id) && !b.disabled;
       });
       for (var b = 0; b < btns.length && b < 60; b++) { try { if (btns[b].isConnected) btns[b].click(); } catch (e) { errs.push("click: " + e.message); } }
       var cvs = scope.querySelectorAll("canvas");

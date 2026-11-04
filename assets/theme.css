@@ -207,6 +207,7 @@ main { padding: 22px 16px 60px; }
 }
 
 main { padding: 30px 34px 70px; max-width: 1000px; }
+@media (max-width: 780px) { main { padding: 22px 16px 60px; } }   /* 바로 위 줄이 앞쪽 휴대폰 설정을 덮어쓰므로 여기서 다시 */
 .stage-head { margin-bottom: 18px; }
 .stage-head .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--teal-700); font-weight: 800; }
 .stage-head h2 { font-size: 28px; margin: 6px 0 10px; text-wrap: balance; font-weight: 400; }
@@ -214,7 +215,7 @@ main { padding: 30px 34px 70px; max-width: 1000px; }
 
 .stage-card { background: var(--card); border: 3px solid var(--line); border-radius: 26px; overflow: hidden; margin-top: 18px; box-shadow: var(--shadow-card); }
 .canvas-wrap { position: relative; background: var(--card-2); border-bottom: 3px solid var(--line); }
-canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-action: pan-y; }
+canvas { display: block; width: 100%; max-width: 100%; height: auto; touch-action: pan-y pinch-zoom; }
 .badge-row { position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
 .badge { font-size: 11px; font-weight: 700; padding: 5px 11px; border-radius: 999px; background: var(--glass); color: var(--ink); border: 2px solid var(--line); backdrop-filter: blur(3px); }
 
@@ -454,7 +455,27 @@ html:not(.sth-teacher) a.unit-card { visibility: hidden; }
 .qf-code svg { width: 100%; height: 100%; display: block; }
 .qf-url { font-family: ui-monospace, Menlo, monospace; font-size: clamp(13px, 2vw, 18px); margin: 12px 0 4px; word-break: break-all; color: #10202e; }
 .qf-hint { font-size: 13.5px; color: #5b6b7b; margin: 4px 0 14px; }
-@media print { .qr-btn { display: none !important; } }
+@media print { .qr-btn, .cv-big-row, .hero-zoom { display: none !important; } }
+/* 크게 보기 — 그림 + 조작 칸을 화면 가득(theme.js) */
+html.sth-big-on, html.sth-big-on body { overflow: hidden; }
+.cv-big-row { display: flex; justify-content: flex-end; padding: 6px 10px; background: var(--card); border-bottom: 3px solid var(--line); }
+.cv-big-btn { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 13px; border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
+.cv-big-btn:hover { border-color: var(--brand); }
+.sth-big { position: fixed !important; inset: 0; z-index: 9000; margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; max-width: none !important; overflow: auto !important; -webkit-overflow-scrolling: touch; background: var(--card); }
+.sth-big .cv-big-row { display: none; }
+.sth-big .canvas-wrap { margin-left: auto; margin-right: auto; }
+.big-bar { position: sticky; top: 0; left: 0; z-index: 5; display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 2px solid var(--line); }
+.big-bar .big-close { flex: none; white-space: nowrap; }
+.big-bar .big-hint { flex: 1 1 auto; font-size: 12.5px; line-height: 1.4; color: var(--mist); }
+/* 대표 그림 크게 보기 */
+.hero-art { position: relative; }
+.hero-art img { height: auto; cursor: zoom-in; }
+.hero-zoom { position: absolute; top: 10px; left: 10px; font: inherit; font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; border: 1.5px solid rgba(18, 32, 58, .25); background: rgba(255, 255, 255, .92); color: #12203a; cursor: pointer; }
+.art-full { position: fixed; inset: 0; z-index: 9000; overflow: auto; background: #0a101c; text-align: center; }
+.art-full img { display: block; width: 100%; max-width: min(100vw, calc(100vh - 56px)); height: auto; margin: 0 auto; }
+.art-full .art-bar { position: sticky; top: 0; z-index: 1; display: flex; justify-content: flex-end; padding: 8px 12px; }
+.art-full .art-cap { max-width: 760px; margin: 0 auto; padding: 14px 18px 28px; color: #e8ecff; font-size: 14.5px; line-height: 1.75; text-align: left; }
+.art-full .art-cap b { display: block; font-size: 17px; margin-bottom: 6px; }
 
 /* 첫 추리 — 짝과 이야기한 뒤 다시 고르기 · 우리 반 투표 (theme.js sthGate) */
 .gate-rv { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-top: 12px; font-size: 13px; color: var(--mist); }
