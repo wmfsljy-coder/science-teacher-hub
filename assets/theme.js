@@ -565,6 +565,7 @@
      window.sthQR(주소, 제목, 작은 제목) — 화면 가득 QR 을 띄운다. 학생은 휴대폰 카메라로 찍어 그 단원에 바로 들어간다.
      QR 도구(qrcode.js)는 이 파일과 같은 폴더에서 처음 누를 때만 불러온다.
      · 단원 페이지: 왼쪽 메뉴에 ‘📱 학생 입장 QR’ 버튼(precheck.js 는 00 들어가기 탭에도 하나 둔다)
+     · 소단원: 이야기 탭 머리에 ‘📱 이 소단원 QR’ 버튼(scope.js) — 주소 끝이 ?sec=02
      · 과목 첫 화면: 단원 카드마다 ‘📱 QR’ 버튼 */
   (function () {
     var SELF = (document.currentScript && document.currentScript.src) || "";
@@ -575,7 +576,7 @@
       s.onload = cb; s.onerror = function () { window.alert("QR 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); };
       document.head.appendChild(s);
     }
-    function clean(u) { var a = document.createElement("a"); a.href = u; return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, ""); }
+    function clean(u) { var a = document.createElement("a"); a.href = u; var m = /[?&]sec=([0-9,]+)/.exec(a.search); return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, "") + (m ? "?sec=" + m[1] : ""); }
     function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
     window.sthQR = function (url, title, sub) {
       url = clean(url || location.href);
@@ -585,7 +586,7 @@
         o.innerHTML = "<div class='qf-box'><div class='qf-sub'>" + esc(sub) + "</div><div class='qf-title'>" + esc(title) + "</div>"
           + "<div class='qf-code'>" + qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: "학생 입장 QR" }) + "</div>"
           + "<div class='qf-url'>" + esc(url.replace(/^https?:\/\//, "")) + "</div>"
-          + "<p class='qf-hint'>휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.</p>"
+          + "<p class='qf-hint'>" + (/[?&]sec=/.test(url) ? "휴대폰 카메라로 찍으면 이 소단원이 바로 열립니다. 학생 화면에는 이번 수업 범위만 보입니다." : "휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.") + "</p>"
           + "<button type='button' class='btn qf-close'>닫기 (Esc)</button></div>";
         function close() { o.remove(); document.removeEventListener("keydown", key); }
         function key(e) { if (e.key === "Escape") close(); }
@@ -602,6 +603,8 @@
       return [subj + (ey ? " · " + ey.textContent.trim() : ""), h ? (h.innerText || h.textContent).replace(/\s+/g, " ").trim() : document.title];
     }
     window.sthUnitQR = function () { var t = unitTitle(); window.sthQR(location.href, t[1], t[0]); };
+    /* 소단원 QR — sec 은 "02" 또는 "01,03", 이름은 큰 제목. 찍으면 scope.js 가 그 소단원을 바로 연다 */
+    window.sthSecQR = function (sec, name) { var t = unitTitle(); window.sthQR(location.origin + location.pathname + "?sec=" + sec, name, (t[0] ? t[0] + " · " : "") + t[1]); };
     function start() {
       if (!TEACHER) return;
       var brand = document.querySelector(".rail .brand");

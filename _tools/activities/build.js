@@ -6,6 +6,7 @@ const fs = require("fs"), vm = require("vm"), path = require("path");
 const ROOT = path.resolve(process.argv[2] || "..") + "/", OUT = path.resolve(process.argv[3] || "data");
 const SUBJ = { "integrated-science-1": "통합과학1", "integrated-science-2": "통합과학2", "earth-science-2": "지구과학", "earth-system-1": "지구시스템과학1", "earth-system-2": "지구시스템과학2", "planet-space-1": "행성우주과학1", "planet-space-2": "행성우주과학2", "climate-change-ecology": "기후변화와 환경생태", "convergence-science-inquiry": "융합과학 탐구", "science-history-culture": "과학의 역사와 문화", "science-inquiry-1": "과학탐구실험1", "science-inquiry-2": "과학탐구실험2" };
 const NONSTORY = /들어가기|수준별 문제|응용 실험실|정리하기|우리 반/;
+const SECT = {};
 const strip = h => String(h || "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/&\w+;/g, " ").replace(/\s+/g, " ").trim();
 const tight = h => String(h || "").replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();   /* 브라우저 textContent 처럼 태그만 뺀다 */
 const VK = { sky: "🔭 하늘 사진(알라딘)", star: "🔭 오늘 밤 하늘(스텔라리움)", eyes: "🪐 NASA Eyes 3D", exo: "🪐 외계 행성 3D", earth: "🌐 지금의 지구", mymap: "🗺 구글 내 지도", mol: "🧬 분자 구조 3D", phet: "🧪 본문 속 PhET", owid: "📈 실제 자료 그래프", ptable: "⚗️ 주기율표", commons: "📜 원본 자료 사진", hubble: "🔭 허블 사진", model: "🦴 박물관 3D 표본", web: "🔗 바깥 자료(쪽 안)", out: "🔗 바깥 자료(새 창)", sun: "☀️ 오늘의 태양" };
@@ -47,6 +48,7 @@ for (const u of UNITS) {
   const tabs = [...html.matchAll(/<button class="tab-btn[^"]*" data-tab="([^"]+)"[^>]*>(?:<span class="num">([^<]*)<\/span>\s*)?([^<]+)<\/button>/g)].map(m => ({ tab: m[1], num: (m[2] || "").trim(), name: m[3].trim() }));
   const starts = [...html.matchAll(/<section class="tab-panel"[^>]*data-panel="([^"]+)"/g)].map(m => ({ tab: m[1], i: m.index }));
   starts.forEach((s, k) => { s.j = k + 1 < starts.length ? starts[k + 1].i : html.length; const t = tabs.find(b => b.tab === s.tab) || { num: "", name: s.tab }; s.num = t.num; s.name = t.name; s.html = html.slice(s.i, s.j); s.text = tight(s.html); s.story = !NONSTORY.test(t.name); s.plate = /^<section class="tab-panel"[^>]*data-plate/.test(s.html); s.label = (t.num ? t.num + " " : "") + t.name + (s.story ? "" : " (탭)"); });
+  SECT[u] = starts.filter(s => s.num && /class="[^"]*\bepisode\b/.test(s.html)).map(s => [s.num, s.name]);   // scope.js 가 소단원으로 보는 탭과 같은 기준
   const secs = starts.filter(s => s.story); secs.forEach(b => b.bg = bg(b.name + " " + b.name + " " + strip(b.html)));
   const bySec = n => secs.find(b => b.num === n);
   const panelAt = i => starts.find(s => i >= s.i && i < s.j);
@@ -117,6 +119,9 @@ const tot = ["전체", UNITS.length + "개 단원"]; for (let k = 2; k < sum[0].
 sum.push(tot);
 const tsv = a => a.map(r => r.join("\t")).join("\n") + "\n";
 fs.mkdirSync(OUT, { recursive: true });
+// 소단원 목록(qr/ 화면이 읽음) — 활동 목록과 따로, 바뀌었을 때만 쓴다
+const fSec = path.join(OUT, "sections.js"), newSec = "/* 소단원 목록 — _tools/activities/build.js 가 만든 파일. 단원 경로: [[번호, 이름], …] */\nwindow.STH_SECTIONS = " + JSON.stringify(SECT, null, 0).replace(/\],"/g, '],\n"') + ";\n";
+if (!fs.existsSync(fSec) || fs.readFileSync(fSec, "utf8") !== newSec) { fs.writeFileSync(fSec, newSec); console.log("소단원 목록 새로 씀", Object.values(SECT).reduce((n, a) => n + a.length, 0), "개"); }
 const fA = path.join(OUT, "activities.tsv"), fS = path.join(OUT, "activity-summary.tsv"), fM = path.join(OUT, "activities-meta.tsv");
 const newA = tsv(rows), newS = tsv(sum);
 const same = fs.existsSync(fA) && fs.existsSync(fS) && fs.readFileSync(fA, "utf8") === newA && fs.readFileSync(fS, "utf8") === newS;
