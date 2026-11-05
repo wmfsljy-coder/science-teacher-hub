@@ -1,0 +1,49 @@
+# 그림·시뮬레이션 '스튜디오 + 블록 모형' 지침 (VISUAL_GUIDE 다음 단계)
+
+모든 이야기 장면 캔버스와 응용 실험실·실제 자료 캔버스를 아래 세 본보기 수준으로 맞춘다.
+유튜브 '신비한 건축사전'처럼 **밝은 스튜디오 바탕 위의 입체 미니어처 모형 + 굵은 테두리 큰 글자 + 흰 판정 카드**가 기본 말투다.
+
+## 본보기 (먼저 코드와 화면을 끝까지 볼 것)
+1. `earth-science-2/2-1` 01 탭 3번째 장면 「빠진 시간 — 부정합」 — episodes.js `/* ---- 장면3 부정합 — 아이소메트릭 단면 모형 ---- */`
+   (블록 단면, 지층 무늬, ▶ 과정 다시 보기 7단계, 굵은 글자, 오른쪽 흰 판정 카드, 장면 위 hero-art 그림 카드)
+2. `earth-system-2/2-1` 04 탭 4번째 장면 「지역마다 다른 바다」 — `/* 장면 4 — 지역별 조석 양상과 바닷길 시각 (아이소메트릭 블록 모형 + 조위 곡선) */`
+   (I.field 지형, 칸마다 물 덮기, 걷는 사람, ▶ 하루 흘려 보기, 아래 그래프 띠)
+3. `integrated-science-2/2-1` 03 탭 3번째 장면 「이상 신호」 — `/* 장면 3 — 엘니뇨 … */`
+   (바다·대기 블록, 워커 순환 움직임, 숨은 캔버스에 블록을 한 번 그려 두고 움직이는 것만 다시 그리기)
+공용 도구: `assets/kit.js` 맨 아래 머리말 — `K.iso`(P·face·profile·shade·top·plane·water·box·house·tree·person·label·field·edges),
+`K.studio`, `K.bigText`, `K.tint`, `K.LT`(밝은 색표), `K.chart({…, light:true})`, `K.plot(…, {light:true})`, `K.card`, `K.row`, `K.bar`, `K.tip`.
+
+## 장면 종류별로 어떻게 그리나
+- **땅·바다·대기·도시·건물·생태계(공간이 있는 것)** → `K.iso` 블록 모형. 앞면·오른쪽 면은 단면(지층·수온·토양·지하), 윗면은 지표(물·풀·도시).
+  조작에 따라 모형이 실제로 바뀌어야 한다(수면 높이, 기울기, 흐름, 개체 수, 건물 수 …).
+- **실험 장치·기계·전기 회로·발전기·용기·세포·기관·분자(물체가 있는 것)** → 입체 미니어처: `I.box`·그라데이션 재질(유리·금속·액체·살·잎),
+  밝은 스튜디오 바닥 위에 놓고 그림자. 분자·원자는 입체 공(`K.planet`), 입자 움직임은 `K.animate`.
+- **그래프·자료 해석이 중심인 것** → 밝은 스튜디오(`K.studio`) 위 `K.chart({ light: true })` + `K.plot({ light: true })`,
+  핵심 숫자는 왼쪽 위 `K.bigText` 큰 글자, 오른쪽에 `K.card` 흰 판정 카드(`K.row`·`K.bar`·`K.tip`). 가능하면 그래프 옆에 그 현상의 작은 입체 모형을 함께 둔다.
+- 어느 경우든: 이름표는 지시선 이름표(`I.label`) 또는 `K.pill`, 과장했으면 `K.warn`, 계속 도는 움직임에는 ⏸ 단추, `K.REDUCE` 면 멈춘 채 시작.
+- 캔버스를 감싼 div 는 `class="canvas-wrap studio"`(stage 클래스는 뺀다). 캔버스 높이는 필요하면 늘려도 된다(가로 900 논리 좌표는 그대로).
+- **무거운 그림 최적화**: 블록·지형처럼 조작할 때만 바뀌는 부분은 숨은 캔버스에 한 번 그려 두고(drawImage), 움직이는 것만 매 프레임 그린다(엘니뇨 본보기).
+
+## 대표 그림(hero-art) — 이야기 탭마다 하나
+- 형식은 VISUAL_GUIDE.md 3단계가 기준이다(2026-11-04 확정): `<figure class="hero-art"><img src="img/이름.webp" alt="…" width="900" height="900" loading="lazy"><figcaption><b>훅 제목(-습니다/-입니다로 끝)</b> 설명 2~3문장</figcaption></figure>`. 제목·설명에 정답을 넣지 않는다.
+  스타일은 공용 story.css 에 있다(단원 index.html 에 따로 넣지 않는다).
+- 그림은 REPL 의 `imagegen.generate({ prompt })` 로 만든다. 프롬프트 뼈대:
+  "Highly detailed 3D isometric miniature diorama … clean white studio background with soft shadow, Blender-like educational explainer render … No text, no labels."
+  그 장면의 사건(장소·시대·장치)이 한눈에 보이게. 실존 인물 얼굴은 넣지 않는다.
+- **과학 검수 필수**: 만든 그림을 반드시 직접 보고, 과학적으로 틀린 곳(예: 수온 약층이 거꾸로 기움, 잘못된 지층 순서, 틀린 구조)이 있으면
+  프롬프트를 고쳐 다시 만든다. 두 번 해도 틀리면 그 탭은 그림 없이 둔다.
+- 저장: 900×900 WEBP(PIL quality=80, method=6), 한 장 190 KB 이하. 끝내기 전에 `python -X utf8 _tools/mediacheck.py` 가 「문제 없음」이어야 한다.
+
+## 응용 실험실·실제 자료 캔버스(lab-cases.js · real-cases.js)
+- 엔진이 이미 밝은 스튜디오 바탕·밝은 색으로 그린다(H.paper, H.v). 사례마다 그림을 위 기준(그래프 = 밝은 카드 그래프, 장치·현장 = 입체 모형)으로 다듬는다.
+  `window.sthKit`(K) 를 lab-cases 안에서 그대로 쓸 수 있다. 판정 조건·조작판·정답 범위는 바꾸지 않는다.
+
+## 바꾸지 않을 것 (VISUAL_GUIDE·STORY_GUIDE 와 같음)
+장면 순서, ep.clear 번호, 미션 판정, 슬라이더 id·범위·step, sthState/sthGate/sthWork 키, 이야기 글, 성취기준, 오개념 상자, handoff.js, assets/ 파일, 맡지 않은 단원. git 커밋·푸시 금지.
+이미 끝난 본보기 세 장면은 건드리지 않는다.
+
+## 확인 (끝내기 전에 모두)
+- `node --check`, `python _tools/check_ids.py <저장소>/<단원>`
+- 배정 포트의 `/_tools/` 에서 allcheck·overlap·solverun: 오류 0, 겹침·잘림 0, 막힌곳 0(작업 전부터 막히던 곳은 작업 전/후 비교해 보고).
+- 캔버스마다 기본값·양 끝값에서 `canvas.toDataURL` 로 찍어 직접 본다: 글자 겹침, 잘림, 물·땅 어긋남, 너무 흐린 선, 틀린 과학.
+  대표 화면을 `_review/<배치>/` 에 png 로 저장.

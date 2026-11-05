@@ -111,6 +111,12 @@
   window.cssVarPage = function (name) {
     return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   };
+  var studioEl = null;
+  window.cssVarStudio = function (name) {
+    if (!studioEl && document.body) { studioEl = document.createElement("div"); studioEl.className = "sth-studio"; studioEl.hidden = true; document.body.appendChild(studioEl); }
+    var v = studioEl ? getComputedStyle(studioEl).getPropertyValue(name).trim() : "";
+    return v || window.cssVarPage(name);
+  };
   window.cssVar = function (name) {
     if (stageEl === null) {
       stageEl = false;
@@ -133,6 +139,20 @@
      한 번만 그리는 화면에서 테마 전환에도 색을 따라가게 하려면
      canvas._redraw = 그리기함수  로 등록해 두면 된다. --------------------- */
   var canvases = [];
+
+  /* 그림에 쓴 글자를 적어 둔다(휴대폰의 ‘그림 속 글자 크게 읽기’ 칸이 읽는다). 한 번 그릴 때 쓴 글자를 한 묶음으로 본다 */
+  function hookText(canvas, ctx) {
+    var orig = ctx.fillText, batch = null;
+    ctx.fillText = function (t, x, y, m) {
+      var s = String(t).trim();
+      if (s) {
+        if (!batch) { batch = []; var b = batch; Promise.resolve().then(function () { batch = null; canvas._texts = b; if (canvas._onText) canvas._onText(); }); }
+        var tr = ctx.getTransform(), k = canvas.width / canvas._w;
+        batch.push({ s: s, x: (tr.a * x + tr.c * y + tr.e) / k, y: (tr.b * x + tr.d * y + tr.f) / k });
+      }
+      return m === undefined ? orig.call(ctx, t, x, y) : orig.call(ctx, t, x, y, m);
+    };
+  }
 
   window.setupCanvas = function (canvas) {
     var ctx = canvas.getContext("2d");
@@ -160,6 +180,7 @@
     canvas._w = W;
     canvas._h = H;
     canvases.push(canvas);
+    hookText(canvas, ctx);
     if (window.sthAddBig) setTimeout(function () { window.sthAddBig(canvas); }, 0);
     return ctx;
   };
@@ -628,6 +649,7 @@
      · 그림 칸마다 ‘🔍 크게 보기’: 그림과 조작 칸을 그 자리에서 화면 가득 펼친다(요소를 옮기지 않아 조작·움직임이 그대로 이어진다).
        휴대폰에서는 되는 기기면 가로로 돌리고, 안 되면 돌리라고 알린다. 넓은 화면에서는 세로에 맞춘다.
      · 대표 그림(.hero-art): 누르면 그림과 설명을 크게.
+     · 휴대폰에서는 그림 아래에 ‘그림 속 글자 크게 읽기’(그림에 그려진 글자를 글로 다시 보여 준다).
      닫기: ✕ · Esc · 휴대폰 뒤로 가기. */
   (function () {
     var cur = null, skipPop = false;
@@ -702,14 +724,44 @@
     window.sthAddBig = function (canvas) {
       if (!canvas.closest || canvas._w < 500) return;
       var wrap = canvas.closest(".canvas-wrap"), host = canvas.closest(".stage-card") || wrap;
-      if (!host || !wrap || host._bigBtn) return;
+      if (!host || !wrap) return;
+      if (host._bigBtn) { if (host._readAdd) host._readAdd(canvas); return; }
       var row = make("div", "cv-big-row"), b = make("button", "cv-big-btn", "🔍 크게 보기");
       b.type = "button"; b.addEventListener("click", function () { openBig(host); });
       row.appendChild(b);
       host._bigBtn = b;
       if (wrap === host) host.parentNode.insertBefore(row, host.nextSibling);
       else wrap.parentNode.insertBefore(row, wrap.nextSibling);
+      addReader(host, row, canvas);
     };
+    /* 휴대폰(세로)에서는 그림 속 글자가 너무 작다 — 같은 글자를 그림 아래에 큰 글씨로. 펼쳤을 때만 따라 바뀐다 */
+    function addReader(host, row, first) {
+      var list = [first], d = make("details", "cv-read"), sum = make("summary", null, "🔤 그림 속 글자 크게 읽기"), body = make("div", "cv-read-body"), timer = 0;
+      d.appendChild(sum); d.appendChild(body);
+      row.parentNode.insertBefore(d, row.nextSibling);
+      function paint() {
+        timer = 0;
+        if (!d.open) return;
+        var seen = {}, lines = [];
+        list.forEach(function (c) {
+          var rows = [];
+          (c._texts || []).forEach(function (t) {
+            if (seen[t.s] || /^[-−+]?[\d.,]+$/.test(t.s)) return;   /* 눈금 숫자만 있는 것은 뺀다 */
+            seen[t.s] = 1;
+            for (var i = 0; i < rows.length; i++) if (Math.abs(rows[i].y - t.y) < 9) { rows[i].a.push(t); return; }
+            rows.push({ y: t.y, a: [t] });
+          });
+          rows.sort(function (p, q) { return p.y - q.y; }).forEach(function (r) { lines.push(r.a.sort(function (p, q) { return p.x - q.x; }).map(function (t) { return t.s; }).join("  ·  ")); });
+        });
+        var next = lines.join("|");
+        if (body._last !== next) { body._last = next; body.textContent = ""; lines.forEach(function (l) { body.appendChild(make("p", null, l)); }); }
+      }
+      function later() { if (d.open && !timer) timer = setTimeout(paint, 300); }
+      function watch(c) { c._onText = later; }
+      watch(first);
+      host._readAdd = function (c) { if (c._w >= 500 && list.indexOf(c) < 0) { list.push(c); watch(c); } };
+      d.addEventListener("toggle", paint);
+    }
 
     function openArt(fig) {
       if (cur) return;

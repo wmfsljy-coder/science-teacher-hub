@@ -6,7 +6,7 @@
 const fs = require("fs"), path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const SRC = path.join(ROOT, "planet-space-2", "assets");
-const FILES = ["theme.js", "theme.css", "story.css", "kit.js", "scope.js"];
+const FILES = ["theme.js", "theme.css", "story.css", "kit.js", "scope.js", "lab.js"];
 const DRY = process.argv.includes("--dry");
 const SKIP = new Set(["science-teacher-hub", "earth-system", "integrated-science", "planet-space", "science-inquiry", "_base_ps2"]);
 const repos = fs.readdirSync(ROOT).filter(d => fs.existsSync(path.join(ROOT, d, ".git")) && !SKIP.has(d));
