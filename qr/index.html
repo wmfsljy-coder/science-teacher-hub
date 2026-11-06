@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>소단원별 학생 입장 QR — 교사용</title>
+<title>과목·단원·소단원별 학생 입장 QR — 교사용</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128241;</text></svg>">
 <link rel="stylesheet" href="../assets/theme.css">
 <style>
@@ -31,6 +31,9 @@
   .uh { grid-column: 1 / -1; margin: 14px 0 0; font-size: 16px; font-weight: 800; color: var(--ink); }
   .uh:first-child { margin-top: 0; }
   .card.whole { border-style: dashed; }
+  .card.subject { border: 3px solid #0f766e; background: #f0fdfa; }
+  .card.subject .s { color: #0f766e; }
+  .uh.subj-h { color: #0f766e; }
   @media (max-width: 780px) { .hero { padding: 34px 18px 8px; } .wrap { padding: 18px 18px 70px; } }
   /* 인쇄: A4 한 장에 6개(2 × 3), 칸마다 잘라 쓰기 */
   @media print {
@@ -51,8 +54,8 @@
 <div class="hero">
   <a class="back" href="../">← 교사용 허브</a>
   <div class="eyebrow">교사용 · 학생 입장</div>
-  <h1 class="display">소단원별 학생 입장 QR</h1>
-  <p>오늘 수업할 소단원의 QR을 화면에 띄우거나 인쇄해 나눠 주세요. 학생이 휴대폰으로 찍으면 그 소단원 이야기가 바로 열리고, 문제도 그 소단원에 맞춰 나옵니다. 다른 소단원은 메뉴에서 눌러 옮겨 갈 수 있습니다. 단원을 처음부터 시작할 때는 ‘단원 전체’ QR을 쓰세요(00 들어가기부터 열립니다).</p>
+  <h1 class="display">과목·단원·소단원별 학생 입장 QR</h1>
+  <p>과목 맨 앞의 ‘과목 전체’ QR을 찍으면 그 과목의 단원 목록이 열리고, 학생이 단원을 골라 들어갑니다. 오늘 수업할 소단원의 QR을 화면에 띄우거나 인쇄해 나눠 주세요. 학생이 휴대폰으로 찍으면 그 소단원 이야기가 바로 열리고, 문제도 그 소단원에 맞춰 나옵니다. 다른 소단원은 메뉴에서 눌러 옮겨 갈 수 있습니다. 단원을 처음부터 시작할 때는 ‘단원 전체’ QR을 쓰세요(00 들어가기부터 열립니다).</p>
 </div>
 
 <div class="wrap">
@@ -113,8 +116,16 @@
   }
   function paint() {
     grid.innerHTML = "";
+    var lastRepo = "";
     UL.filter(function (r) { return inSubj(r) && (!unit || r[5] === unit); }).forEach(function (r) {
       var url = BASE + r[5] + "/", sub = r[1] + (r[3] ? " · " + r[3] : "");
+      /* 과목이 바뀔 때마다 맨 앞에 ‘과목 전체’ QR — 찍으면 그 과목 단원 목록(?all=1) */
+      var repo = r[5].split("/")[0];
+      if (!unit && repo !== lastRepo) {
+        lastRepo = repo;
+        grid.appendChild(el("h3", "uh subj-h", r[1] + " — 과목 전체"));
+        grid.appendChild(card("과목 전체 · 단원 목록", r[1] + " 전체", BASE + repo + "/?all=1", "subject", r[1] + " 전체 학생 입장 QR"));
+      }
       grid.appendChild(el("h3", "uh", r[1] + " · " + r[2]));
       (SECT[r[5]] || []).forEach(function (s) {
         grid.appendChild(card(r[1] + " · " + r[2], s[0] + " " + s[1], url + "?sec=" + s[0], "", s[1] + " 학생 입장 QR"));

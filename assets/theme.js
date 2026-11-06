@@ -19,10 +19,32 @@
   if (/[?&]open=1/.test(location.search)) TEACHER = true;
   window.STH_TEACHER = TEACHER;
   if (TEACHER) root.classList.add("sth-teacher");
+  /* 과목 전체 QR(주소 끝 ?all=1)로 들어온 학생: 그 과목의 단원 목록을 보고, 단원 안에서 ‘← 과목’ 으로 목록에 돌아올 수 있다.
+     같은 탭(sessionStorage) 동안만. 단원 QR·소단원 QR 로 들어온 학생은 지금처럼 그 단원만 본다. */
+  var SUBJ = (/^\/[^\/]+\//.exec(location.pathname) || ["/"])[0], ALL = /[?&]all=1/.test(location.search);
+  try { if (ALL) sessionStorage.setItem("sth-all", SUBJ); ALL = sessionStorage.getItem("sth-all") === SUBJ; } catch (e) {}
+  window.STH_ALL = ALL;
+  if (ALL && !TEACHER) root.classList.add("sth-all");
+  /* 과목 전체 QR 학생은 그 과목 밖으로 나가지 못한다: 과목 밖(다른 과목·상위 과목 모음·허브)으로 가는 링크는 숨기고,
+     단원의 ‘← 과목’ 은 이 과목 단원 목록으로 돌린다. 바깥 누리집(자료·시뮬레이션) 링크는 그대로 둔다. */
+  if (ALL && !TEACHER) {
+    var fence = function () {
+      Array.prototype.forEach.call(document.querySelectorAll("a[href]"), function (a) {
+        var u; try { u = new URL(a.getAttribute("href"), location.href); } catch (e) { return; }
+        var ours = u.host === location.host || u.host === "wmfsljy-coder.github.io";
+        if (!ours || u.pathname.indexOf(SUBJ) === 0) return;
+        if (a.classList.contains("home") && !a.classList.contains("hub")) { a.href = SUBJ; a.textContent = "← 단원 목록"; return; }
+        a.style.display = "none"; a.setAttribute("aria-hidden", "true");
+        var box = a.closest(".back-link"); if (box) box.style.display = "none";
+      });
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", fence); else fence();
+    window.addEventListener("load", fence);
+  }
   /* 과목 첫 화면(단원 카드 목록)은 교사용: 학생에게는 안내만 남긴다 */
   (function () {
     function gate() {
-      if (TEACHER || !document.querySelector("a.unit-card") || document.querySelector(".gate-note")) return;
+      if (TEACHER || ALL || !document.querySelector("a.unit-card") || document.querySelector(".gate-note")) return;
       Array.prototype.forEach.call(document.body.children, function (c) { if (!c.classList.contains("theme-toggle") && c.tagName !== "SCRIPT") c.style.display = "none"; });
       var n = document.createElement("div"); n.className = "gate-note";
       n.innerHTML = "<div class='gate-card'><div class='eyebrow'>학생 안내</div><h1 class='display'>선생님이 알려 준 단원 주소로 들어가세요</h1>"
@@ -598,7 +620,7 @@
       s.onload = cb; s.onerror = function () { window.alert("QR 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요."); };
       document.head.appendChild(s);
     }
-    function clean(u) { var a = document.createElement("a"); a.href = u; var m = /[?&]sec=([0-9,]+)/.exec(a.search); return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, "") + (m ? "?sec=" + m[1] : ""); }
+    function clean(u) { var a = document.createElement("a"); a.href = u; var m = /[?&]sec=([0-9,]+)/.exec(a.search); return a.protocol + "//" + a.host + a.pathname.replace(/index\.html$/, "") + (m ? "?sec=" + m[1] : (/[?&]all=1/.test(a.search) ? "?all=1" : "")); }
     function esc(s) { return String(s || "").replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
     window.sthQR = function (url, title, sub) {
       url = clean(url || location.href);
@@ -608,7 +630,7 @@
         o.innerHTML = "<div class='qf-box'><div class='qf-sub'>" + esc(sub) + "</div><div class='qf-title'>" + esc(title) + "</div>"
           + "<div class='qf-code'>" + qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true, alt: "학생 입장 QR" }) + "</div>"
           + "<div class='qf-url'>" + esc(url.replace(/^https?:\/\//, "")) + "</div>"
-          + "<p class='qf-hint'>" + (/[?&]sec=/.test(url) ? "휴대폰 카메라로 찍으면 이 소단원이 바로 열립니다. 다른 소단원으로도 옮겨 갈 수 있습니다." : "휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.") + "</p>"
+          + "<p class='qf-hint'>" + (/[?&]all=1/.test(url) ? "휴대폰 카메라로 찍으면 이 과목의 단원 목록이 열립니다. 학생은 목록에서 단원을 골라 들어가고, 단원 안의 ‘← 과목’으로 목록에 돌아옵니다." : /[?&]sec=/.test(url) ? "휴대폰 카메라로 찍으면 이 소단원이 바로 열립니다. 다른 소단원으로도 옮겨 갈 수 있습니다." : "휴대폰 카메라로 찍으면 이 단원으로 바로 들어갑니다. 학생 화면에는 이 단원만 보입니다.") + "</p>"
           + "<button type='button' class='btn qf-close'>닫기 (Esc)</button></div>";
         function close() { o.remove(); document.removeEventListener("keydown", key); }
         function key(e) { if (e.key === "Escape") close(); }
@@ -641,6 +663,20 @@
         b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.sthQR(c.href, h ? h.textContent.trim() : c.textContent.trim().slice(0, 40), document.title.split("—")[0].trim()); });
         c.appendChild(b);
       });
+      /* 과목 첫 화면: 과목 전체 QR 을 머리에 늘 보이게 둔다(교사 기기) */
+      var hero = document.querySelector(".hero");
+      if (hero && document.querySelector("a.unit-card") && !hero.querySelector(".subj-qr")) {
+        var subj = document.title.split("—")[0].trim(), surl = location.protocol + "//" + location.host + SUBJ + "?all=1";
+        var box = document.createElement("div"); box.className = "subj-qr";
+        box.innerHTML = "<div class='sq-code'></div><div class='sq-txt'><b>📱 " + esc(subj) + " 전체 QR</b>"
+          + "<span>학생이 찍으면 " + esc(subj) + "의 모든 단원 목록이 열리고, 골라서 들어갑니다. 한 단원만 열려면 단원 카드의 ‘📱 QR’을 쓰세요.</span>"
+          + "<div class='sq-row'><button type='button' class='btn primary sq-big'>크게 띄우기</button>"
+          + "<a class='btn' href='https://wmfsljy-coder.github.io/science-teacher-hub/qr/?s=" + encodeURIComponent(subj) + "'>🖨 과목 QR 모음·인쇄</a></div>"
+          + "<div class='sq-url'>" + esc(surl.replace(/^https?:\/\//, "")) + "</div></div>";
+        hero.appendChild(box);
+        box.querySelector(".sq-big").addEventListener("click", function () { window.sthQR(surl, subj + " 전체", "과목 전체 · 단원 목록"); });
+        load(function () { var q = window.qrcode(0, "M"); q.addData(surl); q.make(); box.querySelector(".sq-code").innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: subj + " 전체 QR" }); });
+      }
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
   })();
