@@ -1,5 +1,5 @@
 /* 글자 겹침만 따로 훑는 검사기.  /_tools/ 를 연 뒤 콘솔에서:
-     window.OV = ["integrated-science-1/1-1", ...];
+     window.OV = ["integrated-science-1/1-1", ...];   (선택: window.OV_W = 390 휴대폰 폭, window.OV_Q = "&cvtext=off" 글자 키우기 끄고 견주기)
      eval(await (await fetch('/_tools/overlap.js',{cache:'reload'})).text())
    각 단원을 숨은 틀(iframe)에 띄워 smoke.js 를 돌리고, 겹친 글자에 좌표를 붙여 돌려준다. */
 (async function () {
@@ -17,8 +17,8 @@
     try { await fetch("/" + u + "/index.html", { cache: "reload" }); } catch (e) {}
     try { await fetch("/" + u + "/episodes.js", { cache: "reload" }); } catch (e) {}
     var f = document.createElement("iframe");
-    f.style.cssText = "position:fixed;left:0;top:0;width:1000px;height:820px;border:0;opacity:0.01;z-index:-1";
-    f.src = "/" + u + "/index.html?open=1&v=" + Date.now();
+    f.style.cssText = "position:fixed;left:0;top:0;width:" + (window.OV_W || 1000) + "px;height:820px;border:0;opacity:0.01;z-index:-1";   /* 휴대폰 폭으로 보려면 window.OV_W = 390 */
+    f.src = "/" + u + "/index.html?open=1" + (window.OV_Q || "") + "&v=" + Date.now();
     document.body.appendChild(f);
     try {
       await new Promise(function (res) { f.onload = res; setTimeout(res, 15000); });

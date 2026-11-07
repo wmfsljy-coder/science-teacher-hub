@@ -126,6 +126,135 @@
     });
   });
 
+  /* ---------- 탭 접근성 · 휴대폰 탭 줄 (sth-a11y-v1) ----------
+     탭 단추를 .tab-strip(role=tablist) 하나로 묶는다. 넓은 화면에서는 예전처럼 세로로 쌓이고,
+     휴대폰(780px 이하)에서는 과목·단원 이름 줄 아래에 탭만 가로로 밀린다(제목·‘← 과목’이 밀려 사라지지 않게).
+     role=tab/tabpanel, aria-selected 를 늘 맞추고, 화살표·Home·End 로 탭을 옮길 수 있다.
+     다른 부품(precheck·scope·quiz)이 탭을 더하거나 active 를 바꿔도 지켜보다가 다시 맞춘다. */
+  (function () {
+    var rail = document.querySelector(".rail");
+    var first = rail && rail.querySelector(":scope > .tab-btn");
+    if (!rail || !first) return;
+    var strip = document.createElement("div");
+    strip.className = "tab-strip"; strip.setAttribute("role", "tablist"); strip.setAttribute("aria-label", "단원 차례");
+    rail.insertBefore(strip, first);
+    Array.prototype.forEach.call(rail.querySelectorAll(":scope > .tab-btn"), function (b) { strip.appendChild(b); });
+    var mq = window.matchMedia ? window.matchMedia("(max-width: 780px)") : null;
+    function orient() { strip.setAttribute("aria-orientation", mq && mq.matches ? "horizontal" : "vertical"); }
+    orient(); if (mq) { if (mq.addEventListener) mq.addEventListener("change", orient); else if (mq.addListener) mq.addListener(orient); }
+    function reveal(b) {
+      if (strip.scrollWidth <= strip.clientWidth + 2) return;
+      var sr = strip.getBoundingClientRect(), br = b.getBoundingClientRect();
+      if (br.left < sr.left) strip.scrollLeft -= sr.left - br.left + 16;
+      else if (br.right > sr.right) strip.scrollLeft += br.right - sr.right + 16;
+    }
+    var last = null, queued = false;
+    function sync() {
+      queued = false;
+      var btns = strip.querySelectorAll(".tab-btn"), on1 = null;
+      Array.prototype.forEach.call(btns, function (b) {
+        var k = b.getAttribute("data-tab");
+        b.setAttribute("role", "tab");
+        if (!b.id && k != null) b.id = "sth-tab-" + k;
+        var p = k == null ? null : document.querySelector('.tab-panel[data-panel="' + k + '"]');
+        if (p) {
+          if (!p.id) p.id = "sth-panel-" + k;
+          p.setAttribute("role", "tabpanel"); p.setAttribute("aria-labelledby", b.id);
+          b.setAttribute("aria-controls", p.id);
+        }
+        var on = b.classList.contains("active");
+        b.setAttribute("aria-selected", on ? "true" : "false");
+        b.tabIndex = on ? 0 : -1;
+        if (on && !on1) on1 = b;
+      });
+      if (!on1 && btns[0]) btns[0].tabIndex = 0;
+      if (on1 && on1 !== last) { last = on1; reveal(on1); }
+    }
+    function later() { if (!queued) { queued = true; Promise.resolve().then(sync); } }
+    sync();
+    if (window.MutationObserver) new MutationObserver(later).observe(strip, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+    strip.addEventListener("keydown", function (e) {
+      var b = e.target.closest ? e.target.closest(".tab-btn") : null;
+      if (!b || e.altKey || e.ctrlKey || e.metaKey) return;
+      var list = Array.prototype.filter.call(strip.querySelectorAll(".tab-btn"), function (x) { return x === b || x.offsetParent !== null; });
+      var i = list.indexOf(b), j = -1;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") j = (i + 1) % list.length;
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") j = (i - 1 + list.length) % list.length;
+      else if (e.key === "Home") j = 0;
+      else if (e.key === "End") j = list.length - 1;
+      if (j < 0) return;
+      e.preventDefault();
+      list[j].focus();
+      if (!list[j].classList.contains("scope-off")) list[j].click();   /* 범위 밖 탭은 초점만(누르면 범위를 풀고 그쪽으로 간다) */
+    });
+  })();
+
+  /* ---------- 슬라이더 이름표 ----------
+     단원 페이지의 <div class="ctrl-label">이름<span class="val">값</span></div> 바로 다음 슬라이더를
+     aria-labelledby 로 잇고(이름만), 값 글(.val)은 aria-valuetext 로 읽어 준다. 버튼 묶음(.seg)은 role=group 으로 이름을 붙이고
+     켜진 단추에 aria-pressed 를 맞춘다. 나중에 생기는 실험실·탐구 슬라이더도 따라 붙인다. */
+  (function () {
+    var seq = 0;
+    function labelEl(r) {
+      var p = r.previousElementSibling;
+      if (p && p.classList.contains("ctrl-label")) return p;
+      var g = r.parentNode;
+      if (g && g.querySelector) { var c = g.querySelector(":scope > .ctrl-label"); if (c) return c; }
+      return null;
+    }
+    function nameOf(lab) {
+      var val = lab.querySelector(":scope > .val");
+      if (!val) { if (!lab.id) lab.id = "sth-lbl-" + (++seq); return { id: lab.id, val: null }; }
+      var n = lab.querySelector(":scope > .sth-lbl");
+      if (!n) {
+        n = document.createElement("span"); n.className = "sth-lbl"; n.id = "sth-lbl-" + (++seq);
+        Array.prototype.slice.call(lab.childNodes).forEach(function (x) { if (x !== val) n.appendChild(x); });
+        lab.insertBefore(n, val);
+      }
+      return { id: n.id, val: val };
+    }
+    function vt(r, val) { var s = (val.textContent || "").trim(); if (s) r.setAttribute("aria-valuetext", s); else r.removeAttribute("aria-valuetext"); }
+    function scan() {
+      Array.prototype.forEach.call(document.querySelectorAll("input[type=range]:not([data-sth-l])"), function (r) {
+        r.setAttribute("data-sth-l", "1");
+        if (r.hasAttribute("aria-label") || r.hasAttribute("aria-labelledby") || (r.labels && r.labels.length)) return;
+        var lab = labelEl(r);
+        if (lab) {
+          var nm = nameOf(lab);
+          r.setAttribute("aria-labelledby", nm.id);
+          if (nm.val) {
+            var val = nm.val; vt(r, val);
+            r.addEventListener("input", function () { setTimeout(function () { vt(r, val); }, 0); });
+            r.addEventListener("change", function () { setTimeout(function () { vt(r, val); }, 0); });
+          }
+        } else if (r.id) {
+          var l2 = document.querySelector('label[for="' + r.id + '"]');
+          if (!l2 && r.previousElementSibling && r.previousElementSibling.tagName === "LABEL") { l2 = r.previousElementSibling; }
+          if (l2) { if (!l2.id) l2.id = "sth-lbl-" + (++seq); r.setAttribute("aria-labelledby", l2.id); }
+        }
+      });
+      Array.prototype.forEach.call(document.querySelectorAll(".seg:not([data-sth-l])"), function (g) {
+        g.setAttribute("data-sth-l", "1");
+        if (!g.hasAttribute("role")) g.setAttribute("role", "group");
+        var lab = g.previousElementSibling;
+        if (lab && lab.classList.contains("ctrl-label") && !g.hasAttribute("aria-labelledby")) { var nm = nameOf(lab); g.setAttribute("aria-labelledby", nm.id); }
+        function press() { Array.prototype.forEach.call(g.querySelectorAll("button"), function (b) { b.setAttribute("aria-pressed", b.classList.contains("on") ? "true" : "false"); }); }
+        press();
+        if (window.MutationObserver) new MutationObserver(press).observe(g, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+      });
+    }
+    var timer = 0;
+    function later() { if (!timer) timer = setTimeout(function () { timer = 0; scan(); }, 150); }
+    function start() {
+      scan();
+      if (window.MutationObserver && document.body) new MutationObserver(function (ms) {
+        for (var i = 0; i < ms.length; i++) if (ms[i].addedNodes.length) { later(); return; }
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+    window.addEventListener("load", later);
+  })();
+
   /* ---------- 유틸 ---------- */
   /* 그림 색: 이야기 단원(.episode 가 있는 쪽)의 캔버스는 어두운 '무대' 색(theme.css 의 .sth-stage)으로 그린다.
      화면 글자 색이 필요하면 cssVarPage 를 쓴다. 무대를 끄려면 <html data-stage="off"> */
@@ -176,6 +305,54 @@
     };
   }
 
+  /* 휴대폰 글자 키우기 — 가로 900 좌표 그림이 338px 쯤으로 줄면 12px 글자가 4.5px 가 된다.
+     그림이 실제로 보이는 폭(CSS 폭)을 보고, 16px 보다 작은 글자를 최대 1.35배까지 키워 그린다(넓은 화면·크게 보기에서는 그대로).
+     그림 좌표는 그대로라 그리기 코드는 고치지 않는다. 글자 폭을 measureText 로 재는 코드는 키운 크기로 잰다.
+     끄려면 <html data-cvtext="off"> */
+  var FONT_D = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "font");
+  var TEXT_MAX = 1.35, TEXT_MIN_CSS = 7.5, TEXT_UNDER = 16;
+  function cssWidthOf(canvas) {
+    var w = canvas.getBoundingClientRect ? canvas.getBoundingClientRect().width : 0;
+    if (!w) { var m = document.querySelector("main"); w = m ? m.clientWidth - 36 : 0; }
+    if (!w) w = (window.innerWidth || 900) - 40;
+    return w;
+  }
+  function textK(canvas) {
+    if (root.getAttribute("data-cvtext") === "off" || /[?&]cvtext=off/.test(location.search) || !canvas._w) return 1;
+    var s = Math.min(1, cssWidthOf(canvas) / canvas._w);        /* 화면에 보이는 배율 */
+    if (s >= 0.66) return 1;
+    return s;
+  }
+  function boostText(canvas, ctx) {
+    if (!FONT_D || !FONT_D.set || !FONT_D.get) return;
+    canvas._tk = textK(canvas);
+    try {
+      Object.defineProperty(ctx, "font", {
+        configurable: true,
+        get: function () { return FONT_D.get.call(ctx); },
+        set: function (v) {
+          var s = canvas._tk || 1;
+          if (s < 1) v = String(v).replace(/(\d+(?:\.\d+)?)px/, function (m0, n) {
+            n = +n; if (!(n > 0) || n >= TEXT_UNDER) return m0;
+            var want = Math.max(n, Math.min(TEXT_MIN_CSS / s, n * TEXT_MAX, TEXT_UNDER + 2));
+            return (Math.round(want * 10) / 10) + "px";
+          });
+          FONT_D.set.call(ctx, v);
+        }
+      });
+    } catch (e) {}
+  }
+  var tkTimer = 0;
+  function retext() {
+    tkTimer = 0;
+    var any = false;
+    for (var i = 0; i < canvases.length; i++) { var c = canvases[i], k = textK(c); if (c.getBoundingClientRect().width && Math.abs(k - (c._tk || 1)) > 0.02) { c._tk = k; any = true; } }
+    if (any) redrawAll();
+  }
+  window.addEventListener("resize", function () { if (!tkTimer) tkTimer = setTimeout(retext, 250); });
+  window.addEventListener("tab-shown", function () { setTimeout(retext, 60); });
+  window.sthRetext = retext;
+
   window.setupCanvas = function (canvas) {
     var ctx = canvas.getContext("2d");
     if (canvas._dprSet) return ctx;
@@ -202,6 +379,7 @@
     canvas._w = W;
     canvas._h = H;
     canvases.push(canvas);
+    boostText(canvas, ctx);
     hookText(canvas, ctx);
     if (window.sthAddBig) setTimeout(function () { window.sthAddBig(canvas); }, 0);
     return ctx;
@@ -746,10 +924,12 @@
         window.removeEventListener("resize", fit);
         document.removeEventListener("fullscreenchange", onFs);
         leaveFull();
+        setTimeout(function () { if (window.sthRetext) window.sthRetext(); }, 120);
         if (host._bigBtn) host._bigBtn.focus();
       });
       x.addEventListener("click", function () { finish(false); });
       fit();
+      setTimeout(function () { if (window.sthRetext) window.sthRetext(); }, 120);
       window.addEventListener("resize", fit);
       goFull();
       setTimeout(function () { if (cur) document.addEventListener("fullscreenchange", onFs); }, 400);
@@ -764,6 +944,7 @@
       if (host._bigBtn) { if (host._readAdd) host._readAdd(canvas); return; }
       var row = make("div", "cv-big-row"), b = make("button", "cv-big-btn", "🔍 크게 보기");
       b.type = "button"; b.addEventListener("click", function () { openBig(host); });
+      row.appendChild(make("span", "cv-big-tip", "글자가 작으면 크게 보기 → 휴대폰을 가로로"));
       row.appendChild(b);
       host._bigBtn = b;
       if (wrap === host) host.parentNode.insertBefore(row, host.nextSibling);

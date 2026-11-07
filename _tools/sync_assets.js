@@ -1,27 +1,45 @@
-/* 공용 부품 맞추기 — planet-space-2/assets 를 기준 사본으로 모든 과목 저장소에 복사하고,
+/* 공용 부품 맞추기 — planet-space-2/assets 를 기준 사본(정본)으로 모든 과목 저장소에 복사하고,
    이야기 단원 index.html 에 scope.js·kit.js 를 theme.js 바로 다음에 붙인다.
      node _tools/sync_assets.js            (실제로 바꿈)
      node _tools/sync_assets.js --dry      (무엇을 바꿀지만 보여 줌)
-   허브(science-teacher-hub)에는 theme.js·theme.css 만 맞춘다. */
+
+   무엇을 복사하나 (2026-11-08부터: 예전에는 6개만 맞춰서 저장소마다 엔진이 어긋났다)
+     · 정본 폴더의 모든 공용 파일(.js .css) — 저장소마다 내용이 다른 파일만 뺀다(PER_REPO).
+     · 일부 과목만 쓰는 부품(OPTIONAL)은 그 파일이 이미 있는 저장소에만, 지정한 정본에서 복사한다.
+     · 줄바꿈은 LF 로 통일해서 쓴다. 비교도 줄바꿈을 무시하고 하므로, Windows 에서 CRLF 로 풀려도 다시 쓰지 않는다.
+   허브(science-teacher-hub/assets)에는 허브 화면이 쓰는 HUB 목록만 맞춘다.
+   절대 건드리지 않는 것: share-config.js(반 목록·공유 주소, 저장소마다 다름), people-data.js(과목별 인물),
+   share.css(옛 단원용, 일부 과목만 — 각자 관리). */
 const fs = require("fs"), path = require("path");
-const ROOT = path.resolve(__dirname, "..");
-const SRC = path.join(ROOT, "planet-space-2", "assets");
-const FILES = ["theme.js", "theme.css", "story.css", "kit.js", "scope.js", "lab.js"];
+let ROOT = __dirname;   /* 위로 올라가며 과목 저장소들이 모인 폴더를 찾는다(허브 _tools 에서도, 상위 _tools 에서도 돈다) */
+while (!fs.existsSync(path.join(ROOT, "planet-space-2", "assets")) && path.dirname(ROOT) !== ROOT) ROOT = path.dirname(ROOT);
+const SRC_REPO = "planet-space-2";
+const SRC = path.join(ROOT, SRC_REPO, "assets");
+const PER_REPO = new Set(["share-config.js", "people-data.js", "share.css"]);
+const OPTIONAL = { "life-kit.js": "integrated-science-2", "climate-life.js": "integrated-science-2" };
+const HUB = ["theme.js", "theme.css", "account.js", "qrcode.js"];
 const DRY = process.argv.includes("--dry");
-const SKIP = new Set(["science-teacher-hub", "earth-system", "integrated-science", "planet-space", "science-inquiry", "_base_ps2"]);
-const repos = fs.readdirSync(ROOT).filter(d => fs.existsSync(path.join(ROOT, d, ".git")) && !SKIP.has(d));
+const SKIP = new Set(["science-teacher-hub", "science-hub-next", "earth-system", "integrated-science", "planet-space", "science-inquiry", "_base_ps2"]);
+const repos = fs.readdirSync(ROOT).filter(d => fs.existsSync(path.join(ROOT, d, ".git")) && fs.existsSync(path.join(ROOT, d, "assets")) && !SKIP.has(d));
+const FILES = fs.readdirSync(SRC).filter(f => /\.(js|css)$/.test(f) && !PER_REPO.has(f) && !OPTIONAL[f]);
+const lf = b => b.toString("utf8").replace(/\r\n/g, "\n");
 let changed = 0;
 function copy(src, dst) {
-  const a = fs.readFileSync(src);
-  if (fs.existsSync(dst) && Buffer.compare(a, fs.readFileSync(dst)) === 0) return;
+  const a = lf(fs.readFileSync(src));
+  if (fs.existsSync(dst) && lf(fs.readFileSync(dst)) === a && !fs.readFileSync(dst, "utf8").includes("\r\n")) return;
   changed++; console.log("복사", path.relative(ROOT, dst));
   if (!DRY) fs.writeFileSync(dst, a);
 }
+/* 정본 자신도 LF 로 */
+for (const f of FILES) { const p = path.join(SRC, f); const b = fs.readFileSync(p, "utf8"); if (b.includes("\r\n")) { changed++; console.log("줄바꿈 LF", path.relative(ROOT, p)); if (!DRY) fs.writeFileSync(p, b.replace(/\r\n/g, "\n")); } }
 for (const r of repos) {
-  if (r === "planet-space-2") continue;
-  for (const f of FILES) copy(path.join(SRC, f), path.join(ROOT, r, "assets", f));
+  if (r !== SRC_REPO) for (const f of FILES) copy(path.join(SRC, f), path.join(ROOT, r, "assets", f));
+  for (const f of Object.keys(OPTIONAL)) {
+    const dst = path.join(ROOT, r, "assets", f), src = path.join(ROOT, OPTIONAL[f], "assets", f);
+    if (fs.existsSync(dst) && fs.existsSync(src)) copy(src, dst);
+  }
 }
-for (const f of ["theme.js", "theme.css"]) copy(path.join(SRC, f), path.join(ROOT, "science-teacher-hub", "assets", f));
+for (const f of HUB) copy(path.join(SRC, f), path.join(ROOT, "science-teacher-hub", "assets", f));
 const TAG = '<script src="../assets/scope.js"></script>\n<script src="../assets/kit.js"></script>';
 for (const r of repos) {
   for (const u of fs.readdirSync(path.join(ROOT, r))) {
@@ -36,4 +54,4 @@ for (const r of repos) {
     if (!DRY) fs.writeFileSync(f, h);
   }
 }
-console.log(DRY ? "(미리보기) " : "", "바뀐 곳", changed);
+console.log(DRY ? "(미리보기) " : "", "바뀐 곳", changed, "· 공용 파일", FILES.length + "개:", FILES.join(" "));

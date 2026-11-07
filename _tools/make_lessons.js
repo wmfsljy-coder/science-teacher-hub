@@ -3,15 +3,29 @@
    페이지(index.html·episodes.js·quiz-items.js·lab-cases.js·real-cases.js)를 고친 뒤 다시 돌리면 그대로 따라온다. */
 "use strict";
 var fs = require("fs"), path = require("path"), vm = require("vm");
-var ROOT = path.join(__dirname, "..");
+var ROOT = __dirname;   /* 위로 올라가며 과목 저장소들이 모인 폴더를 찾는다(허브 _tools 에서도, 상위 _tools 에서도 돈다) */
+while (!fs.existsSync(path.join(ROOT, "planet-space-2")) && path.dirname(ROOT) !== ROOT) ROOT = path.dirname(ROOT);
+/* node _tools/make_lessons.js --check : 쓰지 않고, 페이지와 어긋난 LESSON.md 만 알려 준다(어긋나면 끝 코드 1) */
+var CHECK = process.argv.indexOf("--check") >= 0, STALE = [];
 var UNITS = fs.readFileSync(path.join(__dirname, "ALL_UNITS.txt"), "utf8").split(/\r?\n/).filter(Boolean);
 
 function strip(s) { return String(s || "").replace(/<br\s*\/?>/g, " ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim(); }
-function load(file, fn) {
+/* 단원 자료 파일을 돌려 sthQuiz/sthLab 에 넘기는 값을 잡는다. pre = 먼저 돌릴 파일(실제 자료의 data/*.js).
+   예전에는 data 를 안 불러서 실제 자료 절이 빠지거나(기후변화와 환경생태 1) ‘초신성 0개’처럼 개수가 0 으로 나왔다. */
+function load(file, fn, pre) {
   if (!fs.existsSync(file)) return null;
-  var cap = null, win = {}; win[fn] = function (o) { cap = o; };
-  try { vm.runInNewContext(fs.readFileSync(file, "utf8"), { window: win, document: {}, Math: Math, console: { log: function () {} } }); } catch (e) { return null; }
+  var cap = null, ctx = { document: { getElementById: function () { return null; }, querySelector: function () { return null; }, querySelectorAll: function () { return []; }, createElement: function () { return { style: {}, appendChild: function () {}, setAttribute: function () {} }; } },
+    Math: Math, JSON: JSON, Date: Date, console: { log: function () {}, warn: function () {} }, setTimeout: function () {}, sthKit: {} };
+  ctx.window = ctx; ctx[fn] = function (o) { cap = o; };
+  vm.createContext(ctx);
+  (pre || []).forEach(function (p) { try { vm.runInContext(fs.readFileSync(p, "utf8"), ctx); } catch (e) {} });
+  try { vm.runInContext(fs.readFileSync(file, "utf8"), ctx); } catch (e) { return cap; }
   return cap;
+}
+function dataFiles(dir, html) {
+  var out = [], re = /<script src="(data\/[^"]+\.js)"/g, m;
+  while ((m = re.exec(html))) out.push(path.join(dir, m[1]));
+  return out;
 }
 function gates(js) {
   var out = {}, re = /sthGate\(\{\s*gate:\s*"([^"]+)"[\s\S]*?question:\s*"((?:[^"\\]|\\.)*)"/g, m;
@@ -35,16 +49,16 @@ function unitLesson(u) {
     var stds = [], sr = /<b>\[([^\]]+)\]<\/b>\s*([\s\S]*?)(?=<br>|<\/div>)/g, s;
     while ((s = sr.exec(p))) stds.push([s[1], strip(s[2])]);
     var terms = []; var tm = /<div class="terms">([\s\S]*?)<\/div>/.exec(p);
-    if (tm) { var tr = /<b>([^<]+)<\/b>/g, t; while ((t = tr.exec(tm[1]))) terms.push(t[1]); }
+    if (tm) { var tr = /<b>([\s\S]*?)<\/b>/g, t; while ((t = tr.exec(tm[1]))) terms.push(strip(t[1])); }
     var gq = []; var gr = /class="gate[^"]*" id="([^"]+)"/g, g; while ((g = gr.exec(p))) if (G[g[1]]) gq.push(G[g[1]]);
     var ms = []; var mr = /<div class="mission"[^>]*>([\s\S]*?)<\/div>/g, mm;
-    while ((mm = mr.exec(p))) { var lis = mm[1].match(/<li[^>]*>([\s\S]*?)<\/li>/g); if (lis) lis.forEach(function (l) { ms.push(strip(l)); }); else ms.push(strip(mm[1])); }
+    while ((mm = mr.exec(p))) { mm[1] = mm[1].replace(/<span class="m-tag">[^<]*<\/span>/g, ""); var lis = mm[1].match(/<li[^>]*>([\s\S]*?)<\/li>/g); if (lis) lis.forEach(function (l) { ms.push(strip(l)); }); else ms.push(strip(mm[1])); }
     var mis = []; var cr = /class="miscon[^"]*"><span class="tag">[^<]*<\/span><br><b>([\s\S]*?)<\/b>/g, c; while ((c = cr.exec(p))) mis.push(strip(c[1]));
     var scenes = (p.match(/<section class="scene"/g) || []).length;
     panels.push({ n: +m[1], eb: eb, h2: h2, stds: stds, terms: terms, gq: gq, ms: ms, mis: mis, scenes: scenes });
   }
   var stories = panels.filter(function (x) { return x.stds.length && x.scenes; });
-  var quiz = load(path.join(dir, "quiz-items.js"), "sthQuiz"), lab = load(path.join(dir, "lab-cases.js"), "sthLab"), real = load(path.join(dir, "real-cases.js"), "sthLab");
+  var quiz = load(path.join(dir, "quiz-items.js"), "sthQuiz"), lab = load(path.join(dir, "lab-cases.js"), "sthLab"), real = load(path.join(dir, "real-cases.js"), "sthLab", dataFiles(dir, html));
   var items = (quiz && quiz.items) || [];
   stories.forEach(function (st) {
     st.stds.forEach(function (c) {
@@ -92,7 +106,9 @@ function unitLesson(u) {
   if (lab && lab.cases.length) { L.push("## 응용 실험실 (처음 보는 상황에 적용)", ""); lab.cases.forEach(function (c) { L.push("- " + c.title + " — " + strip(c.task)); }); L.push(""); }
   if (real && real.cases.length) { L.push("## 실제 자료 (기관 관측값)", ""); real.cases.forEach(function (c) { L.push("- " + c.title + " — " + strip(c.task)); }); L.push(""); }
   L.push("## 학생 정보", "", "우리 반 공유를 켠 경우 별명·결과 요약·첫 추리·진행 기록만 선생님 시트에 갑니다. 자세한 것은 [GUIDE.md](https://github.com/wmfsljy-coder/science-teacher-hub/blob/main/GUIDE.md) 5.", "");
-  fs.writeFileSync(path.join(dir, "LESSON.md"), L.join("\n"), "utf8");
+  var lp = path.join(dir, "LESSON.md"), next = L.join("\n");
+  if (CHECK) { var cur = fs.existsSync(lp) ? fs.readFileSync(lp, "utf8").replace(/\r\n/g, "\n") : ""; if (cur !== next) { STALE.push(u); } }
+  else fs.writeFileSync(lp, next, "utf8");
   return { u: u, label: label, title: title, stories: stories.length, q: items.length };
 }
 
@@ -112,7 +128,8 @@ Object.keys(bySubj).forEach(function (sj) {
 });
 O.push("## 단원별 지도안", "");
 done.forEach(function (d) { O.push("- [" + d.label + " " + d.title + "](https://github.com/wmfsljy-coder/" + d.u.split("/")[0] + "/blob/main/" + d.u.split("/")[1] + "/LESSON.md) — 이야기 " + d.stories + "편, 문항 " + d.q); });
-fs.writeFileSync(path.join(ROOT, "science-teacher-hub", "STANDARDS.md"), O.join("\n") + "\n", "utf8");
+if (!CHECK) fs.writeFileSync(path.join(ROOT, "science-teacher-hub", "STANDARDS.md"), O.join("\n") + "\n", "utf8");
+if (CHECK) { console.log(STALE.length ? "페이지와 어긋난 LESSON.md " + STALE.length + "곳: " + STALE.join(", ") : "LESSON.md 44곳 모두 페이지와 같음"); if (STALE.length) process.exitCode = 1; }
 console.log("지도안", done.length, "· 성취기준", Object.keys(STD).length, "· 이야기 없는 단원", done.filter(function (d) { return !d.stories; }).map(function (d) { return d.u; }).join(" "));
 var orphan = Object.keys(STD).filter(function (k) { return !STD[k].units.length; });
 console.log("문항에만 있는 성취기준", orphan.join(" ") || "없음");
