@@ -73,6 +73,67 @@ function teacherKey_() {
   }
   return String(sh.getRange('B1').getValue()).trim();
 }
+/** 관리 열쇠(설정 탭 B5) — 반 지우기·옛 기록 옮기기·명단 넣기·PIN 초기화처럼 되돌리기 어려운 일에만 쓴다.
+ *  교사 열쇠(B1)와 따로 두어, 교사 열쇠가 새어도 자료를 지우거나 남의 계정을 풀 수는 없게 한다. 화면에는 저장하지 않는다. */
+function adminKey_() {
+  teacherKey_();                                           /* 설정 탭이 없으면 먼저 만든다 */
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONF);
+  var v = String(sh.getRange('B5').getValue()).trim();
+  if (!v) {
+    v = 'adm-' + Utilities.getUuid().replace(/-/g, '').slice(0, 14);
+    sh.getRange('A5').setValue('관리 열쇠');
+    sh.getRange('B5').setValue(v);
+    sh.getRange('C5').setValue('반 지우기·명단 넣기·PIN 초기화에만 씁니다. 화면에 저장되지 않으니 그때마다 넣으세요. 바꾸려면 B5 를 고치세요.');
+  }
+  return v;
+}
+/** 열쇠 비교 — 앞에서 틀려도 끝까지 비교하고(걸린 시간으로 열쇠를 짐작하지 못하게), 빈 열쇠는 늘 거절한다. */
+function keyEq_(a, b) {
+  a = String(a == null ? '' : a); b = String(b == null ? '' : b);
+  var x = a.length ^ b.length, n = Math.max(a.length, b.length);
+  for (var i = 0; i < n; i++) x |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  return x === 0 && b.length > 0;
+}
+/** 열쇠 확인 — 10분 안에 30번 넘게 틀리면 그동안은 맞는 열쇠도 거절한다(아무 글자나 마구 넣어 보기 막기). */
+function keyOk_(given, which) {
+  var c = CacheService.getScriptCache(), ck = 'keyBad:' + (which === 'admin' ? 'a' : 't'), bad = +c.get(ck) || 0;
+  if (bad >= 30) return false;
+  if (keyEq_(cut_(given, 40), which === 'admin' ? adminKey_() : teacherKey_())) return true;
+  if (given) c.put(ck, String(bad + 1), 600);
+  return false;
+}
+function isTeacher_(d) { return keyOk_(d && d.key, 't'); }
+/** 관리 일 — 교사 열쇠(key)와 관리 열쇠(admin)가 둘 다 맞아야 한다. */
+function isAdmin_(d) { return isTeacher_(d) && keyOk_(d && d.admin, 'admin'); }
+var ADMIN_ERR = '관리 열쇠가 맞지 않습니다 (시트 설정 탭 B5)';
+/** 공개 목록에 나가는 이름 — 로그인한 학생의 '@학번' 은 '친구 xxxx' 로 가린다(같은 학생은 늘 같은 글자, 학번은 알 수 없음).
+ *  선생님 화면(교사 열쇠)에는 그대로 간다. 학생 화면은 me.pub 과 견주어 '(나)' 를 찾는다. */
+function pubNick_(sid) { return '친구 ' + hmac_('pub|' + sid).replace(/[^A-Za-z0-9]/g, '').slice(0, 4); }
+function nickOut_(nick) { nick = String(nick == null ? '' : nick); return nick.charAt(0) === '@' ? pubNick_(nick.slice(1)) : nick; }
+/** 짧게 담아 두는 공개 목록(반 전체가 한꺼번에 새로 고칠 때 시트를 매번 읽지 않게). 올리면 그 칸은 바로 지운다. */
+function cacheGet_(k) { var v = CacheService.getScriptCache().get(k); if (!v) return null; try { return JSON.parse(v); } catch (e) { return null; } }
+function cachePut_(k, o, sec) { var s = JSON.stringify(o); if (s.length < 90000) CacheService.getScriptCache().put(k, s, sec); return o; }
+/** 탭에서 고른 줄만 꺼낸다 — 앞쪽 짧은 칸(반·별명·단원…, B 열부터 keyCols 칸)과 숨김 칸만 먼저 읽고,
+ *  긴 칸(성과 JSON)이 든 줄 전체(1~ncol 칸)는 고른 줄만 읽는다. test(앞쪽 칸 배열, 숨김 글자) */
+function pickRows_(sh, ncol, keyCols, hidCol, test) {
+  var n = sh.getLastRow() - 1; if (n < 1) return [];
+  var k = sh.getRange(2, 2, n, keyCols).getValues(), h = sh.getRange(2, hidCol, n, 1).getValues(), pick = [];
+  for (var i = 0; i < n; i++) { k[i][0] = clsv_(k[i][0]); if (test(k[i], String(h[i][0]).trim())) pick.push(i); }
+  if (!pick.length) return [];
+  var lo = pick[0], hi = pick[pick.length - 1];
+  if (pick.length > 12 || hi - lo < 40) {                   /* 많거나 붙어 있으면 한 덩어리로 */
+    var blk = sh.getRange(lo + 2, 1, hi - lo + 1, ncol).getValues();
+    return pick.map(function (i) { return blk[i - lo]; });
+  }
+  return pick.map(function (i) { return sh.getRange(i + 2, 1, 1, ncol).getValues()[0]; });
+}
+/** 덮어쓸 줄 찾기 — 앞쪽 짧은 칸만 읽는다. match(앞쪽 칸 배열) 가 참인 첫 줄 번호(시트 줄, 없으면 0) */
+function findKeyRow_(sh, keyCols, match) {
+  var n = sh.getLastRow() - 1; if (n < 1) return 0;
+  var k = sh.getRange(2, 2, n, keyCols).getValues();
+  for (var i = 0; i < n; i++) { k[i][0] = clsv_(k[i][0]); if (match(k[i])) return i + 2; }
+  return 0;
+}
 /** 시트의 표준시를 스크립트와 맞춘다. 다르면 시각이 몇 시간씩 어긋나 기록된다. */
 function ensureTz_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -148,26 +209,27 @@ function doGet(e) {
 
   /* 한 반의 한 단원 — 친구들이 올린 것 */
   if (p.action === 'list') {
-    var cls = cut_(p.cls, 12), unit = cut_(p.unit, 24);
-    var rows = sheet_().getDataRange().getValues(), items = [];
-    for (var i = 1; i < rows.length; i++) {
-      var r = rows[i];
-      if (String(r[1]) !== cls || String(r[3]) !== unit || String(r[7]).trim()) continue;
+    var cls = cut_(p.cls, 12), unit = cut_(p.unit, 24), lk0 = 'L|' + cls + '|' + unit, hit0 = cacheGet_(lk0);
+    if (hit0) return out_(hit0);
+    var items = [];
+    pickRows_(sheet_(), 8, 3, 8, function (k, hid) { return k[0] === cls && String(k[2]) === unit && !hid; }).forEach(function (r) {
       var res = {};
       try { res = JSON.parse(r[5] || '{}'); } catch (err) {}
       delete res._ev;                                           // 수업 효과 기록은 선생님 화면에서만
-      items.push({ nick: String(r[2]), results: res, line: String(r[6] || ''), t: r[0] });
-    }
-    return out_({ ok: true, items: items });
+      items.push({ nick: nickOut_(r[2]), results: res, line: String(r[6] || ''), t: r[0] });   // '@학번' 은 가린다
+    });
+    return out_(cachePut_(lk0, { ok: true, items: items }, 20));
   }
 
   /* 한 반의 활동 기록 — 어느 단원에서 몇 명이, 마지막이 언제인지 */
   if (p.action === 'classlog') {
-    var c2 = cut_(p.cls, 12);
-    var rs = sheet_().getDataRange().getValues(), by = {};
-    for (var k = 1; k < rs.length; k++) {
+    var c2 = cut_(p.cls, 12), ck2 = 'C|' + c2, hit2 = cacheGet_(ck2);
+    if (hit2) return out_(hit2);
+    var sh2 = sheet_(), n2 = sh2.getLastRow() - 1, by = {};
+    var rs = n2 > 0 ? sh2.getRange(2, 1, n2, 5).getValues() : [], hs = n2 > 0 ? sh2.getRange(2, 8, n2, 1).getValues() : [];   /* 긴 성과 칸은 읽지 않는다 */
+    for (var k = 0; k < rs.length; k++) {
       var w = rs[k];
-      if (String(w[1]) !== c2 || String(w[7]).trim()) continue;
+      if (clsv_(w[1]) !== c2 || String(hs[k][0]).trim()) continue;
       var u = String(w[3]);
       if (!by[u]) by[u] = { unit: u, label: String(w[4] || ''), n: 0, last: null };
       by[u].n++;
@@ -177,30 +239,29 @@ function doGet(e) {
     }
     var units = Object.keys(by).map(function (u) { return by[u]; });
     units.sort(function (a, b) { return (b.last || 0) - (a.last || 0); });
-    return out_({ ok: true, units: units });
+    return out_(cachePut_(ck2, { ok: true, units: units }, 30));
   }
 
   /* 한 반의 한 단원 · 한 측정 — 친구들이 올린 측정값 (숨김 칸에 글자가 있으면 빼고) */
   if (p.action === 'measures') {
-    var mc = cut_(p.cls, 12), mu = cut_(p.unit, 24), mk = cut_(p.key, 12), mitems = [];
+    var mc = cut_(p.cls, 12), mu = cut_(p.unit, 24), mk = cut_(p.key, 12), mitems = [], mck = 'M|' + mc + '|' + mu + '|' + mk, mhit = cacheGet_(mck);
+    if (mhit) return out_(mhit);
     var msh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MEASURE);
-    var mv = msh ? msh.getDataRange().getValues() : [];
-    for (var mi = 1; mi < mv.length; mi++) {
-      var mr = mv[mi];
-      if (String(mr[1]) !== mc || String(mr[3]) !== mu || String(mr[4]) !== mk || String(mr[6]).trim()) continue;
+    (msh ? pickRows_(msh, 7, 4, 7, function (k, hid) { return k[0] === mc && String(k[2]) === mu && String(k[3]) === mk && !hid; }) : []).forEach(function (mr) {
       var mo = {}; try { mo = JSON.parse(mr[5] || '{}'); } catch (err4) {}
       if (mo instanceof Array) mo = { v: mo };
-      mitems.push({ nick: String(mr[2]), v: mo.v || [], g: String(mo.g || ''), t: ms_(mr[0]) });
-    }
-    return out_({ ok: true, items: mitems });
+      mitems.push({ nick: nickOut_(mr[2]), v: mo.v || [], g: String(mo.g || ''), t: ms_(mr[0]) });
+    });
+    return out_(cachePut_(mck, { ok: true, items: mitems }, 20));
   }
 
   /* 한 반의 한 단원에서 처음에 많이 틀린 문항 — 별명 없이 문항별 인원만(학생 화면의 ‘다시 풀기’가 쓴다) */
   if (p.action === 'classmiss') {
-    var xc = cut_(p.cls, 12), xu = cut_(p.unit, 24), xr = sheet_().getDataRange().getValues(), cnt = {}, ns = 0;
-    for (var xi = 1; xi < xr.length; xi++) {
+    var xc = cut_(p.cls, 12), xu = cut_(p.unit, 24), cnt = {}, ns = 0, xck = 'X|' + xc + '|' + xu, xhit = cacheGet_(xck);
+    if (xhit) return out_(xhit);
+    var xr = pickRows_(sheet_(), 8, 3, 8, function (k, hid) { return k[0] === xc && String(k[2]) === xu && !hid; });
+    for (var xi = 0; xi < xr.length; xi++) {
       var xw = xr[xi];
-      if (String(xw[1]) !== xc || String(xw[3]) !== xu || String(xw[7]).trim()) continue;
       var xres = {}; try { xres = JSON.parse(xw[5] || '{}'); } catch (err5) {}
       var xe = String(xres._ev || ''); if (!xe) continue; ns++;
       xe.split('|').forEach(function (part) {
@@ -209,7 +270,7 @@ function doGet(e) {
       });
     }
     var top = Object.keys(cnt).map(function (id) { return { id: id, n: cnt[id] }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 10);
-    return out_({ ok: true, students: ns, items: top });
+    return out_(cachePut_(xck, { ok: true, students: ns, items: top }, 60));
   }
 
   /* 바로가기 탭 만들기 — 내용은 코드에 박힌 공개 링크뿐이라 열쇠 없이도 된다(이미 최신이면 아무것도 안 한다). */
@@ -242,7 +303,7 @@ function doPost(e) {
   /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
   if (d.action === 'teacher') {
-    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isTeacher_(d)) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var rs2 = sheet_().getDataRange().getValues();
     var cls_ = {}, cell = {}, units2 = {}, cs = {}, UI = unitInfo_();
     for (var a = 1; a < rs2.length; a++) {
@@ -288,7 +349,7 @@ function doPost(e) {
   /* 수업 효과 — 단원 × 반 마다 완료율·첫 추리 정답률·한 번에 맞힌 비율·막힌 장면. 교사 열쇠가 맞아야 한다.
      학생 화면이 올린 results._ev ( g:키=1/0,… | e:이야기=푼/전체@막힌 장면,… | q:한 번에/손댄 | x:처음에 틀린 문항,… ) 를 모은다. */
   if (d.action === 'evidence') {
-    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isTeacher_(d)) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var ev = sheet_().getDataRange().getValues(), agg = {};
     for (var x = 1; x < ev.length; x++) {
       var q = ev[x];
@@ -343,7 +404,7 @@ function doPost(e) {
   /* 한 반 · 한 단원의 학생별 기록 — 모둠 편성과 '먼저 가 볼 학생'에 쓴다. 교사 열쇠가 맞아야 한다.
      학생 글(한 줄)은 보내지 않는다. 별명·첫 추리(맞음 여부·고른 보기)·이야기 진행·문항·실험실만. */
   if (d.action === 'students') {
-    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isTeacher_(d)) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var wc = cut_(d.cls, 12), wu = cut_(d.unit, 24), sv = sheet_().getDataRange().getValues(), st = [];
     for (var y = 1; y < sv.length; y++) {
       var w = sv[y];
@@ -371,7 +432,8 @@ function doPost(e) {
 
   /* 옛 시트의 기록을 옮겨 붙인다 — 교사 열쇠와 confirm:'옮김' 이 있어야 한다. rows: share 줄들, logs: 활동 줄들(첫 칸은 시각 숫자). */
   if (d.action === 'import') {
-    if (cut_(d.key, 40) !== teacherKey_() || d.confirm !== '옮김') return out_({ ok: false, error: '열쇠 또는 확인이 맞지 않습니다' });
+    if (!isTeacher_(d) || d.confirm !== '옮김') return out_({ ok: false, error: '열쇠 또는 확인이 맞지 않습니다' });
+    if (!isAdmin_(d)) return out_({ ok: false, error: ADMIN_ERR });
     ensureTz_();
     var ilk = LockService.getScriptLock(); if (!ilk.tryLock(20000)) return out_({ ok: false, error: '잠시 뒤 다시' });
     try {
@@ -387,7 +449,8 @@ function doPost(e) {
   /* 한 반의 자료를 지운다 — 교사 열쇠가 맞고 confirm 을 붙였을 때만.
      시험 자료를 치우거나 지난 학년도 반을 정리할 때 쓴다. 되돌릴 수 없다. */
   if (d.action === 'wipe') {
-    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isTeacher_(d)) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isAdmin_(d)) return out_({ ok: false, error: ADMIN_ERR });     /* 지우기는 관리 열쇠까지 */
     var wc = cut_(d.cls, 12);
     if (!wc) return out_({ ok: false, error: '지울 반을 적어 주세요' });
     if (cut_(d.confirm, 10) !== '지움') return out_({ ok: false, error: 'confirm=지움 이 필요합니다' });
@@ -416,20 +479,16 @@ function doPost(e) {
     var vl = LockService.getScriptLock();
     if (!vl.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
     try {
-      var vsh = voteSheet_(), vr = vsh.getDataRange().getValues();
-      for (var vi = 1; vi < vr.length; vi++) {
-        if (clsv_(vr[vi][1]) === vc && String(vr[vi][2]) === vn && String(vr[vi][3]) === vu && String(vr[vi][4]) === vk) {
-          vrow[7] = vr[vi][7]; vsh.getRange(vi + 1, 1, 1, vrow.length).setValues([vrow]); vdone = true; break;
-        }
-      }
-      if (!vdone) vsh.appendRow(vrow);
+      var vsh = voteSheet_(), vat = findKeyRow_(vsh, 4, function (k) { return k[0] === vc && String(k[1]) === vn && String(k[2]) === vu && String(k[3]) === vk; });
+      if (vat) { vrow[7] = vsh.getRange(vat, 8).getValue(); vsh.getRange(vat, 1, 1, vrow.length).setValues([vrow]); vdone = true; }
+      else vsh.appendRow(vrow);
     } finally { vl.releaseLock(); }
     return out_({ ok: true, updated: vdone });
   }
 
   /* 첫 추리 투표 모아 보기 — 교사 열쇠가 맞아야 한다. 보기마다 처음·다시 인원(별명은 보내지 않는다). */
   if (d.action === 'votes') {
-    if (cut_(d.key, 40) !== teacherKey_()) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
+    if (!isTeacher_(d)) return out_({ ok: false, error: '열쇠가 맞지 않습니다' });
     var wc2 = cut_(d.cls, 12), wu2 = cut_(d.unit, 24), gs = {};
     var vs2 = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VOTE), vv = vs2 ? vs2.getDataRange().getValues() : [];
     for (var vj = 1; vj < vv.length; vj++) {
@@ -458,15 +517,11 @@ function doPost(e) {
     var ql = LockService.getScriptLock();
     if (!ql.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
     try {
-      var qsh = measureSheet_(), qr = qsh.getDataRange().getValues();
-      for (var qi = 1; qi < qr.length; qi++) {
-        if (clsv_(qr[qi][1]) === qc && String(qr[qi][2]) === qn && String(qr[qi][3]) === qu && String(qr[qi][4]) === qk) {
-          qrow[6] = qr[qi][6];
-          qsh.getRange(qi + 1, 1, 1, qrow.length).setValues([qrow]); qa = true; break;
-        }
-      }
-      if (!qa) qsh.appendRow(qrow);
+      var qsh = measureSheet_(), qat = findKeyRow_(qsh, 4, function (k) { return k[0] === qc && String(k[1]) === qn && String(k[2]) === qu && String(k[3]) === qk; });
+      if (qat) { qrow[6] = qsh.getRange(qat, 7).getValue(); qsh.getRange(qat, 1, 1, qrow.length).setValues([qrow]); qa = true; }
+      else qsh.appendRow(qrow);
     } finally { ql.releaseLock(); }
+    CacheService.getScriptCache().remove('M|' + qc + '|' + qu + '|' + qk);
     return out_({ ok: true, updated: qa });
   }
 
@@ -484,30 +539,36 @@ function doPost(e) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return out_({ ok: false, error: '지금 올리는 친구가 많습니다. 잠시 뒤 다시 눌러 주세요' });
   try {
-    var sh = sheet_(), rows = sh.getDataRange().getValues();
-    for (var i = 1; i < rows.length; i++) {
-      if (clsv_(rows[i][1]) === cls && String(rows[i][2]) === nick && String(rows[i][3]) === unit) {
-        row[7] = rows[i][7];                                   // 숨김 표시는 유지
-        sh.getRange(i + 1, 1, 1, row.length).setValues([row]);
-        again = true;
-        break;
-      }
-    }
-    if (!again) sh.appendRow(row);
+    var sh = sheet_(), at = findKeyRow_(sh, 3, function (k) { return k[0] === cls && String(k[1]) === nick && String(k[2]) === unit; });   /* 반·별명·단원 세 칸만 읽는다 */
+    if (at) {
+      row[7] = sh.getRange(at, 8).getValue();                  // 숨김 표시는 유지
+      sh.getRange(at, 1, 1, row.length).setValues([row]);
+      again = true;
+    } else sh.appendRow(row);
     /* 활동 기록은 덮어쓰지 않고 쌓는다 */
     logSheet_().appendRow([new Date(), txt_(cls), txt_(nick), safe_(unit), safe_(label), keys.filter(function (k) { return k !== '_ev'; }).length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
+  CacheService.getScriptCache().removeAll(['L|' + cls + '|' + unit, 'C|' + cls, 'X|' + cls + '|' + unit]);   /* 친구 목록이 바로 새로 보이게 */
   return out_({ ok: true, updated: again });
 }
 
 /** 시트 메뉴에서 한 번 눌러 권한을 승인하고 열쇠를 확인하는 용도. */
 function 준비하기() {
   ensureTz_(); sheet_(); logSheet_(); classSheet_(); ensureLinks_(false);
-  var key = teacherKey_();
-  SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n\n선생님 화면(반별 활동)에 이 열쇠를 한 번 넣으면 모든 반이 보입니다.');
+  var key = teacherKey_(), adm = adminKey_();
+  SpreadsheetApp.getUi().alert('준비되었습니다.\n\n교사 열쇠: ' + key + '\n선생님 화면(반별 활동·학습 기록)에 넣으면 모든 반이 보입니다(브라우저를 닫으면 잊습니다).\n\n관리 열쇠: ' + adm + '\nPIN 초기화·명단 넣기·반 지우기 때만 한 번씩 넣습니다.');
+}
+/** 시트 메뉴 — 한 반(또는 * = 모든 반)의 'PIN 정하기'를 20분 연다. 선생님 화면(학습 기록 → 명단 · 로그인)에서도 된다. */
+function PIN정하기열기() {
+  var ui = SpreadsheetApp.getUi(), r = ui.prompt('PIN 정하기 열기', '반 코드를 적으세요(예: 1-3, 2-지구과학A). 모든 반은 * . 20분 동안 이 반에서 PIN 을 아직 안 정한 학생만 처음 PIN 을 정할 수 있습니다.', ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return;
+  var c = cut_(r.getResponseText(), 16); if (!c) return;
+  var o = pinWinRead_(true); o[c] = Date.now() + 20 * 60e3; pinWinWrite_(o);
+  ui.alert(c + ' 반 PIN 정하기를 20분 열었습니다.');
 }
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('우리 반 공유').addItem('준비하기 / 교사 열쇠 보기', '준비하기').addItem('바로가기 다시 만들기', '바로가기')
+    .addItem('PIN 정하기 열기 (20분)', 'PIN정하기열기')
     .addItem('생각 점검 표 새로 만들기', '생각점검').addItem('과목별 보기 새로 만들기 (반별 명단 · 과목 탭)', '과목별보기메뉴').addToUi();
   try { ensureLinks_(false); } catch (e) {}
   try { healCls_(); } catch (e) {}

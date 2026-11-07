@@ -9,7 +9,10 @@
  *  시트 '학습기록' : 시각 | 학번 | 단원 | 항목 | 값
  *                    바뀐 항목마다 한 줄씩 쌓기만 한다 — 처음 답·고친 답·걸린 시간을 나중에 분석할 수 있게.
  *
- *  PIN: 6자리 숫자, 같은 숫자 반복·연속 숫자·학번이 든 번호는 받지 않는다. 5번 틀리면 10분, 10번 틀리면 하루 잠근다.
+ *  PIN: 6자리 숫자, 같은 숫자 반복·연속 숫자·학번이 든 번호는 받지 않는다. 5번 틀리면 10분, 10번째부터는 6시간 잠근다.
+ *  처음 로그인(PIN 정하기)은 선생님이 그 반의 'PIN 정하기'를 열어 둔 동안(기본 20분, 최대 60분)만 된다 — 학번·이름만 아는
+ *  친구가 먼저 PIN 을 정해 계정을 차지하는 것을 막는다. 닫혀 있을 때는 명단에 있는지, PIN 을 정했는지를 답으로 알 수 없다(늘 같은 답).
+ *  틀린 횟수는 학번마다(명단에 없는 학번도) 캐시에 센다. 열린 반은 '설정' 탭 B6 에 { 반: 닫히는 시각 } 으로 남는다.
  *  비밀 열쇠(hmac)는 '설정' 탭 B3 에 저절로 만들어진다 — 바꾸면 모든 PIN·로그인이 풀린다.
  */
 var ROSTER = '명단', DEVICE = '기기', LEARN = '학습', LEARNLOG = '학습기록';
@@ -60,6 +63,45 @@ function badPin_(pin, sid) {
   if (sid && pin.indexOf(sid) >= 0) return '학번이 들어간 PIN 은 쓸 수 없습니다';
   return '';
 }
+/* ---- 처음 로그인 지키기 ---- */
+var BAD_LOGIN = '학번·이름·PIN 중 맞지 않는 것이 있습니다. 처음 로그인이라 PIN 이 아직 없다면, 선생님이 수업 시간에 ‘PIN 정하기’를 열어 주실 때 정할 수 있습니다.';
+function lockMsg_(until, now) { return 'PIN 을 여러 번 틀려 잠겼습니다. ' + Math.ceil((until - now) / 60000) + '분 뒤에 다시 하거나 선생님께 초기화를 부탁하세요.'; }
+/** 학번마다 틀린 횟수 — 명단에 있든 없든 똑같이 센다(잠김으로 명단에 있는지 알아내지 못하게). 5번째 10분, 10번째부터 6시간. */
+function failGet_(sid) { var v = CacheService.getScriptCache().get('af:' + sid); try { return v ? JSON.parse(v) : { n: 0, until: 0 }; } catch (e) { return { n: 0, until: 0 }; } }
+function failAdd_(sid, now) {
+  var f = failGet_(sid); f.n = (+f.n || 0) + 1;
+  var lockMs = f.n >= 10 ? 6 * 3600e3 : (f.n % 5 === 0 ? 10 * 60e3 : 0);
+  f.until = lockMs ? now + lockMs : 0;
+  CacheService.getScriptCache().put('af:' + sid, JSON.stringify(f), 21600);
+  return { n: f.n, lockMs: lockMs, until: f.until };
+}
+function failClear_(sid) { CacheService.getScriptCache().remove('af:' + sid); }
+/** 짧은 시간 횟수 제한 — key 로 max 번까지(ttl 초 동안) */
+function hit_(key, max, ttl) { var c = CacheService.getScriptCache(), n = (+c.get(key) || 0) + 1; c.put(key, String(n), ttl); return n <= max; }
+/** 'PIN 정하기' 창 — 설정 탭 B6 의 { 반 코드(또는 *): 닫히는 시각(ms) }. fresh 면 캐시를 건너뛴다. */
+function pinWinRead_(fresh) {
+  var c = CacheService.getScriptCache(), hit = fresh ? null : c.get('pinWin');
+  if (hit) { try { return JSON.parse(hit) || {}; } catch (e) {} }
+  teacherKey_();
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONF), o = {};
+  try { o = JSON.parse(String(sh.getRange('B6').getValue() || '{}')) || {}; } catch (e) { o = {}; }
+  c.put('pinWin', JSON.stringify(o), 60);
+  return o;
+}
+function pinWinLive_(o) { var now = Date.now(), live = {}; Object.keys(o || {}).forEach(function (k) { if ((+o[k] || 0) > now) live[k] = +o[k]; }); return live; }
+function pinWinWrite_(o) {
+  var live = pinWinLive_(o), sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONF);
+  sh.getRange('A6').setValue('PIN 정하기 열림');
+  sh.getRange('B6').setNumberFormat('@').setValue(JSON.stringify(live));
+  sh.getRange('C6').setValue('선생님 화면이 씁니다. 열린 반의 PIN 없는 학생만 처음 PIN 을 정할 수 있습니다. 비우면 모두 닫힙니다.');
+  CacheService.getScriptCache().put('pinWin', JSON.stringify(live), 60);
+  return live;
+}
+function pinOpen_(prof) {
+  var o = pinWinRead_(), now = Date.now();
+  if ((+o['*'] || 0) > now) return true;
+  return [prof.cls].concat(prof.classes || []).some(function (c) { return c && (+o[c] || 0) > now; });
+}
 function profile_(r) { return { sid: String(r[0]), name: String(r[1]), grade: String(r[2] || ''), cls: clsv_(r[3] || ''), classes: (r[4] instanceof Date ? clsv_(r[4]) : String(r[4] || '')).split(/[,\s]+/).filter(String) }; }
 /** 토큰 → 학번 (기기 시트). 마지막 시각을 고친다. */
 function whoAmI_(t) {
@@ -72,7 +114,7 @@ function whoAmI_(t) {
   dv.getRange(row, 4).setValue(new Date());             /* 마지막 — 캐시가 비었을 때(1시간에 한 번쯤)만 쓴다 */
   var rs = rosterSheet_(), rr = findRow_(rs, 1, sid);
   if (!rr) return null;
-  var me = profile_(rs.getRange(rr, 1, 1, 11).getValues()[0]);
+  var me = profile_(rs.getRange(rr, 1, 1, 11).getValues()[0]); me.pub = pubNick_(sid);   /* 공개 목록에서 보이는 내 이름 */
   c.put('tok:' + h, JSON.stringify(me), 3600);
   return me;
 }
@@ -84,37 +126,42 @@ function accounts_(d) {
   if (a === 'accLogin') {
     var sid = sid_(d.sid), name = nm_(d.name);
     if (!sid || !name) return { ok: false, error: '학번과 이름을 적어 주세요' };
+    var f0 = failGet_(sid); if (f0.until > now.getTime()) return { ok: false, need: 'pin', error: lockMsg_(f0.until, now.getTime()) };
     var lk = LockService.getScriptLock(); if (!lk.tryLock(15000)) return { ok: false, error: '잠시 뒤 다시 눌러 주세요' };
     try {
       var rs = rosterSheet_(), row = findRow_(rs, 1, sid);
       var r = row ? rs.getRange(row, 1, 1, 11).getValues()[0] : null;
-      if (!r || nm_(r[1]) !== name) return { ok: false, error: '명단에서 찾지 못했습니다. 학번과 이름을 확인하고, 그래도 안 되면 선생님께 말씀해 주세요.' };
-      var until = ms_(r[7]);
-      if (until && until > now.getTime()) return { ok: false, error: 'PIN 을 여러 번 틀려 잠겼습니다. ' + Math.ceil((until - now.getTime()) / 60000) + '분 뒤에 다시 하거나 선생님께 초기화를 부탁하세요.' };
-      if (!String(r[5])) {                                   /* 처음 로그인 — PIN 정하기 */
-        var np = String(d.newPin || '');
-        if (!np) return { ok: false, need: 'newpin', name: String(r[1]) };
-        var why = badPin_(np, sid); if (why) return { ok: false, need: 'newpin', error: why };
-        rs.getRange(row, 6, 1, 4).setValues([[hmac_('pin|' + sid + '|' + np), 0, '', now]]);
-      } else if (!String(d.pin || '')) {
-        return { ok: false, need: 'pin', name: String(r[1]) };
-      } else if (hmac_('pin|' + sid + '|' + String(d.pin)) !== String(r[5])) {
-        var fails = (+r[6] || 0) + 1, lockMs = fails >= 10 ? 24 * 3600e3 : (fails % 5 === 0 ? 10 * 60e3 : 0);
-        rs.getRange(row, 7, 1, 2).setValues([[fails, lockMs ? new Date(now.getTime() + lockMs) : '']]);
-        return { ok: false, need: 'pin', error: 'PIN 이 맞지 않습니다' + (lockMs ? ' — 잠시 잠겼습니다.' : ' (' + fails + '번째)') };
+      var real = !!r && nm_(r[1]) === name, pinIn = String(d.pin || ''), newIn = String(d.newPin || '');
+      var until = real ? ms_(r[7]) : null;
+      if (until && until > now.getTime()) return { ok: false, need: 'pin', error: lockMsg_(until, now.getTime()) };
+      if (real && !String(r[5]) && pinOpen_(profile_(r))) {  /* 처음 로그인 — 선생님이 이 반의 'PIN 정하기'를 열어 둔 동안만 */
+        if (!newIn) return { ok: false, need: 'newpin' };
+        var why = badPin_(newIn, sid); if (why) return { ok: false, need: 'newpin', error: why };
+        rs.getRange(row, 6, 1, 4).setValues([[hmac_('pin|' + sid + '|' + newIn), 0, '', now]]);
+      } else if (!pinIn) {
+        return { ok: false, need: 'pin' };                     /* 명단에 있든 없든, PIN 을 정했든 안 정했든 같은 답 */
+      } else if (!real || !String(r[5]) || hmac_('pin|' + sid + '|' + pinIn) !== String(r[5])) {
+        var fa = failAdd_(sid, now.getTime());
+        if (real) rs.getRange(row, 7, 1, 2).setValues([[(+r[6] || 0) + 1, fa.lockMs ? new Date(fa.until) : '']]);   /* 선생님 화면의 '틀림 n' */
+        return { ok: false, need: 'pin', error: fa.lockMs ? lockMsg_(fa.until, now.getTime()) : BAD_LOGIN + ' (' + fa.n + '번째)' };
       } else if ((+r[6] || 0) || String(r[7])) rs.getRange(row, 7, 1, 2).setValues([[0, '']]);   /* 틀린 적이 있을 때만 지운다 */
+      failClear_(sid);
       var tok = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
       deviceSheet_().appendRow([hmac_('tok|' + tok), sid, now, now, cut_(d.ua, 60)]);
       rs.getRange(row, 10).setValue(now);
-      return { ok: true, t: tok, me: profile_(r) };
+      var me1 = profile_(r); me1.pub = pubNick_(sid);
+      return { ok: true, t: tok, me: me1 };
     } finally { lk.releaseLock(); }
   }
-  if (a === 'accCheck') {   /* 학번·이름만으로 — PIN 을 정했는지(처음인지) 묻는다 */
-    var rs0 = rosterSheet_(), row0 = findRow_(rs0, 1, sid_(d.sid)), r0 = row0 ? rs0.getRange(row0, 1, 1, 6).getValues()[0] : null;
-    if (!r0 || nm_(r0[1]) !== nm_(d.name)) return { ok: false, error: '명단에서 찾지 못했습니다. 학번과 이름을 확인하고, 그래도 안 되면 선생님께 말씀해 주세요.' };
-    return { ok: true, need: String(r0[5]) ? 'pin' : 'newpin' };
+  if (a === 'accCheck') {   /* 학번·이름만으로 — 지금 PIN 을 정할 수 있는지(newpin) 묻는다. 그 밖에는 늘 'pin' (명단에 있는지 알려 주지 않는다) */
+    var sid0 = sid_(d.sid);
+    if (!sid0 || !nm_(d.name)) return { ok: false, error: '학번과 이름을 적어 주세요' };
+    if (!hit_('ck:' + sid0, 40, 600)) return { ok: false, error: '잠시 뒤 다시 해 보세요' };
+    var rs0 = rosterSheet_(), row0 = findRow_(rs0, 1, sid0), r0 = row0 ? rs0.getRange(row0, 1, 1, 11).getValues()[0] : null;
+    var first = !!r0 && nm_(r0[1]) === nm_(d.name) && !String(r0[5]) && pinOpen_(profile_(r0));
+    return { ok: true, need: first ? 'newpin' : 'pin' };
   }
-  if (a === 'accMe') { var me = whoAmI_(d.t); return me ? { ok: true, me: me } : { ok: false, error: '다시 로그인해 주세요', relogin: 1 }; }
+  if (a === 'accMe') { var me = whoAmI_(d.t);   /* me.pub 도 함께 */ return me ? { ok: true, me: me } : { ok: false, error: '다시 로그인해 주세요', relogin: 1 }; }
   if (a === 'accLogout') {
     CC.remove('tok:' + hmac_('tok|' + String(d.t || '')));
     var dv = deviceSheet_(), rw = findRow_(dv, 1, hmac_('tok|' + String(d.t || '')));
@@ -126,7 +173,8 @@ function accounts_(d) {
     var unit = cut_(d.unit, 24); if (!/^[\w-]{2,24}$/.test(unit)) return { ok: false, error: '단원 이름이 이상합니다' };
     var snap = JSON.stringify({ s: d.s || {}, w: d.w || {} });
     if (snap.length > 45000) return { ok: false, error: '기록이 너무 큽니다' };
-    var lk2 = LockService.getScriptLock(); if (!lk2.tryLock(15000)) return { ok: false, error: '잠시 뒤', retry: 1 };
+    /* 학습·학습기록 탭은 이 요청만 쓴다 — '우리 반' 올리기(스크립트 잠금)와 줄을 따로 서도록 문서 잠금을 쓴다 */
+    var lk2 = LockService.getDocumentLock() || LockService.getScriptLock(); if (!lk2.tryLock(15000)) return { ok: false, error: '잠시 뒤', retry: 1 };
     try {
       var ls = learnSheet_(), key = who.sid + '|' + unit, lr = findRow_(ls, 1, key);
       if (lr) { var n0 = +ls.getRange(lr, 6).getValue() || 0; ls.getRange(lr, 4, 1, 3).setValues([[now, snap, n0 + 1]]); }
@@ -173,7 +221,19 @@ function accounts_(d) {
   if (a === 'accImportOnce') return accImportOnce_(d);
 
   /* ---- 선생님 (교사 열쇠) ---- */
-  if (cut_(d.key, 40) !== teacherKey_()) return { ok: false, error: '열쇠가 맞지 않습니다' };
+  if (!isTeacher_(d)) return { ok: false, error: '열쇠가 맞지 않습니다' };
+  /* 되돌리기 어려운 일(명단 넣기·PIN 초기화)은 관리 열쇠(admin)까지 */
+  if ((a === 'accImport' || a === 'accPinReset') && !isAdmin_(d)) return { ok: false, error: ADMIN_ERR };
+  if (a === 'accPinWindow') {  /* 한 반(또는 *)의 'PIN 정하기'를 minutes 분 연다(기본 20, 최대 60, 0 이면 닫기) */
+    var pc = cut_(d.cls, 16); if (!pc) return { ok: false, error: '반을 골라 주세요' };
+    var mins = d.minutes == null || d.minutes === '' ? 20 : Math.max(0, Math.min(60, parseInt(d.minutes, 10) || 0));
+    var lkw = LockService.getScriptLock(); if (!lkw.tryLock(10000)) return { ok: false, error: '잠시 뒤' };
+    try {
+      var wo = pinWinRead_(true);
+      if (mins) wo[pc] = now.getTime() + mins * 60e3; else delete wo[pc];
+      return { ok: true, open: pinWinWrite_(wo) };
+    } finally { lkw.releaseLock(); }
+  }
   if (a === 'accRoster') {   /* 명단 + 로그인 상태 (PIN 해시는 보내지 않는다) */
     var rv = rosterSheet_().getDataRange().getValues(), dvs = deviceSheet_().getDataRange().getValues(), nd = {}, list = [];
     for (var j = 1; j < dvs.length; j++) nd[String(dvs[j][1])] = (nd[String(dvs[j][1])] || 0) + 1;
@@ -182,7 +242,7 @@ function accounts_(d) {
       p.pin = !!String(rv[k][5]); p.fails = +rv[k][6] || 0; p.locked = (ms_(rv[k][7]) || 0) > now.getTime(); p.last = ms_(rv[k][9]); p.devices = nd[p.sid] || 0;
       list.push(p);
     }
-    return { ok: true, students: list };
+    return { ok: true, students: list, pinOpen: pinWinLive_(pinWinRead_()) };
   }
   if (a === 'accImport') {   /* 명단 넣기 — rows: [[학번, 이름, 학년, 반, 수업 반], …]. 이미 있는 학번의 PIN·기록은 그대로 둔다 */
     if (d.confirm !== '명단') return { ok: false, error: 'confirm=명단 이 필요합니다' };
@@ -212,6 +272,7 @@ function accounts_(d) {
     rs4.getRange(r4, 6, 1, 3).setValues([['', 0, '']]);
     var dv4 = deviceSheet_(), dvv = dv4.getDataRange().getValues();
     for (var q = dvv.length - 1; q >= 1; q--) if (String(dvv[q][1]) === sid_(d.sid)) { CC.remove('tok:' + String(dvv[q][0])); dv4.deleteRow(q + 1); }
+    failClear_(sid_(d.sid));
     return { ok: true };
   }
   if (a === 'accRecords') {  /* 한 반의 학생들 · 한 단원(또는 모든 단원)의 상태 — 선생님 화면이 풀어서 보여 준다 */
@@ -278,7 +339,7 @@ function accImportOnce_(d) {
   var h = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(d.once || ''), Utilities.Charset.UTF_8)
     .map(function (b) { return ('0' + (b & 255).toString(16)).slice(-2); }).join('');
   if (h !== ACC_IMPORT_ONCE) return { ok: false, error: '열쇠가 맞지 않습니다' };
-  d.key = teacherKey_(); d.action = 'accImport'; d.confirm = '명단';
+  d.key = teacherKey_(); d.admin = adminKey_(); d.action = 'accImport'; d.confirm = '명단';
   var res = accounts_(d);
   if (res.ok && d.classes && d.classes.length) {   /* 반목록 탭에 없는 반 코드를 덧붙인다(우리 반 올리기가 받게) */
     var cs = classSheet_(), have = cs.getLastRow() ? cs.getRange(1, 1, cs.getLastRow(), 1).getValues().map(function (r) { return String(r[0]).trim(); }) : [];

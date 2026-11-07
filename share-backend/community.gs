@@ -42,7 +42,7 @@ function who_(d) {
 
 function community_(d) {
   var a = String(d.action || '');
-  var T = function () { return cut_(d.key, 40) === teacherKey_(); };
+  var T = function () { return isTeacher_(d); };
 
   /* ---------- 선생님 ---------- */
   if (a === 'peerAll' || a === 'qAll' || a === 'peerHide' || a === 'qHide') {

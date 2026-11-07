@@ -165,7 +165,8 @@
        + '<p class="sub">이 저장소의 <code>assets/share-config.js</code>에 웹 앱 주소가 비어 있습니다.</p>');
   }
 
-  try { $("key").value = localStorage.getItem(KEY) || ""; } catch (e) {}
+  /* 교사 열쇠는 이 탭이 열려 있는 동안만 기억한다(sessionStorage) — 교실 공용 PC 에 남지 않게. 예전에 localStorage 에 남은 열쇠는 한 번 옮기고 지운다. */
+  try { var oldKey = localStorage.getItem(KEY); if (oldKey) { if (!sessionStorage.getItem(KEY)) sessionStorage.setItem(KEY, oldKey); localStorage.removeItem(KEY); } $("key").value = sessionStorage.getItem(KEY) || ""; } catch (e) {}
 
   function load() {
     var k = ($("key").value || "").trim();
@@ -178,7 +179,7 @@
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (!j.ok) throw new Error(j.error || "오류");
-        try { localStorage.setItem(KEY, k); } catch (e) {}
+        try { sessionStorage.setItem(KEY, k); } catch (e) {}
         msg.textContent = "불러왔습니다. " + when(Date.now());
         data = j; paint();
         loadEv(k);
@@ -799,7 +800,7 @@
   $("go").addEventListener("click", load);
   $("key").addEventListener("keydown", function (e) { if (e.key === "Enter") load(); });
   $("forget").addEventListener("click", function () {
-    try { localStorage.removeItem(KEY); } catch (e) {}
+    try { localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); } catch (e) {}
     $("key").value = ""; out.innerHTML = ""; msg.textContent = "잊었습니다."; msg.className = "msg";
   });
   if (URL_ && $("key").value) load();

@@ -50,6 +50,9 @@
   </div>
   <div id="ros" hidden>
     <div class="bar"><label>반 <select id="cls2"></select></label><span class="msg" id="smsg"></span></div>
+    <div class="bar"><button class="btn primary" id="pinOpen" type="button">🔓 이 반 PIN 정하기 열기 (20분)</button><button class="btn" id="pinClose" type="button">닫기</button><span class="msg" id="pmsg"></span></div>
+    <p class="note">처음 로그인(PIN 정하기)은 여기서 연 반에서, 연 동안만 됩니다. 수업 시작에 열고 학생들이 PIN 을 정하면 닫으세요. 남이 먼저 정한 것 같으면 그 학생의 PIN 을 초기화하고 다시 여세요.</p>
+    <div class="bar"><label>관리 열쇠 (PIN 초기화에만, 시트 설정 탭 B5 · 저장하지 않음) <input id="adm" type="password" autocomplete="off" style="width:200px"></label></div>
     <div class="scroll"><table id="st"></table></div>
   </div>
 </div>
@@ -68,7 +71,8 @@
   function when(t) { if (!t) return ""; var d = new Date(t); return (d.getMonth() + 1) + "/" + d.getDate() + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
   if (!window.sthAccount || !window.sthAccount.on) { $("msg").textContent = "공유 주소가 설정되지 않아 쓸 수 없습니다."; return; }
   if (window.sthAccMock) { $("mock").innerHTML = "<span class='mockbar'>미리보기 — 이 브라우저 안의 연습용 명단입니다. 교사 열쇠는 mock</span>"; $("key").value = "mock"; }
-  else try { $("key").value = localStorage.getItem(KEY) || ""; } catch (e) {}
+  /* 교사 열쇠는 이 탭이 열려 있는 동안만(sessionStorage). 예전 localStorage 열쇠는 옮기고 지운다 */
+  else try { var oldKey = localStorage.getItem(KEY); if (oldKey) { if (!sessionStorage.getItem(KEY)) sessionStorage.setItem(KEY, oldKey); localStorage.removeItem(KEY); } $("key").value = sessionStorage.getItem(KEY) || ""; } catch (e) {}
   function key() { return $("key").value.trim(); }
   /* 반 코드 → 그 반이 배우는 과목 */
   var SUBJ = { "지구과학": ["지구과학"], "지구시스템": ["지구시스템과학1", "지구시스템과학2"], "행성우주": ["행성우주과학1", "행성우주과학2"], "기후환경": ["기후변화와 환경생태"], "융합탐구": ["융합과학 탐구"], "과학사": ["과학의 역사와 문화"] };
@@ -88,7 +92,8 @@
     $("msg").textContent = "여는 중…";
     call({ action: "accRoster", key: key() }).then(function (j) {
       if (!j.ok) { $("msg").textContent = j.error || "열지 못했습니다"; return; }
-      if (!window.sthAccMock) try { localStorage.setItem(KEY, key()); } catch (e) {}
+      if (!window.sthAccMock) try { sessionStorage.setItem(KEY, key()); } catch (e) {}
+      PINOPEN = j.pinOpen || {};
       ROSTER = j.students || []; $("msg").textContent = "명단 " + ROSTER.length + "명 · 로그인해 본 학생 " + ROSTER.filter(function (s) { return s.pin; }).length + "명";
       $("tabs").hidden = false; $("rec").hidden = false; fillCls(); paintRoster();
     }, function () { $("msg").textContent = "연결하지 못했습니다"; });
@@ -147,8 +152,9 @@
   function detail(st, r, o) {
     var tr = el("tr", "det"), td = el("td"); td.colSpan = 8; tr.appendChild(td);
     function sec(title) { td.appendChild(el("h4", null, title)); var ul = el("ul"); td.appendChild(ul); return ul; }
-    var g = sec("첫 추리"); o.g.forEach(function (x) { var li = el("li"); li.innerHTML = "<b>" + x.t + "</b> — " + x.q + "<br>처음: " + x.a + (x.b ? " → 다시: " + x.b : "") + " <span class='" + (x.ok === "맞음" ? "ok" : "no") + "'>" + (x.ok || "") + "</span>"; g.appendChild(li); }); if (!o.g.length) g.appendChild(el("li", "msg", "없음"));
-    var q = sec("수준별 문제"); o.qd.forEach(function (x) { var li = el("li"); li.innerHTML = "<span class='" + (x.st === "한 번에" ? "ok" : /맞힘/.test(x.st) ? "mid" : "no") + "'>" + x.st + "</span>" + (x.n ? " (틀린 횟수 " + x.n + ")" : "") + " · " + x.id + (x.lv ? " · 수준 " + x.lv : "") + " — " + x.t; q.appendChild(li); }); if (!o.qd.length) q.appendChild(el("li", "msg", "없음"));
+    /* 학생이 보낸 값(고른 보기·문항 번호 등)이 들어가므로 innerHTML 대신 글자(textContent)로만 넣는다 */
+    var g = sec("첫 추리"); o.g.forEach(function (x) { var li = el("li"); li.appendChild(el("b", null, String(x.t))); li.appendChild(document.createTextNode(" — " + x.q)); li.appendChild(el("br")); li.appendChild(document.createTextNode("처음: " + x.a + (x.b ? " → 다시: " + x.b : "") + " ")); li.appendChild(el("span", x.ok === "맞음" ? "ok" : "no", String(x.ok || ""))); g.appendChild(li); }); if (!o.g.length) g.appendChild(el("li", "msg", "없음"));
+    var q = sec("수준별 문제"); o.qd.forEach(function (x) { var li = el("li"); li.appendChild(el("span", x.st === "한 번에" ? "ok" : /맞힘/.test(x.st) ? "mid" : "no", x.st)); li.appendChild(document.createTextNode((x.n ? " (틀린 횟수 " + x.n + ")" : "") + " · " + x.id + (x.lv ? " · 수준 " + x.lv : "") + " — " + x.t)); q.appendChild(li); }); if (!o.qd.length) q.appendChild(el("li", "msg", "없음"));
     var l = sec("응용 실험실 · 실제 자료"); o.labd.forEach(function (x) { l.appendChild(el("li", null, x.k + " — " + (x.ok ? "해결" : "아직") + (x.n ? " (힌트 " + Math.min(2, x.n) + "단계)" : "") + (x.a ? " · " + x.a : ""))); }); if (!o.labd.length) l.appendChild(el("li", "msg", "없음"));
     td.appendChild(el("h4", null, "정리하기 · 쓴 글")); o.w.forEach(function (x) { td.appendChild(el("div", "msg", x.k)); td.appendChild(el("div", "w", x.t)); }); if (!o.w.length) td.appendChild(el("p", "msg", "없음"));
     var b = el("button", "btn", "🕒 바뀐 차례 보기 (시각별)"); b.type = "button"; td.appendChild(b);
@@ -188,7 +194,26 @@
 
   /* ---- 명단 · 로그인 ---- */
   $("cls2").addEventListener("change", paintRoster);
+  /* PIN 정하기 창 — 열린 반과 닫히는 시각 */
+  var PINOPEN = {};
+  function paintPin() {
+    var c = $("cls2").value, u = Math.max(+PINOPEN[c] || 0, +PINOPEN["*"] || 0), left = Math.ceil((u - Date.now()) / 60000);
+    $("pmsg").textContent = left > 0 ? "열림 — " + left + "분 뒤 닫힘" : "닫힘 (처음 로그인 안 됨)";
+    $("pmsg").className = "msg" + (left > 0 ? " ok" : "");
+  }
+  function pinWin(minutes) {
+    var c = $("cls2").value; if (!c) return;
+    $("pmsg").textContent = "보내는 중…";
+    call({ action: "accPinWindow", key: key(), cls: c, minutes: minutes }).then(function (j) {
+      if (!j.ok) { $("pmsg").textContent = j.error || "하지 못했습니다"; return; }
+      PINOPEN = j.open || {}; paintPin();
+    }, function () { $("pmsg").textContent = "연결하지 못했습니다"; });
+  }
+  $("pinOpen").addEventListener("click", function () { pinWin(20); });
+  $("pinClose").addEventListener("click", function () { pinWin(0); });
+  setInterval(function () { if (!$("ros").hidden) paintPin(); }, 30000);
   function paintRoster() {
+    paintPin();
     var c = $("cls2").value, t = $("st"); t.innerHTML = "";
     var h = el("tr"); ["학번", "이름", "반", "수업 반", "PIN", "최근 로그인", "로그인 기기", "", ""].forEach(function (x) { h.appendChild(el("th", null, x)); }); t.appendChild(h);
     var list = ROSTER.filter(function (s) { return s.cls === c || s.classes.indexOf(c) >= 0; });
@@ -201,8 +226,11 @@
       tr.appendChild(el("td", "n", s.devices ? s.devices + "대" : ""));
       tr.appendChild(el("td", "n " + (s.locked ? "no" : ""), s.locked ? "잠김" : (s.fails ? "틀림 " + s.fails : "")));
       var td = el("td"); var b = el("button", "btn", "PIN 초기화"); b.type = "button"; b.disabled = !s.pin && !s.locked;
-      b.addEventListener("click", function () { if (!confirm(s.sid + " " + s.name + " 학생의 PIN 을 지우고 모든 기기에서 로그아웃합니다. 기록은 그대로 남습니다. 할까요?")) return;
-        call({ action: "accPinReset", key: key(), sid: s.sid }).then(function (j) { if (j.ok) { s.pin = false; s.locked = false; s.fails = 0; s.devices = 0; paintRoster(); } else alert(j.error || "하지 못했습니다"); }); });
+      b.addEventListener("click", function () {
+        var adm = ($("adm").value || "").trim();
+        if (!adm && !window.sthAccMock) { alert("PIN 초기화에는 관리 열쇠가 필요합니다. 위 ‘관리 열쇠’ 칸에 시트 설정 탭 B5 의 글자를 넣어 주세요."); $("adm").focus(); return; }
+        if (!confirm(s.sid + " " + s.name + " 학생의 PIN 을 지우고 모든 기기에서 로그아웃합니다. 기록은 그대로 남습니다. 할까요?")) return;
+        call({ action: "accPinReset", key: key(), admin: adm, sid: s.sid }).then(function (j) { if (j.ok) { s.pin = false; s.locked = false; s.fails = 0; s.devices = 0; paintRoster(); } else alert(j.error || "하지 못했습니다"); }); });
       td.appendChild(b); tr.appendChild(td); t.appendChild(tr);
     });
   }
