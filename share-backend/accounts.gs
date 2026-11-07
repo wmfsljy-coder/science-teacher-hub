@@ -66,16 +66,18 @@ function badPin_(pin, sid) {
 /* ---- 처음 로그인 지키기 ---- */
 var BAD_LOGIN = '학번·이름·PIN 중 맞지 않는 것이 있습니다. 처음 로그인이라 PIN 이 아직 없다면, 선생님이 수업 시간에 ‘PIN 정하기’를 열어 주실 때 정할 수 있습니다.';
 function lockMsg_(until, now) { return 'PIN 을 여러 번 틀려 잠겼습니다. ' + Math.ceil((until - now) / 60000) + '분 뒤에 다시 하거나 선생님께 초기화를 부탁하세요.'; }
-/** 학번마다 틀린 횟수 — 명단에 있든 없든 똑같이 센다(잠김으로 명단에 있는지 알아내지 못하게). 5번째 10분, 10번째부터 6시간. */
-function failGet_(sid) { var v = CacheService.getScriptCache().get('af:' + sid); try { return v ? JSON.parse(v) : { n: 0, until: 0 }; } catch (e) { return { n: 0, until: 0 }; } }
-function failAdd_(sid, now) {
-  var f = failGet_(sid); f.n = (+f.n || 0) + 1;
-  var lockMs = f.n >= 10 ? 6 * 3600e3 : (f.n % 5 === 0 ? 10 * 60e3 : 0);
-  f.until = lockMs ? now + lockMs : 0;
-  CacheService.getScriptCache().put('af:' + sid, JSON.stringify(f), 21600);
-  return { n: f.n, lockMs: lockMs, until: f.until };
+/** 틀린 횟수와 잠금 — 명단에 있는 학생은 명단 탭(실패·잠금까지 칸)이 기준이다. 캐시는 보조:
+ *  명단에 없는 학번도 똑같이 센 뒤 잠그고(잠김으로 명단에 있는지 알아내지 못하게), 잠긴 학번은 시트를 열기 전에 빨리 거절한다.
+ *  캐시가 지워져도 명단 학생의 횟수·잠금은 그대로다. 5번째 10분, 10번째부터 6시간. */
+function lockFor_(n) { return n >= 10 ? 6 * 3600e3 : (n % 5 === 0 ? 10 * 60e3 : 0); }
+function failGet_(sid) { var v = null; try { v = CacheService.getScriptCache().get('af:' + sid); } catch (e) {} try { return v ? JSON.parse(v) : { n: 0, until: 0 }; } catch (e) { return { n: 0, until: 0 }; } }
+function failSet_(sid, n, until) { try { CacheService.getScriptCache().put('af:' + sid, JSON.stringify({ n: n, until: until }), 21600); } catch (e) {} }
+function failAdd_(sid, now) {   /* 명단에 없는 학번 — 캐시에만 센다 */
+  var n = (+failGet_(sid).n || 0) + 1, lockMs = lockFor_(n), until = lockMs ? now + lockMs : 0;
+  failSet_(sid, n, until);
+  return { n: n, lockMs: lockMs, until: until };
 }
-function failClear_(sid) { CacheService.getScriptCache().remove('af:' + sid); }
+function failClear_(sid) { try { CacheService.getScriptCache().remove('af:' + sid); } catch (e) {} }
 /** 짧은 시간 횟수 제한 — key 로 max 번까지(ttl 초 동안) */
 function hit_(key, max, ttl) { var c = CacheService.getScriptCache(), n = (+c.get(key) || 0) + 1; c.put(key, String(n), ttl); return n <= max; }
 /** 'PIN 정하기' 창 — 설정 탭 B6 의 { 반 코드(또는 *): 닫히는 시각(ms) }. fresh 면 캐시를 건너뛴다. */
@@ -115,7 +117,7 @@ function whoAmI_(t) {
   var rs = rosterSheet_(), rr = findRow_(rs, 1, sid);
   if (!rr) return null;
   var me = profile_(rs.getRange(rr, 1, 1, 11).getValues()[0]); me.pub = pubNick_(sid);   /* 공개 목록에서 보이는 내 이름 */
-  c.put('tok:' + h, JSON.stringify(me), 3600);
+  cacheSet_('tok:' + h, JSON.stringify(me), 3600);
   return me;
 }
 
@@ -126,7 +128,7 @@ function accounts_(d) {
   if (a === 'accLogin') {
     var sid = sid_(d.sid), name = nm_(d.name);
     if (!sid || !name) return { ok: false, error: '학번과 이름을 적어 주세요' };
-    var f0 = failGet_(sid); if (f0.until > now.getTime()) return { ok: false, need: 'pin', error: lockMsg_(f0.until, now.getTime()) };
+    var f0 = failGet_(sid); if (f0.until > now.getTime()) return { ok: false, need: 'pin', error: lockMsg_(f0.until, now.getTime()) };   /* 빠른 거절(보조) */
     var lk = LockService.getScriptLock(); if (!lk.tryLock(15000)) return { ok: false, error: '잠시 뒤 다시 눌러 주세요' };
     try {
       var rs = rosterSheet_(), row = findRow_(rs, 1, sid);
@@ -137,17 +139,22 @@ function accounts_(d) {
       if (real && !String(r[5]) && pinOpen_(profile_(r))) {  /* 처음 로그인 — 선생님이 이 반의 'PIN 정하기'를 열어 둔 동안만 */
         if (!newIn) return { ok: false, need: 'newpin' };
         var why = badPin_(newIn, sid); if (why) return { ok: false, need: 'newpin', error: why };
-        rs.getRange(row, 6, 1, 4).setValues([[hmac_('pin|' + sid + '|' + newIn), 0, '', now]]);
+        rs.getRange(row, 6, 1, 4).setValues([[safe_(hmac_('pin|' + sid + '|' + newIn)), 0, '', now]]);   /* 해시가 - 로 시작하면 시트가 수식으로 보므로 safe_ */
       } else if (!pinIn) {
         return { ok: false, need: 'pin' };                     /* 명단에 있든 없든, PIN 을 정했든 안 정했든 같은 답 */
       } else if (!real || !String(r[5]) || hmac_('pin|' + sid + '|' + pinIn) !== String(r[5])) {
-        var fa = failAdd_(sid, now.getTime());
-        if (real) rs.getRange(row, 7, 1, 2).setValues([[(+r[6] || 0) + 1, fa.lockMs ? new Date(fa.until) : '']]);   /* 선생님 화면의 '틀림 n' */
+        var fa;
+        if (real) {                                          /* 명단 학생: 시트의 누적 횟수가 기준, 캐시는 따라 적는다 */
+          var fn = (+r[6] || 0) + 1, fl = lockFor_(fn), fu = fl ? now.getTime() + fl : 0;
+          rs.getRange(row, 7, 1, 2).setValues([[fn, fu ? new Date(fu) : '']]);
+          failSet_(sid, fn, fu);
+          fa = { n: fn, lockMs: fl, until: fu };
+        } else fa = failAdd_(sid, now.getTime());
         return { ok: false, need: 'pin', error: fa.lockMs ? lockMsg_(fa.until, now.getTime()) : BAD_LOGIN + ' (' + fa.n + '번째)' };
       } else if ((+r[6] || 0) || String(r[7])) rs.getRange(row, 7, 1, 2).setValues([[0, '']]);   /* 틀린 적이 있을 때만 지운다 */
       failClear_(sid);
       var tok = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-      deviceSheet_().appendRow([hmac_('tok|' + tok), sid, now, now, cut_(d.ua, 60)]);
+      deviceSheet_().appendRow([safe_(hmac_('tok|' + tok)), sid, now, now, safe_(cut_(d.ua, 60))]);
       rs.getRange(row, 10).setValue(now);
       var me1 = profile_(r); me1.pub = pubNick_(sid);
       return { ok: true, t: tok, me: me1 };
@@ -206,7 +213,7 @@ function accounts_(d) {
     else {
       var rv3 = rosterSheet_().getDataRange().getValues();
       for (var i3 = 1; i3 < rv3.length; i3++) { var p3 = profile_(rv3[i3]); if (p3.sid && (p3.cls === cls3 || p3.classes.indexOf(cls3) >= 0)) { mem[p3.sid] = 1; total++; } }
-      CC.put('mem:' + cls3, JSON.stringify(mem), 600);
+      cacheSet_('mem:' + cls3, JSON.stringify(mem), 600);
     }
     var agg = { gates: {}, quiz: {}, eps: {}, labs: {}, wrote: 0, n: 0 };
     learnPick_(function (sid, u) { return u === u3 && mem[sid]; }).forEach(function (r) {
@@ -214,7 +221,7 @@ function accounts_(d) {
       classAdd_(agg, dd3.s || {}, dd3.w || {});
     });
     var res3 = agg.n < 3 ? { ok: true, cls: cls3, total: total, n: agg.n, few: 1 } : { ok: true, cls: cls3, total: total, n: agg.n, agg: agg };
-    var js3 = JSON.stringify(res3); if (js3.length < 90000) CC.put(ck, js3, 30);
+    cacheSet_(ck, JSON.stringify(res3), 30);                  /* 100KB(바이트) 넘으면 안 담고, 실패해도 답은 그대로 */
     return res3;
   }
 
@@ -252,7 +259,7 @@ function accounts_(d) {
       for (var m = 1; m < old.length; m++) keep[String(old[m][0])] = old[m];
       var rows = (d.rows || []).slice(0, 3000).map(function (x) {
         var s3 = sid_(x[0]), o = keep[s3] || [];
-        return [s3, safe_(cut_(x[1], 20)), txt_(cut_(x[2], 4)), txt_(cut_(x[3], 12)), txt_(cut_(x[4], 200)), o[5] || '', o[6] || 0, o[7] || '', o[8] || '', o[9] || '', safe_(cut_(x[5] || o[10] || '', 60))];
+        return [s3, safe_(cut_(x[1], 20)), txt_(cut_(x[2], 4)), txt_(cut_(x[3], 12)), txt_(cut_(x[4], 200)), safe_(o[5] || ''), o[6] || 0, o[7] || '', o[8] || '', o[9] || '', safe_(cut_(x[5] || o[10] || '', 60))];
       }).filter(function (x) { return x[0] && x[1]; });
       if (!rows.length) return { ok: false, error: '넣을 줄이 없습니다' };
       if (d.append) {   /* 덧붙이기 — 이미 있는 학번은 건너뛴다 */

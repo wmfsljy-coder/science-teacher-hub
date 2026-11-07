@@ -30,12 +30,9 @@ function jarr_(s) { try { var a = JSON.parse(s || '[]'); return a instanceof Arr
 
 /** 보낸 사람 확인 — 반·별명·단원. 로그인 이름('@학번')은 토큰으로 확인한다. */
 function who_(d) {
-  var cls = cut_(d.cls, 16), nick = cut_(d.nick, 12), unit = cut_(d.unit, 24);
+  var cls = cut_(d.cls, 16), nick = nick_(d.nick), unit = cut_(d.unit, 24);
   if (!cls || !nick || !/^[\w-]{2,24}$/.test(unit)) return { err: '반·이름·단원이 필요합니다' };
-  if (nick.charAt(0) === '@') {
-    var w = typeof whoAmI_ === 'function' ? whoAmI_(d.t) : null;
-    if (!w || '@' + w.sid !== nick) return { err: '다시 로그인해 주세요', relogin: 1 };
-  }
+  if (!nickOkFor_(nick, d.t)) return { err: '다시 로그인해 주세요', relogin: 1 };   /* '@학번'·'친구 xxxx' 는 토큰이 맞는 본인만 (Code.gs) */
   if (cls !== '0-시험' && !allowed_(cls)) return { err: '등록되지 않은 반 코드입니다' };     /* 0-시험: 선생님 시험용 반(명단의 9901~9903) */
   return { cls: cls, nick: nick, unit: unit };
 }

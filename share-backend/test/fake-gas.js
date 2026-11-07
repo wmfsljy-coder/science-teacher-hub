@@ -52,6 +52,7 @@ class Sheet {
   constructor(ss, name) { this.ss = ss; this.name = name; this.rows = []; }
   put(r, c, v) {
     if (typeof v === 'string' && v.charAt(0) === "'") v = v.slice(1);         /* 시트는 앞의 ' 를 떼고 글자로 둔다 */
+    else if (typeof v === 'string' && /^[=+\-@]/.test(v)) this.ss.formulas.push(this.name + '!' + r + ',' + c + ' ' + v);   /* ' 없이 = + - @ 로 시작하면 진짜 시트는 수식으로 본다 */
     while (this.rows.length < r) this.rows.push([]);
     const row = this.rows[r - 1]; while (row.length < c) row.push('');
     row[c - 1] = v;
@@ -71,7 +72,7 @@ class Sheet {
   clear() { this.rows = []; return this; }
 }
 class Spreadsheet {
-  constructor() { this.sheets = {}; this.tz = 'Asia/Seoul'; this.reads = 0; this.writes = 0; this.fullReads = 0; }
+  constructor() { this.sheets = {}; this.tz = 'Asia/Seoul'; this.reads = 0; this.writes = 0; this.fullReads = 0; this.formulas = []; this.slept = 0; }
   getSheetByName(n) { return this.sheets[n] || null; }
   insertSheet(n) { const s = new Sheet(this, n); this.sheets[n] = s; return s; }
   getSpreadsheetTimeZone() { return this.tz; }
@@ -83,7 +84,7 @@ function makeCache(clock) {
   const live = (k) => { const e = m.get(k); if (!e) return null; if (e.exp <= clock()) { m.delete(k); return null; } return e.v; };
   return {
     get: (k) => live(k),
-    put: (k, v, sec) => { if (String(k).length > 250) throw new Error('캐시 열쇠가 너무 깁니다'); if (String(v).length > 100000) throw new Error('캐시 값이 너무 큽니다'); m.set(k, { v: String(v), exp: clock() + Math.min(sec || 600, 21600) * 1000 }); },
+    put: (k, v, sec) => { if (String(k).length > 250) throw new Error('캐시 열쇠가 너무 깁니다'); if (Buffer.byteLength(String(v), 'utf8') > 100 * 1024) throw new Error('캐시 값이 너무 큽니다(100KB 넘음)');   /* 진짜 캐시처럼 바이트로 센다 */ m.set(k, { v: String(v), exp: clock() + Math.min(sec || 600, 21600) * 1000 }); },
     remove: (k) => { m.delete(k); },
     removeAll: (ks) => ks.forEach((k) => m.delete(k)),
     _map: m,
@@ -108,7 +109,7 @@ function load(dir) {
       base64EncodeWebSafe: (bytes) => Buffer.from(bytes.map((b) => b & 255)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
       computeDigest: (alg, s) => signed(crypto.createHash(alg === 'SHA_1' ? 'sha1' : 'sha256').update(String(s), 'utf8').digest()),
       DigestAlgorithm: { SHA_1: 'SHA_1', SHA_256: 'SHA_256' }, Charset: { UTF_8: 'UTF_8' },
-      sleep: () => {},
+      sleep: (ms) => { ss.slept += ms; },
     },
   };
   vm.createContext(ctx);

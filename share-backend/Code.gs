@@ -94,12 +94,11 @@ function keyEq_(a, b) {
   for (var i = 0; i < n; i++) x |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   return x === 0 && b.length > 0;
 }
-/** 열쇠 확인 — 10분 안에 30번 넘게 틀리면 그동안은 맞는 열쇠도 거절한다(아무 글자나 마구 넣어 보기 막기). */
+/** 열쇠 확인 — 맞는 열쇠는 언제나 바로 통과한다(남이 틀린 열쇠를 아무리 넣어도 선생님은 막히지 않는다).
+ *  틀린 열쇠만 답을 1.5초 늦춰 마구 넣어 보기를 느리게 한다. 열쇠는 무작위 10~14자리라 짐작할 수 없다. */
 function keyOk_(given, which) {
-  var c = CacheService.getScriptCache(), ck = 'keyBad:' + (which === 'admin' ? 'a' : 't'), bad = +c.get(ck) || 0;
-  if (bad >= 30) return false;
   if (keyEq_(cut_(given, 40), which === 'admin' ? adminKey_() : teacherKey_())) return true;
-  if (given) c.put(ck, String(bad + 1), 600);
+  if (given) Utilities.sleep(1500);
   return false;
 }
 function isTeacher_(d) { return keyOk_(d && d.key, 't'); }
@@ -112,7 +111,41 @@ function pubNick_(sid) { return '친구 ' + hmac_('pub|' + sid).replace(/[^A-Za-
 function nickOut_(nick) { nick = String(nick == null ? '' : nick); return nick.charAt(0) === '@' ? pubNick_(nick.slice(1)) : nick; }
 /** 짧게 담아 두는 공개 목록(반 전체가 한꺼번에 새로 고칠 때 시트를 매번 읽지 않게). 올리면 그 칸은 바로 지운다. */
 function cacheGet_(k) { var v = CacheService.getScriptCache().get(k); if (!v) return null; try { return JSON.parse(v); } catch (e) { return null; } }
-function cachePut_(k, o, sec) { var s = JSON.stringify(o); if (s.length < 90000) CacheService.getScriptCache().put(k, s, sec); return o; }
+/** UTF-8 바이트 수 — 캐시 한 칸은 100KB(바이트)까지라 한글은 글자 수의 3배로 센다. */
+function utf8Len_(s) {
+  var n = 0;
+  for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c < 0x80) n++; else if (c < 0x800) n += 2; else if (c >= 0xD800 && c <= 0xDBFF) { n += 4; i++; } else n += 3; }
+  return n;
+}
+/** 캐시에 넣기 — 100KB 가 넘으면 넣지 않고, 캐시가 실패해도 응답에는 영향이 없게 한다. */
+function cacheSet_(k, s, sec) { try { if (utf8Len_(String(s)) <= 100000) CacheService.getScriptCache().put(k, String(s), sec); } catch (e) {} }
+function cachePut_(k, o, sec) { cacheSet_(k, JSON.stringify(o), sec); return o; }
+/** 반별 캐시 세대 — 올리면 세대를 바꾼다. 목록은 '읽기 시작할 때의 세대' 이름으로만 담기므로,
+ *  읽는 사이에 누가 올려도 옛 목록이 새 세대에 담기지 않는다(방금 쓴 글이 20초 동안 안 보이는 일 막기).
+ *  세대 값이 캐시에서 사라지면 새 무작위 값으로 시작해 옛 칸과 겹치지 않는다. */
+function genNew_() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function gen_(cls) {
+  var c = CacheService.getScriptCache(), k = 'G|' + cls, g = null;
+  try { g = c.get(k); } catch (e) {}
+  if (!g) { g = genNew_(); try { c.put(k, g, 21600); } catch (e) {} }
+  return g;
+}
+function bump_(cls) { try { CacheService.getScriptCache().put('G|' + cls, genNew_(), 21600); } catch (e) {} }
+/** 요청으로 받은 별명 — 유니코드를 맞추고(전각 ＠ → @), 보이지 않는 글자·앞쪽 따옴표·공백을 떼어 낸다.
+ *  시트는 앞의 ' 를 먹으므로 "'@10301" 은 저장될 때 @10301 이 된다 — 정리한 뒤에 '@' 로 시작하는지 본다. */
+function nick_(s) {
+  s = String(s == null ? '' : s);
+  try { s = s.normalize('NFKC'); } catch (e) {}
+  s = s.replace(/[\u0000-\u001F\u007F-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u2028-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0]/g, '');
+  s = s.replace(/\s+/g, ' ').replace(/^[\s'"`\u2018-\u201F\u2032-\u2037]+/, '').trim();
+  return s.slice(0, 12);
+}
+/** '@학번' 이나 가린 이름('친구 xxxx')처럼 보이는 별명은 로그인(토큰)한 그 학생만 쓴다 */
+function nickNeedsToken_(n) { return n.charAt(0) === '@' || /^친구 [A-Za-z0-9]{4}$/.test(n); }
+function nickOkFor_(n, t) {
+  if (!nickNeedsToken_(n)) return true;
+  var w = whoAmI_(t); return !!w && n === '@' + w.sid;
+}
 /** 탭에서 고른 줄만 꺼낸다 — 앞쪽 짧은 칸(반·별명·단원…, B 열부터 keyCols 칸)과 숨김 칸만 먼저 읽고,
  *  긴 칸(성과 JSON)이 든 줄 전체(1~ncol 칸)는 고른 줄만 읽는다. test(앞쪽 칸 배열, 숨김 글자) */
 function pickRows_(sh, ncol, keyCols, hidCol, test) {
@@ -143,7 +176,7 @@ function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).set
 function cut_(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
 /** 학생이 보낸 글이 = + - @ 로 시작하면 시트가 수식으로 실행한다(=IMPORTXML 로 자료를 빼돌릴 수도 있다).
  *  앞에 ' 를 붙여 글자로만 저장한다. 시트에서 읽으면 ' 는 빠진 채로 돌아온다. */
-function safe_(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
+function safe_(s) { s = String(s == null ? '' : s); return /^[\s'"\u2018\u2019]*[=+\-@]/.test(s) ? "'" + s : s; }   /* 앞 공백·따옴표 뒤의 = 도 막는다 */
 /** 반 코드·별명처럼 글자 그대로 남아야 하는 값. 시트는 '1-1' 을 날짜(1월 1일)로, '0101' 을 숫자(101)로 바꿔 버리므로
  *  숫자·날짜처럼 보이면 앞에 ' 를 붙여 글자로 저장한다(읽으면 ' 는 빠진다). 그러지 않으면 1학년 반(1-1~1-7)의 기록이 제 반을 찾지 못한다. */
 function txt_(s) { s = safe_(s); return /^[\d\s.,\/:-]*\d[\d\s.,\/:-]*$/.test(s) ? "'" + s : s; }
@@ -209,7 +242,7 @@ function doGet(e) {
 
   /* 한 반의 한 단원 — 친구들이 올린 것 */
   if (p.action === 'list') {
-    var cls = cut_(p.cls, 12), unit = cut_(p.unit, 24), lk0 = 'L|' + cls + '|' + unit, hit0 = cacheGet_(lk0);
+    var cls = cut_(p.cls, 12), unit = cut_(p.unit, 24), lk0 = 'L|' + cls + '|' + unit + '|' + gen_(cls), hit0 = cacheGet_(lk0);
     if (hit0) return out_(hit0);
     var items = [];
     pickRows_(sheet_(), 8, 3, 8, function (k, hid) { return k[0] === cls && String(k[2]) === unit && !hid; }).forEach(function (r) {
@@ -223,7 +256,7 @@ function doGet(e) {
 
   /* 한 반의 활동 기록 — 어느 단원에서 몇 명이, 마지막이 언제인지 */
   if (p.action === 'classlog') {
-    var c2 = cut_(p.cls, 12), ck2 = 'C|' + c2, hit2 = cacheGet_(ck2);
+    var c2 = cut_(p.cls, 12), ck2 = 'C|' + c2 + '|' + gen_(c2), hit2 = cacheGet_(ck2);
     if (hit2) return out_(hit2);
     var sh2 = sheet_(), n2 = sh2.getLastRow() - 1, by = {};
     var rs = n2 > 0 ? sh2.getRange(2, 1, n2, 5).getValues() : [], hs = n2 > 0 ? sh2.getRange(2, 8, n2, 1).getValues() : [];   /* 긴 성과 칸은 읽지 않는다 */
@@ -244,7 +277,7 @@ function doGet(e) {
 
   /* 한 반의 한 단원 · 한 측정 — 친구들이 올린 측정값 (숨김 칸에 글자가 있으면 빼고) */
   if (p.action === 'measures') {
-    var mc = cut_(p.cls, 12), mu = cut_(p.unit, 24), mk = cut_(p.key, 12), mitems = [], mck = 'M|' + mc + '|' + mu + '|' + mk, mhit = cacheGet_(mck);
+    var mc = cut_(p.cls, 12), mu = cut_(p.unit, 24), mk = cut_(p.key, 12), mitems = [], mck = 'M|' + mc + '|' + mu + '|' + mk + '|' + gen_(mc), mhit = cacheGet_(mck);
     if (mhit) return out_(mhit);
     var msh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(MEASURE);
     (msh ? pickRows_(msh, 7, 4, 7, function (k, hid) { return k[0] === mc && String(k[2]) === mu && String(k[3]) === mk && !hid; }) : []).forEach(function (mr) {
@@ -257,7 +290,7 @@ function doGet(e) {
 
   /* 한 반의 한 단원에서 처음에 많이 틀린 문항 — 별명 없이 문항별 인원만(학생 화면의 ‘다시 풀기’가 쓴다) */
   if (p.action === 'classmiss') {
-    var xc = cut_(p.cls, 12), xu = cut_(p.unit, 24), cnt = {}, ns = 0, xck = 'X|' + xc + '|' + xu, xhit = cacheGet_(xck);
+    var xc = cut_(p.cls, 12), xu = cut_(p.unit, 24), cnt = {}, ns = 0, xck = 'X|' + xc + '|' + xu + '|' + gen_(xc), xhit = cacheGet_(xck);
     if (xhit) return out_(xhit);
     var xr = pickRows_(sheet_(), 8, 3, 8, function (k, hid) { return k[0] === xc && String(k[2]) === xu && !hid; });
     for (var xi = 0; xi < xr.length; xi++) {
@@ -297,9 +330,8 @@ function doPost(e) {
   /* 익명 돌려 읽기·동료 평가·궁금한 것 게시판(community.gs) — action 이 peer·q 로 시작하는 요청 */
   if (/^(peer|q)[A-Z]/.test(String(d.action || ''))) return out_(community_(d));
   /* '@학번' 이름은 로그인한 학생만 쓴다(투표·올리기·측정값) — 토큰이 그 학번과 맞아야 받는다 */
-  if (/^(vote|post|measure)$/.test(String(d.action || '')) && cut_(d.nick, 12).charAt(0) === '@') {
-    var aw = whoAmI_(d.t); if (!aw || '@' + aw.sid !== cut_(d.nick, 12)) return out_({ ok: false, error: '다시 로그인해 주세요' });
-  }
+  /* 별명을 먼저 정리(nick_)한 뒤 본다 — "'@10301"·"＠10301"·앞 공백 같은 우회를 막는다 */
+  if (/^(vote|post|measure)$/.test(String(d.action || '')) && !nickOkFor_(nick_(d.nick), d.t)) return out_({ ok: false, error: '다시 로그인해 주세요' });
   /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
   if (d.action === 'teacher') {
@@ -464,12 +496,13 @@ function doPost(e) {
         }
       });
     } finally { lk.releaseLock(); }
+    bump_(wc);
     return out_({ ok: true, removed: gone });
   }
 
   /* 첫 추리 투표 — 처음 고른 보기와 (짝과 이야기한 뒤) 다시 고른 보기의 번호만 받는다. 같은 반·별명·단원·열쇠는 덮어쓴다. */
   if (d.action === 'vote') {
-    var vc = cut_(d.cls, 12), vn = cut_(d.nick, 12), vu = cut_(d.unit, 24), vk = cut_(d.key, 12);
+    var vc = cut_(d.cls, 12), vn = nick_(d.nick), vu = cut_(d.unit, 24), vk = cut_(d.key, 12);
     if (!vc || !vn || !vu || !vk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
     if (!allowed_(vc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
     var va = parseInt(d.a, 10), vb = d.b == null || d.b === '' ? '' : parseInt(d.b, 10);
@@ -505,7 +538,7 @@ function doPost(e) {
 
   /* 우리 반 측정값(선택 활동) — 숫자 1~3개만 받는다. 같은 반·별명·단원·측정은 덮어쓴다. */
   if (d.action === 'measure') {
-    var qc = cut_(d.cls, 12), qn = cut_(d.nick, 12), qu = cut_(d.unit, 24), qk = cut_(d.key, 12);
+    var qc = cut_(d.cls, 12), qn = nick_(d.nick), qu = cut_(d.unit, 24), qk = cut_(d.key, 12);
     if (!qc || !qn || !qu || !qk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
     if (!allowed_(qc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
     var qv = (d.v instanceof Array ? d.v : []).slice(0, 3).map(Number).filter(function (x) { return isFinite(x) && Math.abs(x) < 1e7; })
@@ -521,12 +554,12 @@ function doPost(e) {
       if (qat) { qrow[6] = qsh.getRange(qat, 7).getValue(); qsh.getRange(qat, 1, 1, qrow.length).setValues([qrow]); qa = true; }
       else qsh.appendRow(qrow);
     } finally { ql.releaseLock(); }
-    CacheService.getScriptCache().remove('M|' + qc + '|' + qu + '|' + qk);
+    bump_(qc);
     return out_({ ok: true, updated: qa });
   }
 
   if (d.action !== 'post') return out_({ ok: false, error: '알 수 없는 요청' });
-  var cls = cut_(d.cls, 12), nick = cut_(d.nick, 12), unit = cut_(d.unit, 24);
+  var cls = cut_(d.cls, 12), nick = nick_(d.nick), unit = cut_(d.unit, 24);
   if (!cls || !nick || !unit) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
   if (!allowed_(cls)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
   var res = {}, keys = Object.keys(d.results || {}).slice(0, 12);
@@ -548,7 +581,7 @@ function doPost(e) {
     /* 활동 기록은 덮어쓰지 않고 쌓는다 */
     logSheet_().appendRow([new Date(), txt_(cls), txt_(nick), safe_(unit), safe_(label), keys.filter(function (k) { return k !== '_ev'; }).length, again ? '다시' : '처음']);
   } finally { lock.releaseLock(); }
-  CacheService.getScriptCache().removeAll(['L|' + cls + '|' + unit, 'C|' + cls, 'X|' + cls + '|' + unit]);   /* 친구 목록이 바로 새로 보이게 */
+  bump_(cls);                                                  /* 친구 목록이 바로 새로 보이게(세대를 바꾼다) */
   return out_({ ok: true, updated: again });
 }
 

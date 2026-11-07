@@ -130,6 +130,27 @@ t('PIN 초기화·명단 넣기는 관리 열쇠까지 있어야 한다, 초기�
   const r = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '573920' });   // 창이 아직 열려 있음
   assert.strictEqual(r.ok, true, '초기화 뒤 다시 정할 수 있음');
 });
+t('[A4] 캐시가 지워져도 틀린 횟수·잠금은 명단 탭 기준으로 이어진다', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  for (let i = 0; i < 4; i++) E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '000111' });
+  E.g.__cache._map.clear();                                   // 캐시가 통째로 사라짐
+  const fifth = E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '000111' });
+  assert.ok(/잠겼습니다/.test(fifth.error), '시트의 4번 + 1 = 5번째에 잠김');
+  E.g.__cache._map.clear();
+  const ok = E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '482915' });
+  assert.strictEqual(ok.ok, false, '캐시가 없어도 시트 잠금 시각으로 막힘'); assert.ok(/잠겼습니다/.test(ok.error));
+  const row = E.rs.getDataRange().getValues().find((x) => String(x[0]) === '10301');
+  assert.strictEqual(+row[6], 5); assert.ok(row[7] instanceof Date && row[7].getTime() > Date.now());
+});
+t('[시트] PIN·기기 해시가 - 로 시작해도 수식으로 쓰지 않는다(로그인 20번)', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '*' });
+  E.post({ action: 'accLogin', sid: '10302', name: '라마바', newPin: '482915' });
+  for (let i = 0; i < 20; i++) assert.strictEqual(E.post({ action: 'accLogin', sid: '10302', name: '라마바', pin: '482915' }).ok, true);
+  assert.deepStrictEqual(E.g.__ss.formulas, []);
+});
 t('accRoster 는 교사 열쇠로 되고 열린 반을 함께 준다', () => {
   const E = setup();
   E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
@@ -145,11 +166,16 @@ t('지우기(wipe)·옛 기록 옮기기는 관리 열쇠까지', () => {
   assert.strictEqual(E.post({ action: 'import', key: E.tk, confirm: '옮김', rows: [] }).ok, false);
   assert.strictEqual(E.post({ action: 'wipe', key: E.tk, admin: E.ak, cls: '1-3', confirm: '지움' }).ok, true);
 });
-t('열쇠를 마구 넣어 보면(10분에 30번) 맞는 열쇠도 잠시 막힌다', () => {
+t('[A1] 남이 틀린 열쇠를 아무리 넣어도 맞는 열쇠는 바로 통과, 틀린 열쇠만 늦게 답한다', () => {
   const E = setup();
+  for (let i = 0; i < 60; i++) assert.strictEqual(E.post({ action: 'teacher', key: 'sth-guess' + i }).ok, false);
+  for (let i = 0; i < 60; i++) E.post({ action: 'wipe', key: E.tk, admin: 'adm-guess' + i, cls: '1-3', confirm: '지움' });
+  assert.ok(E.g.__ss.slept >= 120 * 1000, '틀린 열쇠는 1초 넘게 늦춤');
+  const before = E.g.__ss.slept;
   assert.strictEqual(E.post({ action: 'teacher', key: E.tk }).ok, true);
-  for (let i = 0; i < 30; i++) E.post({ action: 'teacher', key: 'sth-guess' + i });
-  assert.strictEqual(E.post({ action: 'teacher', key: E.tk }).ok, false);
+  assert.strictEqual(E.post({ action: 'accPinReset', key: E.tk, admin: E.ak, sid: '10302' }).ok, true);
+  assert.strictEqual(E.g.__ss.slept, before, '맞는 열쇠는 기다리지 않음');
+  assert.strictEqual(E.g.__cache.get('keyBad:t'), null, '서버 전체 잠금 칸이 없음');
 });
 t('빈 열쇠는 늘 거절한다(시트 B1 이 비어 있어도)', () => {
   const E = setup();
@@ -203,12 +229,56 @@ t('목록은 잠깐 캐시되지만, 새로 올리면 바로 다시 읽는다 ·
   const C = E.get({ action: 'classlog', cls: '1-3' });
   assert.strictEqual(C.units[0].n, 2);
 });
+t('[A3] 읽는 사이에 누가 올려도, 옛 목록이 캐시에 남아 방금 쓴 글을 가리지 않는다', () => {
+  const E = setup();
+  E.post({ action: 'post', cls: '1-3', nick: '고래', unit: 'is1-5', results: { a: '1' } });
+  const real = E.g.pickRows_; let once = true;
+  E.g.pickRows_ = function () {                               // GET 이 옛 줄을 읽은 직후에 다른 학생이 올린다
+    const rows = real.apply(null, arguments);
+    if (once) { once = false; assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: '상어', unit: 'is1-5', results: { a: '2' } }).ok, true); }
+    return rows;
+  };
+  assert.strictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is1-5' }).items.length, 1, '이 GET 은 옛 목록(1명)');
+  E.g.pickRows_ = real;
+  assert.strictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is1-5' }).items.length, 2, '바로 다음 GET 은 새 목록(2명)');
+});
+t('[A3] 세대 값이 캐시에서 사라져도 옛 목록을 주지 않는다', () => {
+  const E = setup();
+  E.post({ action: 'post', cls: '1-3', nick: '고래', unit: 'is1-6', results: {} });
+  E.get({ action: 'list', cls: '1-3', unit: 'is1-6' });
+  E.post({ action: 'post', cls: '1-3', nick: '상어', unit: 'is1-6', results: {} });
+  E.g.__cache.remove('G|1-3');
+  assert.strictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is1-6' }).items.length, 2);
+});
+t('[A2] 한글이 많아 100KB(바이트)를 넘는 목록은 캐시에 넣지 않고, 답은 정상', () => {
+  const E = setup();
+  const long = '가'.repeat(290);                               // 한 칸 300자 안
+  for (let i = 0; i < 12; i++) {
+    const res = {}; for (let k = 0; k < 10; k++) res['k' + k] = long;
+    assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: 'n' + i, unit: 'is1-7', results: res, line: long }).ok, true);
+  }
+  const L = E.get({ action: 'list', cls: '1-3', unit: 'is1-7' });
+  const s = JSON.stringify(L);
+  assert.ok(s.length < 90000 && Buffer.byteLength(s) > 100 * 1024, '글자 수는 9만 아래, 바이트는 100KB 넘음(옛 검사를 통과하던 크기)');
+  assert.strictEqual(L.ok, true); assert.strictEqual(L.items.length, 12);
+  const before = E.g.__ss.reads;
+  assert.strictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is1-7' }).items.length, 12);
+  assert.ok(E.g.__ss.reads > before, '캐시에 없으니 다시 시트를 읽음');
+  assert.strictEqual(E.g.utf8Len_('가a😀'), 3 + 1 + 4);
+});
+t('[A2] 캐시 저장이 실패해도 응답은 정상', () => {
+  const E = setup();
+  E.post({ action: 'post', cls: '1-3', nick: '고래', unit: 'is1-8', results: {} });
+  const put = E.g.__cache.put; E.g.__cache.put = () => { throw new Error('캐시 고장'); };
+  try { assert.strictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is1-8' }).items.length, 1); assert.strictEqual(E.get({ action: 'classlog', cls: '1-3' }).ok, true); }
+  finally { E.g.__cache.put = put; }
+});
 t('숨김 칸에 글자가 있으면 목록에서 빠진다', () => {
   const E = setup();
   E.post({ action: 'post', cls: '1-3', nick: '고래', unit: 'is1-3', results: {} });
   E.post({ action: 'post', cls: '1-3', nick: '상어', unit: 'is1-3', results: {} });
   E.g.sheet_().getRange(2, 8).setValue('숨김');
-  E.g.__cache.removeAll(['L|1-3|is1-3']);
+  E.g.bump_('1-3');                                          // 시트를 직접 고친 것은 20초 뒤 보이므로, 시험에서는 세대를 바꾼다
   const L = E.get({ action: 'list', cls: '1-3', unit: 'is1-3' });
   assert.deepStrictEqual(L.items.map((x) => x.nick), ['상어']);
 });
@@ -219,6 +289,45 @@ t('많은 줄 사이에서도 고른 줄만 정확히 꺼낸다(pickRows_)', () 
   const want = []; for (let i = 0; i < 120; i++) if (!(i % 3) && i % 2) want.push('n' + i);
   assert.deepStrictEqual(L.items.map((x) => x.nick).sort(), want.sort());
   assert.ok(L.items.every((x) => +x.results.a % 3 === 0));
+});
+
+console.log('별명 사칭 · 수식 막기');
+t('[B1] 토큰 없이 \'@학번\' 을 따옴표·전각·공백·보이지 않는 글자로 감싸 보내도 막힌다', () => {
+  const E = setup();
+  const tricks = ["'@10301", "''@10301", ' @10301', '\uFF2010301', '\uFE6B10301', '\u200B@10301', '\uFEFF@10301', '\u2018@10301', '"@10301', '\u3000@10301', '\u202E@10301'];
+  for (const nk of tricks) {
+    for (const action of ['post', 'vote', 'measure']) {
+      const r = E.post({ action, cls: '1-3', nick: nk, unit: 'is1-1', results: {}, key: 'g1', a: 0, v: [1] });
+      assert.strictEqual(r.ok, false, action + ' ' + JSON.stringify(nk) + ' 가 통과하면 안 됨');
+    }
+    const c = E.post({ action: 'qAdd', cls: '1-3', nick: nk, unit: 'is1-1', text: '궁금한 것이 있어요 정말로' });
+    assert.strictEqual(c.ok, false, 'qAdd ' + JSON.stringify(nk));
+  }
+  ['share', '투표', '측정값', '질문'].forEach((n) => { const sh = E.g.__ss.getSheetByName(n); if (sh) assert.ok(!sh.getDataRange().getValues().some((r) => String(r[2]).indexOf('10301') >= 0 || String(r[3]).indexOf('10301') >= 0), n + ' 탭에 저장되면 안 됨'); });
+});
+t('[B1] 가린 이름(친구 xxxx)을 흉내 내는 별명도 토큰 없이는 막힌다, 본인 토큰이면 전각 사용도 본인 이름으로', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  const me = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: me.me.pub, unit: 'is1-1', results: {} }).ok, false);
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: '\uFF2010301', t: me.t, unit: 'is1-1', results: {} }).ok, true);
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: '@10302', t: me.t, unit: 'is1-1', results: {} }).ok, false, '남의 학번은 내 토큰으로도 안 됨');
+  const L = E.get({ action: 'list', cls: '1-3', unit: 'is1-1' });
+  assert.deepStrictEqual(L.items.map((x) => x.nick), [me.me.pub]);
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: '친구가 좋아', unit: 'is1-1', results: {} }).ok, true, '평범한 별명은 그대로');
+});
+t('[B1] 글 칸의 수식 주입(= + - @, 앞 따옴표·공백 포함)이 수식으로 저장되지 않는다', () => {
+  const E = setup();
+  const bad = ['=IMPORTXML("http://x","//a")', '+1+1', '-2+3', '@SUM(1)', "'=HYPERLINK(1)", ' =1+1', '\t=1'];
+  bad.forEach((v, i) => {
+    E.post({ action: 'post', cls: '1-3', nick: '별' + i, unit: v.slice(0, 10) || 'u', unitLabel: v, results: { a: v }, line: v });
+    E.post({ action: 'measure', cls: '1-3', nick: '별' + i, unit: 'is1-1', key: 'm1', v: [1], g: v });
+    E.post({ action: 'peerPut', cls: '1-3', nick: '별' + i, unit: 'is1-1', text: v + ' 열 글자 넘게 씁니다' });
+    E.post({ action: 'qAdd', cls: '1-3', nick: '별' + i, unit: 'is1-1', text: v + ' 궁금해요 정말' });
+  });
+  E.g.healCls_();                                             // 읽어서 다시 쓰는 길도 한 번
+  assert.deepStrictEqual(E.g.__ss.formulas, []);
+  assert.strictEqual(E.g.safe_("'=1"), "''=1"); assert.strictEqual(E.g.safe_(' =1'), "' =1"); assert.strictEqual(E.g.safe_('고래'), '고래');
 });
 
 console.log('\n' + passed + '개 통과, ' + failed + '개 실패');
