@@ -130,21 +130,24 @@ function gen_(cls) {
 }
 function bump_(cls) { try { CacheService.getScriptCache().put('G|' + cls, genNew_(), 21600); } catch (e) {} }
 /** 별명 사칭 판별용 값(검사에만 쓴다, 저장·표시·글 식별에는 안 씀) — 유니코드를 맞추고(전각 ＠ → @),
- *  앞쪽의 보이지 않는 글자·공백·따옴표와 뒤쪽의 보이지 않는 글자·공백만 떼어 낸다. 가운데 글자(이모지의 ZWJ 등)는 그대로.
+ *  숨은 글자(Cf 등)는 모두 지우고, 앞쪽 공백·따옴표와 뒤쪽 공백을 떼어 낸다. 저장값은 손대지 않는다.
  *  시트는 앞의 ' 를 먹으므로 "'@10301" 은 저장될 때 @10301 이 된다 — 그래서 이 값으로 '@' 를 본다. */
 var NICK_INV_ = '\\u0000-\\u001F\\u007F-\\u009F\\u00AD\\u034F\\u061C\\u115F\\u1160\\u17B4\\u17B5\\u180E\\u200B-\\u200F\\u2028-\\u202E\\u2060-\\u206F\\u3164\\uFEFF\\uFFA0\\s';
 var NICK_HEAD_ = new RegExp('^[' + NICK_INV_ + '\'"`\\u2018-\\u201F\\u2032-\\u2037]+'), NICK_TAIL_ = new RegExp('[' + NICK_INV_ + ']+$');
 function nickCheck_(s) {
   s = String(s == null ? '' : s);
   try { s = s.normalize('NFKC'); } catch (e) {}
-  return s.replace(NICK_HEAD_, '').replace(NICK_TAIL_, '');
+  /* 검사용에서는 숨은 글자를 가운데까지 모두 지운다(ZWSP·ZWNJ·ZWJ·WJ·BOM·소프트하이픈 등 Cf 범주, 제어 문자, 한글 채움 문자) —
+     '친구 a\u200Bbcd' 로 가린 이름 검사를 빠져나가지 못하게. 저장·표시용 별명(이모지의 ZWJ)은 그대로 둔다. */
+  try { s = s.replace(new RegExp('[\\p{Cf}\\p{Cc}\\u034F\\u115F\\u1160\\u17B4\\u17B5\\u3164\\uFFA0]', 'gu'), ''); } catch (e) { s = s.replace(new RegExp('[' + NICK_INV_ + ']', 'g'), function (m) { return /\s/.test(m) ? m : ''; }); }
+  return s.replace(NICK_HEAD_, '').replace(NICK_TAIL_, '').replace(/\s+/g, ' ');
 }
 /** '@학번' 이나 가린 이름('친구 xxxx')처럼 보이는 별명은 로그인(토큰)한 그 학생만 쓴다 */
 function nickNeedsToken_(c) { return c.charAt(0) === '@' || /^친구 [A-Za-z0-9]{4}$/.test(c); }
 /** 요청의 별명 → { nick: 저장할 별명, ok }. 평범한 별명은 보낸 그대로(cut_ 만) 저장해 글 식별·'(나)' 가 예전과 같다.
  *  토큰이 필요한 별명은 본인일 때만 받고, 저장은 '@학번' 한 가지 모양으로(공개 목록에서 늘 가려지게). */
 function nickIn_(raw, t) {
-  var n = cut_(raw, 12), c = nickCheck_(n);
+  var n = cut_(raw, 12), c = nickCheck_(raw);   /* 검사는 cut_ 전의 원래 값으로(cut_ 가 BOM 등을 공백으로 바꾸기 전) */
   if (!nickNeedsToken_(c)) return { nick: n, ok: true };
   var w = whoAmI_(t);
   return w && c === '@' + w.sid ? { nick: c, ok: true } : { nick: n, ok: false };

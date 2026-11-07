@@ -354,12 +354,35 @@ t('[별명 그대로] 이모지(ZWJ)·전각 별명은 보낸 그대로 저장·
   assert.strictEqual(E.post({ action: 'peerPut', cls: '1-3', nick: sci, unit: 'is2-1', text: '고친 글입니다 열 글자 넘게요' }).ok, true);
   assert.strictEqual(E.g.__ss.getSheetByName('돌려읽기').getLastRow(), 2, '돌려 읽기도 한 줄(덮어쓰기)');
 });
-t('[별명 그대로] 가운데 ZWJ 는 판별용 값에서도 지우지 않고, 앞뒤 보이지 않는 글자만 떼어 낸다', () => {
+t('[별명 검사] 검사용 값은 숨은 글자를 가운데까지 지우고(저장값은 그대로), 앞 따옴표·전각도 정리한다', () => {
   const E = setup();
-  assert.strictEqual(E.g.nickCheck_('\u{1F469}\u200D\u{1F52C}'), '\u{1F469}\u200D\u{1F52C}');
   assert.strictEqual(E.g.nickCheck_('\u200B\u2018@10301\u200B '), '@10301');
   assert.strictEqual(E.g.nickCheck_('\uFF2010301'), '@10301');
-  assert.strictEqual(E.g.nickCheck_('고\u200D래'), '고\u200D래');
+  assert.strictEqual(E.g.nickCheck_('친구 a\u200Bbcd'), '친구 abcd');
+  ['\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF', '\u00AD', '\u2061', '\u180E', '\u3164'].forEach((z) => assert.strictEqual(E.g.nickCheck_('친구 a' + z + 'bcd'), '친구 abcd', 'U+' + z.charCodeAt(0).toString(16)));
+});
+t('[별명 검사] 가운데 숨은 글자로 가린 이름(친구 xxxx)을 흉내 내도 토큰 없이는 막히고, ZWJ 이모지 별명은 그대로 저장된다', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  const me = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  const pub = me.me.pub;                                    // '친구 ' + 4글자
+  ['\u200B', '\u200D', '\u2060', '\uFEFF', '\u00AD'].forEach((z) => {
+    const fake = pub.slice(0, 4) + z + pub.slice(4);
+    assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: fake, unit: 'is3-1', results: {} }).ok, false, '사칭 U+' + z.charCodeAt(0).toString(16));
+    assert.strictEqual(E.post({ action: 'qAdd', cls: '1-3', nick: fake, unit: 'is3-1', text: '궁금한 것이 있어요 정말로' }).ok, false);
+  });
+  const sci = '\u{1F469}\u200D\u{1F52C}';
+  E.post({ action: 'post', cls: '1-3', nick: sci, unit: 'is3-1', results: {} });
+  assert.deepStrictEqual(E.get({ action: 'list', cls: '1-3', unit: 'is3-1' }).items.map((x) => x.nick), [sci]);
+});
+t('[pub] 예전 캐시에 남은 프로필에 pub 이 없어도 채워서 돌려준다', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  const me = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  E.post({ action: 'accMe', t: me.t });                       // 캐시에 담김
+  const k = [...E.g.__cache._map.keys()].find((x) => x.indexOf('tok:') === 0);
+  const old = JSON.parse(E.g.__cache.get(k)); delete old.pub; E.g.__cache.put(k, JSON.stringify(old), 3600);
+  assert.strictEqual(E.post({ action: 'accMe', t: me.t }).me.pub, me.me.pub);
 });
 t('[B1] 글 칸의 수식 주입(= + - @, 앞 따옴표·공백 포함)이 수식으로 저장되지 않는다', () => {
   const E = setup();
@@ -373,6 +396,44 @@ t('[B1] 글 칸의 수식 주입(= + - @, 앞 따옴표·공백 포함)이 수�
   E.g.healCls_();                                             // 읽어서 다시 쓰는 길도 한 번
   assert.deepStrictEqual(E.g.__ss.formulas, []);
   assert.strictEqual(E.g.safe_("'=1"), "''=1"); assert.strictEqual(E.g.safe_(' =1'), "' =1"); assert.strictEqual(E.g.safe_('고래'), '고래');
+});
+
+console.log('반 통계 (저장형 XSS)');
+function classEnv() {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  const ts = ['10301', '10302'].map((sid, i) => E.post({ action: 'accLogin', sid, name: ['가나다', '라마바'][i], newPin: '482915' }).t);
+  E.rs.appendRow(['10303', '파하가', '1', '1-3', '', '', 0, '', '', '', '']);
+  ts.push(E.post({ action: 'accLogin', sid: '10303', name: '파하가', newPin: '482915' }).t);
+  return { E, ts };
+}
+const XSS = '<img src=x onerror=alert(1)>';
+t('[B1] accSync 는 lab·real 키와 값을 정해진 모양만 저장한다(정상 기록은 그대로)', () => {
+  const { E, ts } = classEnv();
+  const s = { lab: { c1: { p: 2, ok: 1, n: 1 }, [XSS]: { p: 0, ok: 1 }, c2: { p: XSS, ok: '<b>', n: 'x', evil: XSS } }, real: { r1: { p: 1, a: '답 ' + XSS } }, quiz: { q1: { r: 1 } } };
+  assert.strictEqual(E.post({ action: 'accSync', t: ts[0], unit: 'is1-1', s, w: {} }).ok, true);
+  const got = E.post({ action: 'accPull', t: ts[0], units: ['is1-1'] }).units['is1-1'].d.s;
+  assert.deepStrictEqual(Object.keys(got.lab).sort(), ['c1', 'c2']);
+  assert.deepStrictEqual(got.lab.c1, { p: 2, ok: 1, n: 1 }, '정상 기록은 그대로(다른 기기에서 이어 하기)');
+  assert.deepStrictEqual(got.lab.c2, {}, '숫자·불리언이 아닌 p·ok·n, 모르는 칸은 버림');
+  assert.strictEqual(got.real.r1.a, '답 ' + XSS, '적은 답은 글자로 남김(선생님 화면은 textContent)');
+  assert.deepStrictEqual(got.quiz, { q1: { r: 1 } });
+});
+t('[B1] 반 통계(accClass)에는 모양이 다른 키가 나가지 않는다 — 이미 저장된 나쁜 키 포함', () => {
+  const { E, ts } = classEnv();
+  ts.forEach((t, i) => E.post({ action: 'accSync', t, unit: 'is1-1', s: { lab: { c1: { p: 1, ok: i % 2 } }, quiz: { q1: { r: 1 } }, g1I: 0, ep1: { c: [1, 0], done: false } }, w: {} }));
+  /* 고치기 전에 저장된 것처럼 시트에 직접 나쁜 키를 넣는다 */
+  const ls = E.g.learnSheet_(), v = ls.getDataRange().getValues();
+  const r = v.findIndex((x) => String(x[1]) === '10301');
+  const bad = { s: { lab: { [XSS]: { p: 1, ok: 1 }, c1: { p: 1, ok: 1 } }, real: { ['r1"><svg>']: { p: 0 } }, quiz: { [XSS]: { r: 1 } }, [XSS + 'I']: 1, [XSS]: { c: [1], done: true } }, w: {} };
+  ls.getRange(r + 1, 5).setValue(JSON.stringify(bad));
+  const res = E.post({ action: 'accClass', t: ts[1], unit: 'is1-1' });
+  assert.strictEqual(res.ok, true); assert.ok(res.agg, '3명 이상이라 통계가 나옴');
+  const js = JSON.stringify(res.agg);
+  assert.ok(js.indexOf('<') < 0 && js.indexOf('svg') < 0, '나쁜 키가 통계에 없음');
+  assert.deepStrictEqual(Object.keys(res.agg.labs), ['lab:c1']);
+  assert.strictEqual(res.agg.labs['lab:c1'].n, 3);
+  assert.deepStrictEqual(Object.keys(res.agg.quiz), ['q1']); assert.deepStrictEqual(Object.keys(res.agg.gates), ['g1']); assert.deepStrictEqual(Object.keys(res.agg.eps), ['ep1']);
 });
 
 console.log('\n' + passed + '개 통과, ' + failed + '개 실패');

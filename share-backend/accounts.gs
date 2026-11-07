@@ -110,7 +110,7 @@ function profile_(r) { return { sid: String(r[0]), name: String(r[1]), grade: St
 function whoAmI_(t) {
   t = String(t || ''); if (t.length < 20) return null;
   var h = hmac_('tok|' + t), c = CacheService.getScriptCache(), hit = c.get('tok:' + h);
-  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  if (hit) { try { var mc = JSON.parse(hit); if (mc && mc.sid && !mc.pub) mc.pub = pubNick_(mc.sid); return mc; } catch (e) {} }   /* 예전 캐시에는 pub 이 없다 */
   var dv = deviceSheet_(), row = findRow_(dv, 1, h);
   if (!row) return null;
   var sid = String(dv.getRange(row, 2).getValue());
@@ -176,7 +176,9 @@ function accounts_(d) {
   if (a === 'accSync') {    /* 한 단원의 지금 상태 + 바뀐 항목들 */
     var who = whoAmI_(d.t); if (!who) return { ok: false, error: '다시 로그인해 주세요', relogin: 1 };
     var unit = cut_(d.unit, 24); if (!/^[\w-]{2,24}$/.test(unit)) return { ok: false, error: '단원 이름이 이상합니다' };
-    var snap = JSON.stringify({ s: d.s || {}, w: d.w || {} });
+    var s0 = d.s && typeof d.s === 'object' && !(d.s instanceof Array) ? d.s : {};
+    ['lab', 'real'].forEach(function (lk) { if (lk in s0) s0[lk] = labClean_(s0[lk]); });   /* 실험실 기록은 정해진 모양만 */
+    var snap = JSON.stringify({ s: s0, w: d.w || {} });
     if (snap.length > 45000) return { ok: false, error: '기록이 너무 큽니다' };
     /* 학습·학습기록 탭은 이 요청만 쓴다 — '우리 반' 올리기(스크립트 잠금)와 줄을 따로 서도록 문서 잠금을 쓴다 */
     var lk2 = LockService.getDocumentLock() || LockService.getScriptLock(); if (!lk2.tryLock(15000)) return { ok: false, error: '잠시 뒤', retry: 1 };
@@ -308,16 +310,35 @@ function classOfUnit_(who, unit) {
   return hit[0] || '';
 }
 /** 한 학생의 단원 상태를 반 합계에 더한다 — 첫 추리(처음·다시 고른 보기), 문항(한 번에·나중에 맞힘), 장면, 실험실, 글을 쓴 사람 수 */
+/** 반 통계·실험실 기록의 이름(키) — 영문·숫자·하이픈·밑줄 40자까지만. 학생 기기가 보낸 키가 친구 화면에 그대로 나가므로
+ *  (저장형 XSS 막기) 모양이 다른 키는 저장할 때도, 이미 저장된 것을 모을 때도 버린다. 실제 키는 c1·r2·ep1·g1 같은 모양이다. */
+var STAT_KEY_ = /^[A-Za-z0-9_-]{1,40}$/;
+/** 실험실(lab)·실제 자료(real) 기록 — { 사례: { p: 고른 보기(숫자), ok: 1/0, n: 본 힌트 수, a·line: 적은 답(글자, 선생님 화면은 textContent) } } 만 남긴다 */
+function labClean_(L) {
+  var out = {}; if (!L || typeof L !== 'object' || L instanceof Array) return out;
+  Object.keys(L).slice(0, 40).forEach(function (c) {
+    var x = L[c]; if (!STAT_KEY_.test(c) || !x || typeof x !== 'object') return;
+    var o = {};
+    if (typeof x.p === 'number' && isFinite(x.p)) o.p = x.p;
+    if (typeof x.ok === 'boolean' || typeof x.ok === 'number') o.ok = x.ok ? 1 : 0;
+    if (typeof x.n === 'number' && isFinite(x.n)) o.n = Math.max(0, Math.min(99, Math.round(x.n)));
+    if (typeof x.a === 'string') o.a = cut_(x.a, 300);
+    if (typeof x.line === 'string') o.line = cut_(x.line, 300);
+    out[c] = o;
+  });
+  return out;
+}
 function classAdd_(A, s, w) {
   A.n++;
   Object.keys(s).forEach(function (k) {
     var v = s[k];
     if (/I$/.test(k) && typeof v === 'number' && !/_2I$/.test(k)) {
+      if (!STAT_KEY_.test(k.slice(0, -1))) return;
       var g = k.slice(0, -1), G = A.gates[g] || (A.gates[g] = { a: {}, b: {}, ok: 0, n: 0 });
       G.n++; G.a[v] = (G.a[v] || 0) + 1;
       if (typeof s[g + '_2I'] === 'number') G.b[s[g + '_2I']] = (G.b[s[g + '_2I']] || 0) + 1;
       if (s[g + 'OK'] === '맞음') G.ok++;
-    } else if (v && typeof v === 'object' && v.c && v.c.length !== undefined) {
+    } else if (v && typeof v === 'object' && v.c instanceof Array && STAT_KEY_.test(k)) {
       var E = A.eps[k] || (A.eps[k] = { n: 0, done: 0, sc: [] }), m = 0;
       E.n++; if (v.done) E.done++;
       v.c.forEach(function (x, i) { E.sc[i] = (E.sc[i] || 0) + (x ? 1 : 0); if (x) m++; });
@@ -325,13 +346,13 @@ function classAdd_(A, s, w) {
   });
   var Q = s.quiz || {};
   Object.keys(Q).forEach(function (id) {
-    var x = Q[id] || {}; if (!(x.r === 1 || x.n || x.sh)) return;
+    var x = Q[id] || {}; if (!STAT_KEY_.test(id) || !(x.r === 1 || x.n || x.sh)) return;
     var q = A.quiz[id] || (A.quiz[id] = { n: 0, first: 0, later: 0, ov: 0 });
     q.n++; if (x.r === 1 && !x.n && !x.sh) q.first++; else { if (x.r === 1) q.later++; if (x.cf === 2) q.ov = (q.ov || 0) + 1; }
   });
   ['lab', 'real'].forEach(function (lk) {
     var L = s[lk] || {};
-    Object.keys(L).forEach(function (c) { var x = L[c] || {}; if (x.p == null) return; var key = lk + ':' + c, B = A.labs[key] || (A.labs[key] = { n: 0, ok: 0 }); B.n++; if (x.ok) B.ok++; });
+    Object.keys(L).forEach(function (c) { var x = L[c] || {}; if (!STAT_KEY_.test(c) || x.p == null) return;   /* 이미 저장된 나쁜 키도 여기서 걸러진다 */ var key = lk + ':' + c, B = A.labs[key] || (A.labs[key] = { n: 0, ok: 0 }); B.n++; if (x.ok) B.ok++; });
   });
   if (Object.keys(w).some(function (k) { return String(w[k] || '').trim(); })) A.wrote++;
 }

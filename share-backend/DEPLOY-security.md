@@ -4,16 +4,15 @@
 
 ## 배포 전
 1. 브랜치 검수 통과 → `main` 에 합치기.
-2. `node share-backend/test/security.test.js` → 20개 모두 통과.
+2. `node share-backend/test/security.test.js` → 37개 모두 통과.
 3. 온라인 편집기에서 바뀐 것이 없는지: 빈 임시 폴더에서 `clasp clone 1sUt-7RMERJjuRjp0Hfa02QGNsI4YOR9ZslqBQgkhzWLvm_7WYXlP6ujl` 한 뒤 main 의 .gs 와 비교(다르면 멈추고 먼저 합친다).
 
 ## 배포
 4. `cd share-backend && clasp push`
 5. `clasp deploy -i AKfycbzhHTTpKcoBbjOnPQDRcx94IsiSOihR1M7LwfaSJmbqIKWJpOLoPMqtFIsVuLhRGY3E -d "보안: PIN 정하기 창·관리 열쇠·목록 학번 가림·캐시"`
-   (새 배포를 만들지 말고 같은 id 에 새 버전. 주소가 그대로라 옛 학생 화면으로도 로그인·올리기·목록 보기는 그대로 된다.)
-   **단, 학생 화면(share.js 등) 갱신이 필요한 것:** 목록에서 가려진 '친구 xxxx' 글에 '(나)' 를 붙이는 것(로그인 답의 `me.pub` 과 견주기)과
-   로그인 학생의 @학번 게시 흐름 점검, share-config 의 localhost 빼기·`file:` 예외 없애기. 갱신 전에는 로그인 학생 자기 카드에 '(나)' 가 안 붙는다.
-   이 학생 화면 갱신은 다른 작업자가 공용 엔진(12개 저장소를 한 벌로 합치는 작업)에서 함께 진행 중이다 — 배포 시점을 그쪽과 맞춘다.
+   (새 배포를 만들지 말고 같은 id 에 새 버전. 주소는 그대로다.)
+   학생 화면: **새 화면은 이미 배포됐다**(허브 d77bb30 — 로그인 학생 올리기·측정값·투표·돌려 읽기·질문에 토큰 첨부, `me.pub` 으로 '(나)', localhost·`file:` 빼기).
+   업데이트를 아직 못 받은 **옛 화면**(브라우저 캐시 등)은 로그인·목록 보기는 되지만, 토큰을 붙이지 않아 **@학번 이름으로 올리기는 실패**하고 자기 카드에 '(나)' 가 안 붙는다. 새로고침하면 풀린다.
 6. 시트를 열어 메뉴 **우리 반 공유 → 준비하기** 한 번 → 관리 열쇠(B5)가 생기고 화면에 뜬다. 메뉴에 'PIN 정하기 열기'가 보이는지 확인.
 
 ## 배포 직후 확인 (5분)
