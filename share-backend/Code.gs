@@ -94,12 +94,10 @@ function keyEq_(a, b) {
   for (var i = 0; i < n; i++) x |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   return x === 0 && b.length > 0;
 }
-/** 열쇠 확인 — 맞는 열쇠는 언제나 바로 통과한다(남이 틀린 열쇠를 아무리 넣어도 선생님은 막히지 않는다).
- *  틀린 열쇠만 답을 1.5초 늦춰 마구 넣어 보기를 느리게 한다. 열쇠는 무작위 10~14자리라 짐작할 수 없다. */
+/** 열쇠 확인 — 맞으면 통과, 틀리면 바로 거절한다. 늦추거나 잠그는 장치는 두지 않는다
+ *  (실행 시간·동시 실행 자리를 잡아먹거나 선생님을 막을 수 있어서). 열쇠는 무작위 10~14자리라 짐작할 수 없다. */
 function keyOk_(given, which) {
-  if (keyEq_(cut_(given, 40), which === 'admin' ? adminKey_() : teacherKey_())) return true;
-  if (given) Utilities.sleep(1500);
-  return false;
+  return keyEq_(cut_(given, 40), which === 'admin' ? adminKey_() : teacherKey_());
 }
 function isTeacher_(d) { return keyOk_(d && d.key, 't'); }
 /** 관리 일 — 교사 열쇠(key)와 관리 열쇠(admin)가 둘 다 맞아야 한다. */
@@ -131,20 +129,25 @@ function gen_(cls) {
   return g;
 }
 function bump_(cls) { try { CacheService.getScriptCache().put('G|' + cls, genNew_(), 21600); } catch (e) {} }
-/** 요청으로 받은 별명 — 유니코드를 맞추고(전각 ＠ → @), 보이지 않는 글자·앞쪽 따옴표·공백을 떼어 낸다.
- *  시트는 앞의 ' 를 먹으므로 "'@10301" 은 저장될 때 @10301 이 된다 — 정리한 뒤에 '@' 로 시작하는지 본다. */
-function nick_(s) {
+/** 별명 사칭 판별용 값(검사에만 쓴다, 저장·표시·글 식별에는 안 씀) — 유니코드를 맞추고(전각 ＠ → @),
+ *  앞쪽의 보이지 않는 글자·공백·따옴표와 뒤쪽의 보이지 않는 글자·공백만 떼어 낸다. 가운데 글자(이모지의 ZWJ 등)는 그대로.
+ *  시트는 앞의 ' 를 먹으므로 "'@10301" 은 저장될 때 @10301 이 된다 — 그래서 이 값으로 '@' 를 본다. */
+var NICK_INV_ = '\\u0000-\\u001F\\u007F-\\u009F\\u00AD\\u034F\\u061C\\u115F\\u1160\\u17B4\\u17B5\\u180E\\u200B-\\u200F\\u2028-\\u202E\\u2060-\\u206F\\u3164\\uFEFF\\uFFA0\\s';
+var NICK_HEAD_ = new RegExp('^[' + NICK_INV_ + '\'"`\\u2018-\\u201F\\u2032-\\u2037]+'), NICK_TAIL_ = new RegExp('[' + NICK_INV_ + ']+$');
+function nickCheck_(s) {
   s = String(s == null ? '' : s);
   try { s = s.normalize('NFKC'); } catch (e) {}
-  s = s.replace(/[\u0000-\u001F\u007F-\u009F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u2028-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0]/g, '');
-  s = s.replace(/\s+/g, ' ').replace(/^[\s'"`\u2018-\u201F\u2032-\u2037]+/, '').trim();
-  return s.slice(0, 12);
+  return s.replace(NICK_HEAD_, '').replace(NICK_TAIL_, '');
 }
 /** '@학번' 이나 가린 이름('친구 xxxx')처럼 보이는 별명은 로그인(토큰)한 그 학생만 쓴다 */
-function nickNeedsToken_(n) { return n.charAt(0) === '@' || /^친구 [A-Za-z0-9]{4}$/.test(n); }
-function nickOkFor_(n, t) {
-  if (!nickNeedsToken_(n)) return true;
-  var w = whoAmI_(t); return !!w && n === '@' + w.sid;
+function nickNeedsToken_(c) { return c.charAt(0) === '@' || /^친구 [A-Za-z0-9]{4}$/.test(c); }
+/** 요청의 별명 → { nick: 저장할 별명, ok }. 평범한 별명은 보낸 그대로(cut_ 만) 저장해 글 식별·'(나)' 가 예전과 같다.
+ *  토큰이 필요한 별명은 본인일 때만 받고, 저장은 '@학번' 한 가지 모양으로(공개 목록에서 늘 가려지게). */
+function nickIn_(raw, t) {
+  var n = cut_(raw, 12), c = nickCheck_(n);
+  if (!nickNeedsToken_(c)) return { nick: n, ok: true };
+  var w = whoAmI_(t);
+  return w && c === '@' + w.sid ? { nick: c, ok: true } : { nick: n, ok: false };
 }
 /** 탭에서 고른 줄만 꺼낸다 — 앞쪽 짧은 칸(반·별명·단원…, B 열부터 keyCols 칸)과 숨김 칸만 먼저 읽고,
  *  긴 칸(성과 JSON)이 든 줄 전체(1~ncol 칸)는 고른 줄만 읽는다. test(앞쪽 칸 배열, 숨김 글자) */
@@ -330,8 +333,9 @@ function doPost(e) {
   /* 익명 돌려 읽기·동료 평가·궁금한 것 게시판(community.gs) — action 이 peer·q 로 시작하는 요청 */
   if (/^(peer|q)[A-Z]/.test(String(d.action || ''))) return out_(community_(d));
   /* '@학번' 이름은 로그인한 학생만 쓴다(투표·올리기·측정값) — 토큰이 그 학번과 맞아야 받는다 */
-  /* 별명을 먼저 정리(nick_)한 뒤 본다 — "'@10301"·"＠10301"·앞 공백 같은 우회를 막는다 */
-  if (/^(vote|post|measure)$/.test(String(d.action || '')) && !nickOkFor_(nick_(d.nick), d.t)) return out_({ ok: false, error: '다시 로그인해 주세요' });
+  /* 판별용 값(nickCheck_)으로 본다 — "'@10301"·"＠10301"·앞 공백 같은 우회를 막는다. 저장은 NK.nick */
+  var NK = /^(vote|post|measure)$/.test(String(d.action || '')) ? nickIn_(d.nick, d.t) : null;
+  if (NK && !NK.ok) return out_({ ok: false, error: '다시 로그인해 주세요' });
   /* 교사 열쇠가 드는 요청은 주소창·방문 기록에 남지 않도록 POST 로만 받는다 */
   /* 선생님 화면 — 모든 반을 한눈에. 교사 열쇠가 맞아야 한다. */
   if (d.action === 'teacher') {
@@ -502,7 +506,7 @@ function doPost(e) {
 
   /* 첫 추리 투표 — 처음 고른 보기와 (짝과 이야기한 뒤) 다시 고른 보기의 번호만 받는다. 같은 반·별명·단원·열쇠는 덮어쓴다. */
   if (d.action === 'vote') {
-    var vc = cut_(d.cls, 12), vn = nick_(d.nick), vu = cut_(d.unit, 24), vk = cut_(d.key, 12);
+    var vc = cut_(d.cls, 12), vn = NK.nick, vu = cut_(d.unit, 24), vk = cut_(d.key, 12);
     if (!vc || !vn || !vu || !vk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
     if (!allowed_(vc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
     var va = parseInt(d.a, 10), vb = d.b == null || d.b === '' ? '' : parseInt(d.b, 10);
@@ -538,7 +542,7 @@ function doPost(e) {
 
   /* 우리 반 측정값(선택 활동) — 숫자 1~3개만 받는다. 같은 반·별명·단원·측정은 덮어쓴다. */
   if (d.action === 'measure') {
-    var qc = cut_(d.cls, 12), qn = nick_(d.nick), qu = cut_(d.unit, 24), qk = cut_(d.key, 12);
+    var qc = cut_(d.cls, 12), qn = NK.nick, qu = cut_(d.unit, 24), qk = cut_(d.key, 12);
     if (!qc || !qn || !qu || !qk) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
     if (!allowed_(qc)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
     var qv = (d.v instanceof Array ? d.v : []).slice(0, 3).map(Number).filter(function (x) { return isFinite(x) && Math.abs(x) < 1e7; })
@@ -559,7 +563,7 @@ function doPost(e) {
   }
 
   if (d.action !== 'post') return out_({ ok: false, error: '알 수 없는 요청' });
-  var cls = cut_(d.cls, 12), nick = nick_(d.nick), unit = cut_(d.unit, 24);
+  var cls = cut_(d.cls, 12), nick = NK.nick, unit = cut_(d.unit, 24);
   if (!cls || !nick || !unit) return out_({ ok: false, error: '반·별명·단원이 필요합니다' });
   if (!allowed_(cls)) return out_({ ok: false, error: '등록되지 않은 반 코드입니다' });
   var res = {}, keys = Object.keys(d.results || {}).slice(0, 12);

@@ -113,6 +113,30 @@ t('틀린 횟수 제한: 5번 틀리면 맞는 PIN 도 잠시 막힌다 · 명�
   assert.strictEqual(ok.ok, false); assert.ok(/잠겼습니다/.test(ok.error));
   assert.deepStrictEqual(ok, E.post({ action: 'accLogin', sid: '19999', name: '없는이', pin: '482915' }));
 });
+t('[잠금 분리] 친구가 학번만 알고 틀린 이름·아무 PIN 으로 10번 넣어도 본인은 바로 로그인된다', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  let last;
+  for (let i = 0; i < 10; i++) last = E.post({ action: 'accLogin', sid: '10301', name: '친구가아는이름', pin: '000111' });
+  assert.ok(/잠겼습니다/.test(last.error), '그 조합(학번+틀린 이름)은 잠김');
+  for (let i = 0; i < 6; i++) E.post({ action: 'accLogin', sid: '10301', name: '다른이름' + i, pin: '000111' });
+  const me = E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '482915' });
+  assert.strictEqual(me.ok, true, '본인(맞는 이름·PIN)은 잠기지 않음');
+  const row = E.rs.getDataRange().getValues().find((x) => String(x[0]) === '10301');
+  assert.strictEqual(+row[6] || 0, 0, '본인 줄의 실패 칸에 쌓이지 않음');
+});
+t('[잠금 분리] 이름 틀린 조합·명단에 없는 조합·진짜 학생의 틀린 PIN 이 답으로 구별되지 않는다', () => {
+  const E = setup();
+  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
+  E.post({ action: 'accLogin', sid: '10302', name: '라마바', newPin: '482915' });
+  for (let i = 0; i < 11; i++) {
+    const a = E.post({ action: 'accLogin', sid: '10302', name: '라마바', pin: '000111' });     // 진짜 학생, 틀린 PIN
+    const b = E.post({ action: 'accLogin', sid: '10302', name: '틀린이름', pin: '000111' });   // 학번 O, 이름 X
+    const c = E.post({ action: 'accLogin', sid: '19999', name: '없는이', pin: '000111' });     // 명단 X
+    assert.deepStrictEqual(a, b, (i + 1) + '번째'); assert.deepStrictEqual(b, c, (i + 1) + '번째');
+  }
+});
 t('accCheck 도 학번마다 10분에 40번까지', () => {
   const E = setup();
   for (let i = 0; i < 40; i++) assert.strictEqual(E.post({ action: 'accCheck', sid: '10302', name: '라마바' }).ok, true);
@@ -166,15 +190,13 @@ t('지우기(wipe)·옛 기록 옮기기는 관리 열쇠까지', () => {
   assert.strictEqual(E.post({ action: 'import', key: E.tk, confirm: '옮김', rows: [] }).ok, false);
   assert.strictEqual(E.post({ action: 'wipe', key: E.tk, admin: E.ak, cls: '1-3', confirm: '지움' }).ok, true);
 });
-t('[A1] 남이 틀린 열쇠를 아무리 넣어도 맞는 열쇠는 바로 통과, 틀린 열쇠만 늦게 답한다', () => {
+t('[열쇠] 남이 틀린 열쇠를 아무리 넣어도 맞는 열쇠는 통과, 틀린 열쇠는 기다리지 않고 바로 거절', () => {
   const E = setup();
   for (let i = 0; i < 60; i++) assert.strictEqual(E.post({ action: 'teacher', key: 'sth-guess' + i }).ok, false);
-  for (let i = 0; i < 60; i++) E.post({ action: 'wipe', key: E.tk, admin: 'adm-guess' + i, cls: '1-3', confirm: '지움' });
-  assert.ok(E.g.__ss.slept >= 120 * 1000, '틀린 열쇠는 1초 넘게 늦춤');
-  const before = E.g.__ss.slept;
+  for (let i = 0; i < 60; i++) assert.strictEqual(E.post({ action: 'wipe', key: E.tk, admin: 'adm-guess' + i, cls: '1-3', confirm: '지움' }).ok, false);
+  assert.strictEqual(E.g.__ss.slept, 0, 'sleep 없음(실행 시간·동시 실행 자리를 잡아먹지 않음)');
   assert.strictEqual(E.post({ action: 'teacher', key: E.tk }).ok, true);
   assert.strictEqual(E.post({ action: 'accPinReset', key: E.tk, admin: E.ak, sid: '10302' }).ok, true);
-  assert.strictEqual(E.g.__ss.slept, before, '맞는 열쇠는 기다리지 않음');
   assert.strictEqual(E.g.__cache.get('keyBad:t'), null, '서버 전체 잠금 칸이 없음');
 });
 t('빈 열쇠는 늘 거절한다(시트 B1 이 비어 있어도)', () => {
@@ -315,6 +337,29 @@ t('[B1] 가린 이름(친구 xxxx)을 흉내 내는 별명도 토큰 없이는 �
   const L = E.get({ action: 'list', cls: '1-3', unit: 'is1-1' });
   assert.deepStrictEqual(L.items.map((x) => x.nick), [me.me.pub]);
   assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: '친구가 좋아', unit: 'is1-1', results: {} }).ok, true, '평범한 별명은 그대로');
+});
+t('[별명 그대로] 이모지(ZWJ)·전각 별명은 보낸 그대로 저장·표시되고, 다시 올리면 같은 글을 덮는다', () => {
+  const E = setup();
+  const sci = '\u{1F469}\u200D\u{1F52C}', wide = '\uFF21고래', narrow = 'A고래';
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: sci, unit: 'is2-1', results: { a: '1' } }).updated, false);
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: sci, unit: 'is2-1', results: { a: '2' } }).updated, true, 'ZWJ 이모지 재게시는 같은 글');
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: wide, unit: 'is2-1', results: { a: 'w' } }).updated, false);
+  assert.strictEqual(E.post({ action: 'post', cls: '1-3', nick: narrow, unit: 'is2-1', results: { a: 'n' } }).updated, false, 'Ａ고래 와 A고래 는 다른 글');
+  const L = E.get({ action: 'list', cls: '1-3', unit: 'is2-1' });
+  assert.deepStrictEqual(L.items.map((x) => x.nick).sort(), [sci, wide, narrow].sort(), "목록의 별명 = 보낸 별명(학생 화면의 '(나)' 가 맞음)");
+  assert.strictEqual(L.items.find((x) => x.nick === wide).results.a, 'w');
+  assert.strictEqual(E.post({ action: 'measure', cls: '1-3', nick: sci, unit: 'is2-1', key: 'm1', v: [1] }).updated, false);
+  assert.strictEqual(E.post({ action: 'measure', cls: '1-3', nick: sci, unit: 'is2-1', key: 'm1', v: [2] }).updated, true);
+  assert.strictEqual(E.post({ action: 'peerPut', cls: '1-3', nick: sci, unit: 'is2-1', text: '첫 번째 글입니다 열 글자 넘게' }).ok, true);
+  assert.strictEqual(E.post({ action: 'peerPut', cls: '1-3', nick: sci, unit: 'is2-1', text: '고친 글입니다 열 글자 넘게요' }).ok, true);
+  assert.strictEqual(E.g.__ss.getSheetByName('돌려읽기').getLastRow(), 2, '돌려 읽기도 한 줄(덮어쓰기)');
+});
+t('[별명 그대로] 가운데 ZWJ 는 판별용 값에서도 지우지 않고, 앞뒤 보이지 않는 글자만 떼어 낸다', () => {
+  const E = setup();
+  assert.strictEqual(E.g.nickCheck_('\u{1F469}\u200D\u{1F52C}'), '\u{1F469}\u200D\u{1F52C}');
+  assert.strictEqual(E.g.nickCheck_('\u200B\u2018@10301\u200B '), '@10301');
+  assert.strictEqual(E.g.nickCheck_('\uFF2010301'), '@10301');
+  assert.strictEqual(E.g.nickCheck_('고\u200D래'), '고\u200D래');
 });
 t('[B1] 글 칸의 수식 주입(= + - @, 앞 따옴표·공백 포함)이 수식으로 저장되지 않는다', () => {
   const E = setup();
