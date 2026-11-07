@@ -546,7 +546,8 @@
         var b4 = rv.querySelector(".rv-send"); if (sent && b4) b4.click();
       });
       if (b3) b3.addEventListener("click", function () {
-        var stx = rv.querySelector(".rv-st"); b3.disabled = true; stx.textContent = "보내는 중…";
+        var stx = rv.querySelector(".rv-st"); if (!url) { stx.textContent = "공유가 꺼져 있습니다."; return; }
+        b3.disabled = true; stx.textContent = "보내는 중…";
         fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ action: "vote", cls: me.cls, nick: me.nick, t: me.t || "", unit: String(UNIT || "").replace(/^sth-/, ""), key: K,
                                  a: STATE[K + "I"], b: typeof STATE[K + "_2I"] === "number" ? STATE[K + "_2I"] : "" }) })

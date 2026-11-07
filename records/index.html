@@ -141,7 +141,7 @@
       tr.appendChild(el("td", "n", when(r.at)));
       var g = el("td"); o.g.forEach(function (x) { var p = el("span", "pill " + (x.ok === "맞음" ? "ok" : x.ok === "어긋남" ? "no" : ""), (x.ok === "맞음" ? "✓" : x.ok === "어긋남" ? "✗" : "·") + " " + x.k); p.title = x.q + "\n처음: " + x.a + (x.b ? "\n다시: " + x.b : ""); g.appendChild(p); }); tr.appendChild(g);
       tr.appendChild(el("td", null, o.ep.map(function (e) { return e.k + " " + e.n + "/" + e.tot + (e.done ? " ✓" : ""); }).join(" · ") || "–"));
-      var q = el("td"); q.innerHTML = o.qn ? "<span class='ok'>한 번에 " + o.q1 + "</span> · <span class='mid'>다시 " + o.q2 + "</span> · <span class='no'>아직 " + o.qx + "</span> <span class='msg'>(" + o.qn + "문항, 한 번에 " + pct(o.q1, o.qn) + ")</span>" : "–"; tr.appendChild(q);
+      var q = el("td"); q.innerHTML = o.qn ? "<span class='ok'>한 번에 " + (+o.q1 || 0) + "</span> · <span class='mid'>다시 " + (+o.q2 || 0) + "</span> · <span class='no'>아직 " + (+o.qx || 0) + "</span> <span class='msg'>(" + (+o.qn || 0) + "문항, 한 번에 " + String(pct(+o.q1 || 0, +o.qn || 0)).replace(/[^0-9%–]/g, "") + ")</span>" : "–";   /* 숫자만 */ tr.appendChild(q);
       tr.appendChild(el("td", "n", o.labN ? o.lab + "/" + o.labN + " 해결" : "–"));
       tr.appendChild(el("td", null, o.w.length ? o.w.length + "칸 · " + o.wLen + "자" : "–"));
       t.appendChild(tr);

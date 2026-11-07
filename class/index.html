@@ -130,6 +130,9 @@
   var URL_ = (window.STH_SHARE_URL || "").trim();
   var $ = function (id) { return document.getElementById(id); };
   function el(t, c, s) { var e = document.createElement(t); if (c) e.className = c; if (s != null) e.textContent = s; return e; }
+  /* 서버(시트)에서 온 글을 innerHTML 에 넣을 때는 escH, 숫자는 numH */
+  function escH(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function numH(x) { x = +x; return isFinite(x) ? x : 0; }
   function when(t) {
     var d = new Date(t);
     if (!t || isNaN(d.getTime())) return "";
@@ -276,7 +279,7 @@
       r.pc.forEach(function (x) { Object.keys(T).forEach(function (k) { T[k] += x[k] || 0; }); });
       var gT = T.pn - T.pre > 0 ? (T.post - T.pre) / (T.pn - T.pre) : null;
       var ms = el("p", "sub");
-      ms.innerHTML = T.pn ? "<b>오개념 변화</b> — 두 번 답한 응답 " + T.pn + "개 · 정답 " + pct(T.pre, T.pn) + " → <b>" + pct(T.post, T.pn) + "</b> · 확신 오답 " + T.preSW + " → <b>" + T.postSW + "</b>"
+      ms.innerHTML = T.pn ? "<b>오개념 변화</b> — 두 번 답한 응답 " + numH(T.pn) + "개 · 정답 " + escH(pct(T.pre, T.pn)) + " → <b>" + escH(pct(T.post, T.pn)) + "</b> · 확신 오답 " + numH(T.preSW) + " → <b>" + numH(T.postSW) + "</b>"
         + " · 정규화 향상도 <b>g = " + (gT === null ? "–" : gT.toFixed(2)) + "</b>" + (gT === null ? "" : gT >= 0.7 ? " (크게 바뀜)" : gT >= 0.3 ? " (어느 정도 바뀜)" : gT > 0 ? " (조금 바뀜)" : " (바뀌지 않음)")
         + " · 오개념→바른 개념 " + T.fix + " · 맞았다가 틀림 " + T.slip + " · 남은 오개념 " + T.stay
         : "아직 이야기를 끝내고 다시 답한 학생이 없어 변화는 측정 전입니다.";
@@ -658,7 +661,7 @@
         var nums = el("div", "nums");
         nums.innerHTML = m.map(function (s) {
           var chips = G.keys.map(function (k) { var g = s.g[k]; return g ? (g[1] != null ? MK.charAt(g[1]) || "?" : "") + (g[0] ? "✓" : "✗") : "·"; }).join(" ");
-          return "<b>" + s.nick.replace(/[<>&]/g, "") + "</b> " + chips;
+          return "<b>" + escH(s.nick) + "</b> " + escH(chips);
         }).join("<br>");
         c.appendChild(nums); gg.appendChild(c);
         txt.push((i + 1) + "모둠: " + m.map(function (s) { return s.nick; }).join(", "));
@@ -722,7 +725,7 @@
       var card = el("div", "cls-card" + (pick === c.cls ? " on" : ""));
       card.appendChild(el("div", "name", c.cls));
       var n = el("div", "nums");
-      n.innerHTML = (c.students == null ? "기록 <b>" + c.n + "</b>건" : "학생 <b>" + c.students + "</b>명") + " · 단원 <b>" + c.units + "</b>개<br>마지막 " + (when(c.last) || "-") + " (" + ago(c.last) + ")";
+      n.innerHTML = (c.students == null ? "기록 <b>" + numH(c.n) + "</b>건" : "학생 <b>" + numH(c.students) + "</b>명") + " · 단원 <b>" + numH(c.units) + "</b>개<br>마지막 " + escH(when(c.last) || "-") + " (" + escH(ago(c.last)) + ")";
       card.appendChild(n);
       card.addEventListener("click", function () { pick = (pick === c.cls) ? null : c.cls; paint(); });
       g.appendChild(card);

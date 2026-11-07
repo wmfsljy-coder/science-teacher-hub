@@ -13,6 +13,11 @@
   "use strict";
   var KEY = "sth-acc", SYNC = "sth-accsync-", LOCK_TABS = /수준별 문제|응용 실험실|실제 자료|교과서 실험|정리하기/;
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  /* 서버에서 온 글은 innerHTML 에 넣기 전에 늘 esc, 숫자는 N. 반 통계의 열쇠(첫 추리·장면·문항·실험 이름)는 형식에 맞는 것만 보인다 */
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function N(x) { x = +x; return isFinite(x) ? x : 0; }
+  var KEY_OK = /^[A-Za-z0-9_-]{1,40}$/, LAB_OK = /^(lab|real):[A-Za-z0-9_-]{1,40}$/;
+  function okKeys(o, re) { return Object.keys(o && typeof o === "object" ? o : {}).filter(function (k) { return (re || KEY_OK).test(k) && o[k] && typeof o[k] === "object"; }); }
   function get(st, k) { try { return JSON.parse(st.getItem(k) || "null"); } catch (e) { return null; } }
   function put(st, k, v) { try { if (v == null) st.removeItem(k); else st.setItem(k, JSON.stringify(v)); } catch (e) {} }
   var TEACHER = false; try { TEACHER = localStorage.getItem("sth-teacher") === "1"; } catch (e) {}
@@ -78,6 +83,7 @@
   })();
   function call(body) {
     if (MOCK) return new Promise(function (ok) { setTimeout(function () { ok(Mock(JSON.parse(JSON.stringify(body)))); }, 250); });
+    if (!URL_) return Promise.resolve({ ok: false, error: "공유 주소가 꺼져 있습니다" });
     return fetch(URL_, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
   }
   window.sthAccCall = call;   /* 선생님 화면도 같은 길로 부른다 */
@@ -214,7 +220,7 @@
     if (!chip) { chip = el("button", "acc-chip"); chip.type = "button"; document.body.appendChild(chip); chip.addEventListener("click", toggleMenu); if (MOCK) document.body.appendChild(el("div", "acc-mock", "미리보기 — 연습용 명단(실제 기록 아님)")); }
     var a = acc();
     chip.classList.toggle("in", !!a);
-    chip.innerHTML = a ? "👤 " + a.me.sid + " " + a.me.name : "👤 로그인";
+    chip.textContent = a ? "👤 " + a.me.sid + " " + a.me.name : "👤 로그인";
   }
   function pendingChip(label) {   /* 서버 확인을 기다리는 동안 칩 */
     if (!chip) paint();
@@ -274,7 +280,7 @@
   function pending() { return syncUnits().some(pendingU); }
   function flushAll(keep) { syncUnits().forEach(function (u) { flush(keep, u); }); }
   var lastSent = 0;   /* 한 반이 한꺼번에 풀 때 서버가 밀리지 않게 — 바뀐 뒤 2.5초, 그리고 앞 전송에서 15초가 지난 뒤 보낸다 */
-  window.sthOnStore = function (unit) { if (!acc()) return; clearTimeout(timer); timer = setTimeout(flushAll, Math.max(2500, 15000 - (Date.now() - lastSent))); };
+  window.sthOnStore = function (unit) { if (!ON || (!URL_ && !MOCK) || !acc()) return; clearTimeout(timer); timer = setTimeout(flushAll, Math.max(2500, 15000 - (Date.now() - lastSent))); };
   function diff(a, b, pre, out, t) {   /* 바뀐 항목: [항목, 새 값, 시각] — s.키 / w.키, 객체는 한 단계 더 들어간다(문항별 기록 등) */
     a = a || {}; b = b || {};
     Object.keys(b).forEach(function (k) {
@@ -288,6 +294,7 @@
   }
   function flush(keep, u) {
     clearTimeout(timer);
+    if (!URL_ && !MOCK) return;
     var A = acc(); u = u || unitId(); if (!A || !u) return;
     var raw = null; try { raw = localStorage.getItem("sth-" + u); } catch (e) {}
     if (!raw) return;
@@ -296,15 +303,16 @@
     var old = {}; try { old = prev.raw ? JSON.parse(prev.raw) : {}; } catch (e) {}
     var now = Date.now(), ch = diff(old.s, cur.s, "s.", [], now).concat(diff(old.w, cur.w, "w.", [], now));
     var body = { action: "accSync", t: A.t, unit: u, s: cur.s || {}, w: cur.w || {}, ch: ch }; lastSent = now;
-    if (keep === true && !MOCK && navigator.sendBeacon) { try { navigator.sendBeacon(URL_, new Blob([JSON.stringify(body)], { type: "text/plain;charset=utf-8" })); put(localStorage, SYNC + u, { raw: raw, at: now }); } catch (e) {} return; }
+    if (keep === true && !MOCK && URL_ && navigator.sendBeacon) { try { navigator.sendBeacon(URL_, new Blob([JSON.stringify(body)], { type: "text/plain;charset=utf-8" })); put(localStorage, SYNC + u, { raw: raw, at: now }); } catch (e) {} return; }
     call(body).then(function (j) {
       if (j && j.ok) put(localStorage, SYNC + u, { raw: raw, at: j.at || now });
       else if (j && j.relogin) { setAcc(null); lockAll(); }
     }, function () { /* 연결 안 됨 — 다음 저장·30초 뒤·다시 연결될 때 보낸다 */ });
   }
-  setInterval(function () { if (pending()) flushAll(); }, 30000);
-  window.addEventListener("online", function () { if (pending()) flushAll(); });
-  window.addEventListener("pagehide", function () { if (pending()) flushAll(true); });
+  function canSend() { return MOCK || !!URL_; }
+  setInterval(function () { if (canSend() && pending()) flushAll(); }, 30000);
+  window.addEventListener("online", function () { if (canSend() && pending()) flushAll(); });
+  window.addEventListener("pagehide", function () { if (canSend() && pending()) flushAll(true); });
 
   /* ---- 다른 기기에서 한 기록 불러오기: 이 기기에 없는 항목만 채운다(이 기기의 것이 먼저) ---- */
   function pullNow(fromLogin) {
@@ -367,7 +375,7 @@
       b.addEventListener("click", function () { if (acc()) loadClass(); }); }
     return box;
   }
-  function bar(n, tot, cls) { var w = tot ? Math.round(n / tot * 100) : 0; return "<span class='acb'><i class='" + (cls || "") + "' style='width:" + w + "%'></i></span>"; }
+  function bar(n, tot, cls) { n = N(n); tot = N(tot); var w = tot ? Math.max(0, Math.min(100, Math.round(n / tot * 100))) : 0; return "<span class='acb'><i class='" + (cls || "") + "' style='width:" + w + "%'></i></span>"; }
   function loadClass() {
     var box = classPanel(), A = acc(), u = unitId(); if (!box) return;
     if (!A) { box.innerHTML = ""; return; }
@@ -377,51 +385,53 @@
     else box.innerHTML = "<p class='msg'>📊 우리 반 기록을 모으는 중…</p>";
     flush();
     call({ action: "accClass", t: A.t, unit: u }).then(function (j) {
-      if (!j || !j.ok) { if (!old) box.innerHTML = "<p class='msg'>📊 우리 반 한눈에: " + ((j && j.error) || "불러오지 못했습니다") + "</p>"; return; }
+      if (!j || !j.ok) { if (!old) box.innerHTML = "<p class='msg'>📊 우리 반 한눈에: " + esc((j && j.error) || "불러오지 못했습니다") + "</p>"; return; }
       put(localStorage, CK, { j: j, at: Date.now() });
       items(function (IT) { paintClass(box, j, (IT || {})[u] || {}); });
     }, function () { if (!old) box.innerHTML = "<p class='msg'>📊 지금은 우리 반 기록을 불러올 수 없습니다. 잠시 뒤 다시 열어 보세요.</p>"; });
   }
   function paintClass(box, j, it, staleAt) {
     var my = {}; try { my = (JSON.parse(localStorage.getItem("sth-" + unitId()) || "{}").s) || {}; } catch (e) {}
-    var h = "<div class='ac-head'><b>📊 우리 반 한눈에</b> — " + j.cls + " · 로그인해서 이 단원을 한 친구 <b>" + j.n + "명</b> / " + j.total + "명 <span class='msg'>(이름 없이 센 것" + (staleAt ? " · " + new Date(staleAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + " 결과, 새로 고치는 중…" : "") + ")</span> <button type='button' class='btn ac-re'>↻</button></div>";
+    var h = "<div class='ac-head'><b>📊 우리 반 한눈에</b> — " + esc(j.cls) + " · 로그인해서 이 단원을 한 친구 <b>" + N(j.n) + "명</b> / " + N(j.total) + "명 <span class='msg'>(이름 없이 센 것" + (staleAt ? " · " + new Date(staleAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) + " 결과, 새로 고치는 중…" : "") + ")</span> <button type='button' class='btn ac-re'>↻</button></div>";
     if (j.few) { box.innerHTML = h + "<p class='msg'>아직 이 단원을 한 친구가 3명보다 적어서 모아 보여 줄 수 없어요. 친구들이 더 하면 보입니다.</p>"; box.querySelector(".ac-re").onclick = loadClass; return; }
-    var A = j.agg, G = it.g || {}, QT = it.q || {};
-    var gk = Object.keys(A.gates).sort(function (a, b) { var ka = Object.keys(G), x = ka.indexOf(a), y = ka.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
+    var A = j.agg && typeof j.agg === "object" ? j.agg : {}, G = it.g || {}, QT = it.q || {};
+    function pct(a, b) { a = N(a); b = N(b); return b ? Math.max(0, Math.min(100, Math.round(a / b * 100))) : 0; }
+    var gk = okKeys(A.gates).sort(function (a, b) { var ka = Object.keys(G), x = ka.indexOf(a), y = ka.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y); });
     if (gk.length) {
       h += "<h4>💡 첫 추리 — 우리 반은 처음에 무엇을 골랐나</h4>";
       gk.forEach(function (g) {
         var S = A.gates[g], q = G[g] || {}, opts = q.o || [], mine = my[g + "I"], seen = typeof mine === "number";
-        h += "<div class='ac-g'><div class='ac-q'>" + (q.t ? "<b>" + q.t + "</b> " : "") + (q.q || g) + "</div>";
-        var n = Math.max(opts.length, Object.keys(S.a).reduce(function (m, k) { return Math.max(m, +k + 1); }, 0));
+        var Sa = S.a && typeof S.a === "object" ? S.a : {}, Sb = S.b && typeof S.b === "object" ? S.b : {};
+        h += "<div class='ac-g'><div class='ac-q'>" + (q.t ? "<b>" + q.t + "</b> " : "") + (q.q || esc(g)) + "</div>";
+        var n = Math.min(12, Math.max(opts.length, Object.keys(Sa).filter(function (k) { return /^\d{1,2}$/.test(k); }).reduce(function (m, k) { return Math.max(m, +k + 1); }, 0)));
         for (var i = 0; i < n; i++) {
-          var a = S.a[i] || 0, b = S.b[i] || 0;
+          var a = N(Sa[i]), b = N(Sb[i]);
           h += "<div class='ac-o'><span class='ac-t'>" + (opts[i] || "보기 " + (i + 1)) + (mine === i ? " <b class='me'>◀ 나</b>" : "") + "</span>" + bar(a, S.n) + "<span class='ac-n'>" + a + "명" + (b ? " · 다시 고른 뒤 " + b + "명" : "") + "</span></div>";
         }
-        h += seen ? "<div class='msg'>맞힌 친구 " + S.ok + "명 / " + S.n + "명</div>" : "<div class='msg'>나도 고르고 나면 맞힌 친구 수가 보여요.</div>";
+        h += seen ? "<div class='msg'>맞힌 친구 " + N(S.ok) + "명 / " + N(S.n) + "명</div>" : "<div class='msg'>나도 고르고 나면 맞힌 친구 수가 보여요.</div>";
         h += "</div>";
       });
     }
-    var ek = Object.keys(A.eps);
+    var ek = okKeys(A.eps);
     if (ek.length) {
       h += "<h4>🧩 이야기 장면 — 몇 명이 어디까지 풀었나</h4>";
-      ek.forEach(function (k) { var E = A.eps[k]; h += "<div class='ac-o'><span class='ac-t'>" + k + " · 끝까지 " + E.done + "명</span><span class='ac-sc'>" + E.sc.map(function (x, i) { return "<span title='장면 " + (i + 1) + "'>" + (i + 1) + "<i style='height:" + Math.round((x || 0) / E.n * 100) + "%'></i></span>"; }).join("") + "</span></div>"; });
+      ek.forEach(function (k) { var E = A.eps[k], sc = Array.isArray(E.sc) ? E.sc.slice(0, 30) : []; h += "<div class='ac-o'><span class='ac-t'>" + esc(k) + " · 끝까지 " + N(E.done) + "명</span><span class='ac-sc'>" + sc.map(function (x, i) { return "<span title='장면 " + (i + 1) + "'>" + (i + 1) + "<i style='height:" + pct(x, E.n) + "%'></i></span>"; }).join("") + "</span></div>"; });
     }
-    var qk = Object.keys(A.quiz);
+    var qk = okKeys(A.quiz);
     if (qk.length) {
       var mq = my.quiz || {};
-      qk.sort(function (a, b) { var A1 = A.quiz[a], B1 = A.quiz[b]; return A1.first / A1.n - B1.first / B1.n; });
+      qk.sort(function (a, b) { var A1 = A.quiz[a], B1 = A.quiz[b]; return pct(A1.first, A1.n) - pct(B1.first, B1.n); });
       h += "<h4>✏️ 수준별 문제 — 우리 반이 어려워한 순서</h4><div class='msg'>막대 = 한 번에 맞힌 친구 비율(진한 색), 나중에 맞힌 친구(옅은 색)</div>";
       qk.forEach(function (id, qi) {
         if (qi === 5) h += "<details class='ac-more'><summary>나머지 " + (qk.length - 5) + "문항도 보기</summary>";
-        var Q = A.quiz[id], t = (QT[id] || [])[2] || id, x = mq[id] || {}, me = x.r === 1 && !x.n && !x.sh ? "✓ 나는 한 번에" : x.r === 1 ? "△ 나는 다시 풀어 맞힘" : (x.n || x.sh) ? "✗ 나는 아직" : "· 나는 아직 안 풂";
-        h += "<div class='ac-o'><span class='ac-t'>" + (QT[id] ? "수준 " + QT[id][0] + " · " : "") + String(t).slice(0, 70) + (String(t).length > 70 ? "…" : "") + " <span class='msg'>" + me + "</span></span><span class='acb'><i style='width:" + Math.round(Q.first / Q.n * 100) + "%'></i><i class='lt' style='width:" + Math.round(Q.later / Q.n * 100) + "%'></i></span><span class='ac-n'>" + Math.round(Q.first / Q.n * 100) + "% · " + Q.n + "명</span></div>";
+        var Q = A.quiz[id], t = (QT[id] || [])[2] || esc(id), x = mq[id] || {}, me = x.r === 1 && !x.n && !x.sh ? "✓ 나는 한 번에" : x.r === 1 ? "△ 나는 다시 풀어 맞힘" : (x.n || x.sh) ? "✗ 나는 아직" : "· 나는 아직 안 풂";
+        h += "<div class='ac-o'><span class='ac-t'>" + (QT[id] ? "수준 " + QT[id][0] + " · " : "") + String(t).slice(0, 70) + (String(t).length > 70 ? "…" : "") + " <span class='msg'>" + me + "</span></span><span class='acb'><i style='width:" + pct(Q.first, Q.n) + "%'></i><i class='lt' style='width:" + pct(Q.later, Q.n) + "%'></i></span><span class='ac-n'>" + pct(Q.first, Q.n) + "% · " + N(Q.n) + "명</span></div>";
       });
       if (qk.length > 5) h += "</details>";
     }
-    var lk = Object.keys(A.labs);
-    if (lk.length) { h += "<h4>🔬 응용 실험실 · 실제 자료 — 해결한 친구</h4>"; lk.forEach(function (k) { var B = A.labs[k]; h += "<div class='ac-o'><span class='ac-t'>" + (k.indexOf("lab:") === 0 ? "응용 " : "실제 자료 ") + k.split(":")[1] + "</span>" + bar(B.ok, B.n) + "<span class='ac-n'>" + B.ok + "/" + B.n + "명</span></div>"; }); }
-    h += "<p class='msg'>📝 정리하기 글을 쓴 친구 " + A.wrote + "명 · 글 내용은 모으지 않습니다.</p>";
+    var lk = okKeys(A.labs, LAB_OK);   /* 'lab:c1'·'real:r2' 꼴만 — 학생 기록에서 모인 열쇠라 아무 글이나 올 수 있다 */
+    if (lk.length) { h += "<h4>🔬 응용 실험실 · 실제 자료 — 해결한 친구</h4>"; lk.forEach(function (k) { var B = A.labs[k]; h += "<div class='ac-o'><span class='ac-t'>" + (k.indexOf("lab:") === 0 ? "응용 " : "실제 자료 ") + esc(k.split(":")[1]) + "</span>" + bar(B.ok, B.n) + "<span class='ac-n'>" + N(B.ok) + "/" + N(B.n) + "명</span></div>"; }); }
+    h += "<p class='msg'>📝 정리하기 글을 쓴 친구 " + N(A.wrote) + "명 · 글 내용은 모으지 않습니다.</p>";
     box.innerHTML = h; box.querySelector(".ac-re").onclick = function () { this.textContent = "⏳"; loadClass(); };
   }
 

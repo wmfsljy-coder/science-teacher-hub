@@ -54,4 +54,28 @@ for (const r of repos) {
     if (!DRY) fs.writeFileSync(f, h);
   }
 }
+/* 캐시 버스팅: 단원 index.html(과 과목 첫 화면)의 엔진 주소 끝에 ?v=<내용 해시 8자리> 를 붙인다.
+   엔진이 바뀌면 주소가 바뀌어 학생 기기의 옛 사본이 바로 새로 받아진다(해시는 줄바꿈을 LF 로 맞춘 내용으로). */
+const crypto = require("crypto");
+const verCache = {};
+function ver(file) {
+  if (!(file in verCache)) verCache[file] = fs.existsSync(file) ? crypto.createHash("md5").update(lf(fs.readFileSync(file))).digest("hex").slice(0, 8) : null;
+  return verCache[file];
+}
+function stamp(htmlFile, assetsDir, prefix) {
+  const raw = fs.readFileSync(htmlFile, "utf8");
+  const esc = prefix.replace(/[.\/]/g, "\\$&");
+  const re = new RegExp('(<(?:script|link)\\b[^>]*?\\b(?:src|href)=")' + esc + '([\\w.-]+\\.(?:js|css))(?:\\?v=[0-9a-f]*)?"', "g");
+  const out = raw.replace(re, (all, pre, name) => { const v = ver(path.join(assetsDir, name)); return v ? pre + prefix + name + "?v=" + v + '"' : all; });
+  if (out !== raw) { changed++; console.log("주소 ?v=", path.relative(ROOT, htmlFile)); if (!DRY) fs.writeFileSync(htmlFile, out); }
+}
+for (const r of repos) {
+  const ad = path.join(ROOT, r, "assets");
+  for (const u of fs.readdirSync(path.join(ROOT, r))) {
+    const f = path.join(ROOT, r, u, "index.html");
+    if (fs.existsSync(f)) stamp(f, ad, "../assets/");
+  }
+  const top = path.join(ROOT, r, "index.html");
+  if (fs.existsSync(top)) stamp(top, ad, "assets/");
+}
 console.log(DRY ? "(미리보기) " : "", "바뀐 곳", changed, "· 공용 파일", FILES.length + "개:", FILES.join(" "));
