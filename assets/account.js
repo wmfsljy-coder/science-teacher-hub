@@ -20,7 +20,7 @@
   /* ---- 미리보기용 가짜 뒷단 ---- */
   var MOCK = /[?&]mock=1\b/.test(location.search); try { if (MOCK) sessionStorage.setItem("sth-mock", "1"); else MOCK = sessionStorage.getItem("sth-mock") === "1"; } catch (e) {}
   var URL_ = String(window.STH_SHARE_URL || "").trim(), HOSTS = window.STH_SHARE_HOSTS;
-  if (URL_ && HOSTS && HOSTS.length && HOSTS.indexOf(location.hostname) < 0 && location.protocol !== "file:") URL_ = "";
+  if (URL_ && HOSTS && HOSTS.length && HOSTS.indexOf(location.hostname) < 0) URL_ = "";
   var ON = MOCK || (!!URL_ && window.STH_LOGIN === true);   /* 뒷단(accounts.gs)·명단이 준비된 뒤 share-config.js 에 STH_LOGIN = true 를 넣어야 켜진다 */
   var Mock = (function () {
     var DB = "sth-mock-db";
@@ -29,20 +29,29 @@
       ["2101", "정지구", "2", "2-1", "2-지구과학A,2-과학사B"], ["2102", "한우주", "2", "2-1", "2-행성우주A,2-기후환경B"]].map(function (r) { return { sid: r[0], name: r[1], grade: r[2], cls: r[3], classes: r[4].split(","), pin: "", fails: 0, until: 0, last: 0 }; }),
       dev: {}, learn: {}, log: [] }; put(localStorage, DB, d); } return d; }
     function save(d) { put(localStorage, DB, d); }
-    function prof(s) { return { sid: s.sid, name: s.name, grade: s.grade, cls: s.cls, classes: s.classes }; }
+    function prof(s) { return { sid: s.sid, name: s.name, grade: s.grade, cls: s.cls, classes: s.classes, pub: pub(s.sid) }; }
+    /* 공개 목록의 가린 이름(새 뒷단의 me.pub 흉내) — 학번마다 고정된 '친구 xxxx' */
+    function pub(sid) { var h = 0; String(sid).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return "친구 " + ("000" + (h % 46656).toString(36)).slice(-4); }
+    var BAD = "학번·이름·PIN 중 맞지 않는 것이 있습니다. 처음 로그인이라 PIN 이 아직 없다면, 선생님이 수업 시간에 ‘PIN 정하기’를 열어 주실 때 정할 수 있습니다.";
+    /* 'PIN 정하기' 창 — { 반 코드(또는 *): 닫히는 시각 } */
+    function open(d, s) { var w = d.win || {}, now = Date.now(); if ((+w["*"] || 0) > now) return true; return [s.cls].concat(s.classes || []).some(function (c) { return c && (+w[c] || 0) > now; }); }
+    function live(w) { var o = {}, now = Date.now(); Object.keys(w || {}).forEach(function (k) { if ((+w[k] || 0) > now) o[k] = +w[k]; }); return o; }
     function bad(p, sid) { if (!/^\d{6}$/.test(p)) return "PIN 은 숫자 6자리입니다"; if (/^(\d)\1{5}$/.test(p)) return "같은 숫자만 반복하는 PIN 은 쓸 수 없습니다"; if ("0123456789012".indexOf(p) >= 0 || "9876543210987".indexOf(p) >= 0) return "연속된 숫자는 쓸 수 없습니다"; if (p.indexOf(sid) >= 0) return "학번이 들어간 PIN 은 쓸 수 없습니다"; return ""; }
     function find(d, sid) { return d.roster.filter(function (s) { return s.sid === String(sid || "").replace(/\D/g, ""); })[0]; }
     function nm(s) { return String(s || "").replace(/\s+/g, ""); }
     function who(d, t) { var sid = d.dev[t]; return sid ? find(d, sid) : null; }
     return function (b) {
       var d = db(), a = b.action, now = Date.now(), s, w;
-      if (a === "accCheck") { s = find(d, b.sid); if (!s || nm(s.name) !== nm(b.name)) return { ok: false, error: "명단에서 찾지 못했습니다. 학번과 이름을 확인하고, 그래도 안 되면 선생님께 말씀해 주세요." }; return { ok: true, need: s.pin ? "pin" : "newpin" }; }
+      /* 새 뒷단(보안 고침)과 같은 규칙: 처음 PIN 은 선생님이 그 반의 'PIN 정하기'(accPinWindow)를 열어 둔 동안만.
+         닫혀 있으면 accCheck 는 명단에 있든 없든 늘 { ok: true, need: 'pin' }, 로그인은 늘 같은 거절 문장 */
+      if (a === "accCheck") { s = find(d, b.sid); if (!String(b.sid || "").replace(/\D/g, "") || !nm(b.name)) return { ok: false, error: "학번과 이름을 적어 주세요" };
+        return { ok: true, need: s && nm(s.name) === nm(b.name) && !s.pin && open(d, s) ? "newpin" : "pin" }; }
       if (a === "accLogin") {
-        s = find(d, b.sid); if (!s || nm(s.name) !== nm(b.name)) return { ok: false, error: "명단에서 찾지 못했습니다." };
-        if (s.until > now) return { ok: false, error: "PIN 을 여러 번 틀려 잠겼습니다. " + Math.ceil((s.until - now) / 60000) + "분 뒤에 다시 하세요." };
-        if (!s.pin) { if (!b.newPin) return { ok: false, need: "newpin" }; var why = bad(String(b.newPin), s.sid); if (why) return { ok: false, need: "newpin", error: why }; s.pin = "h" + b.newPin; s.fails = 0; }
+        s = find(d, b.sid); var real = !!s && nm(s.name) === nm(b.name);
+        if (real && s.until > now) return { ok: false, need: "pin", error: "PIN 을 여러 번 틀려 잠겼습니다. " + Math.ceil((s.until - now) / 60000) + "분 뒤에 다시 하세요." };
+        if (real && !s.pin && open(d, s)) { if (!b.newPin) return { ok: false, need: "newpin" }; var why = bad(String(b.newPin), s.sid); if (why) return { ok: false, need: "newpin", error: why }; s.pin = "h" + b.newPin; s.fails = 0; }
         else if (!b.pin) return { ok: false, need: "pin" };
-        else if (s.pin !== "h" + b.pin) { s.fails++; if (s.fails >= 10) s.until = now + 864e5; else if (s.fails % 5 === 0) s.until = now + 6e5; save(d); return { ok: false, need: "pin", error: "PIN 이 맞지 않습니다 (" + s.fails + "번째)" }; }
+        else if (!real || !s.pin || s.pin !== "h" + b.pin) { if (real) { s.fails++; if (s.fails >= 10) s.until = now + 6 * 36e5; else if (s.fails % 5 === 0) s.until = now + 6e5; save(d); } return { ok: false, need: "pin", error: BAD + (real ? " (" + s.fails + "번째)" : "") }; }
         s.fails = 0; s.last = now; var t = "m" + Math.random().toString(36).slice(2) + now.toString(36); d.dev[t] = s.sid; save(d); return { ok: true, t: t, me: prof(s) };
       }
       if (a === "accMe") { s = who(d, b.t); return s ? { ok: true, me: prof(s) } : { ok: false, relogin: 1, error: "다시 로그인해 주세요" }; }
@@ -52,7 +61,10 @@
         (b.ch || []).forEach(function (c) { d.log.push([c[2] || now, s.sid, b.unit, c[0], JSON.stringify(c[1])]); }); if (d.log.length > 4000) d.log = d.log.slice(-4000); save(d); return { ok: true, at: now }; }
       if (a === "accPull") { s = who(d, b.t); if (!s) return { ok: false, relogin: 1 }; var out = {}; Object.keys(d.learn).forEach(function (k2) { var L = d.learn[k2]; if (L.sid === s.sid && (!b.units || !b.units.length || b.units.indexOf(L.unit) >= 0)) out[L.unit] = { at: L.at, d: L.d }; }); return { ok: true, me: prof(s), units: out }; }
       if (a !== "accClass" && b.key !== "mock") return { ok: false, error: "열쇠가 맞지 않습니다 (미리보기 열쇠는 mock)" };
-      if (a === "accRoster") { var dv = {}; Object.keys(d.dev).forEach(function (t2) { dv[d.dev[t2]] = (dv[d.dev[t2]] || 0) + 1; }); return { ok: true, students: d.roster.map(function (x) { var p = prof(x); p.pin = !!x.pin; p.fails = x.fails; p.locked = x.until > now; p.last = x.last; p.devices = dv[x.sid] || 0; return p; }) }; }
+      if (a === "accPinWindow") { var pc = String(b.cls || "").slice(0, 16); if (!pc) return { ok: false, error: "반을 골라 주세요" };
+        var mins = b.minutes == null || b.minutes === "" ? 20 : Math.max(0, Math.min(60, parseInt(b.minutes, 10) || 0)), wo = live(d.win);
+        if (mins) wo[pc] = now + mins * 60e3; else delete wo[pc]; d.win = wo; save(d); return { ok: true, open: live(wo) }; }
+      if (a === "accRoster") { var dv = {}; Object.keys(d.dev).forEach(function (t2) { dv[d.dev[t2]] = (dv[d.dev[t2]] || 0) + 1; }); return { ok: true, pinOpen: live(d.win), students: d.roster.map(function (x) { var p = prof(x); p.pin = !!x.pin; p.fails = x.fails; p.locked = x.until > now; p.last = x.last; p.devices = dv[x.sid] || 0; return p; }) }; }
       if (a === "accPinReset") { s = find(d, b.sid); if (!s) return { ok: false }; s.pin = ""; s.fails = 0; s.until = 0; Object.keys(d.dev).forEach(function (t3) { if (d.dev[t3] === s.sid) delete d.dev[t3]; }); save(d); return { ok: true }; }
       if (a === "accRecords") { var st = d.roster.filter(function (x) { return x.cls === b.cls || x.classes.indexOf(b.cls) >= 0; }), ids = st.map(function (x) { return x.sid; });
         return { ok: true, students: st.map(prof), records: Object.keys(d.learn).map(function (k4) { return d.learn[k4]; }).filter(function (L) { return ids.indexOf(L.sid) >= 0 && (!b.unit || L.unit === b.unit); }) }; }
@@ -82,6 +94,15 @@
   window.sthAccount = { me: function () { var a = acc(); return a && a.me; }, on: ON,
     /* 로그인한 학생을 반·이름으로 — 투표·돌려 읽기·질문 게시판이 쓴다. 이름은 '@학번', 서버는 토큰 t 로 확인한다 */
     ident: function (unit) { var a = acc(); if (!a || !a.me || !a.me.sid) return null; var c = classOfUnit(a.me, unit || unitId()); return c ? { cls: c, nick: "@" + a.me.sid, t: a.t } : null; },
+    /* 별명이 내 로그인 이름('@학번')이면 로그인 토큰 — 올리기·측정값·투표·돌려 읽기·질문이 본문에 t 로 붙인다(옛·새 뒷단 모두 t 를 확인만 하고 저장하지 않는다) */
+    tokFor: function (nick) { var a = acc(); return a && a.me && a.me.sid && String(nick == null ? "" : nick) === "@" + a.me.sid ? (a.t || "") : ""; },
+    /* 목록에 보이는 이름이 나인가 — 새 뒷단은 공개 목록에서 '@학번' 을 가린 이름(me.pub, '친구 xxxx')으로 보낸다. pub 이 없으면(옛 뒷단) '@학번' 그대로 견준다 */
+    isMine: function (listNick, myNick) {
+      listNick = String(listNick == null ? "" : listNick); myNick = String(myNick == null ? "" : myNick);
+      if (listNick && listNick === myNick) return true;
+      var a = acc(); if (!a || !a.me || !a.me.sid || myNick !== "@" + a.me.sid) return false;
+      return !!a.me.pub && listNick === String(a.me.pub);
+    },
     /* 소단원 안 카드(교과서 실험·실제 자료)가 쓴다: 열어도 되는지, 안 되면 로그인 창 */
     need: function () { return !ON || TEACHER || !!acc(); },
     login: function (then) { dialog(then); } };

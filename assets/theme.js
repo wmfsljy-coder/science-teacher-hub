@@ -531,8 +531,9 @@
       var me = {}; try { me = JSON.parse(localStorage.getItem("sth-me") || "{}"); } catch (e) {}
       /* 로그인한 학생은 반·별명을 따로 저장하지 않아도 로그인으로 투표한다 */
       if (!(me.cls && me.nick) && window.sthAccount && window.sthAccount.ident) { var li = window.sthAccount.ident(String(UNIT || "").replace(/^sth-/, "")); if (li) me = li; }
+      if (!me.t && me.nick && window.sthAccount && window.sthAccount.tokFor) me.t = window.sthAccount.tokFor(me.nick);   /* 저장한 별명이 '@학번' 이면 로그인 토큰 */
       var url = String(window.STH_SHARE_URL || "").trim(), hosts = window.STH_SHARE_HOSTS;
-      if (url && hosts && hosts.length && hosts.indexOf(location.hostname) < 0 && location.protocol !== "file:") url = "";
+      if (url && hosts && hosts.length && hosts.indexOf(location.hostname) < 0) url = "";
       if (url && !again) h += me.cls && me.nick ? "<button type='button' class='btn rv-send'>📣 우리 반 투표에 보내기</button><span class='rv-st'></span>"
                                              : "<span class='rv-st'>‘우리 반’ 탭에서 반과 별명을 저장하면 투표를 보낼 수 있어요.</span>";
       rv.innerHTML = h;
