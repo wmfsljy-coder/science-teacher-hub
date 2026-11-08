@@ -8,10 +8,15 @@
 - 10분 시연 순서: [DEMO.md](DEMO.md)
 - 성취기준 대응표와 단원별 지도안 목록: [STANDARDS.md](STANDARDS.md) (지도안은 각 단원 폴더의 `LESSON.md`)
 
+### 허브 화면이 만들어지는 방식 (2026-11-08부터)
+- 첫 화면·과목·지도안/QR·자료실(`resources/`)·QR 모음(`qr/`)·판 구조 지도(`maps/`)는 `site/`(Next.js) 에서 만들어집니다. `.github/workflows/pages.yml` 이 빌드하고, 이 저장소의 기존 파일(`assets/`·`class/`·`records/`·`data/`·`maps/plates.kml`·`phet/`)을 **같은 주소 그대로** 더해 GitHub Pages(Actions)로 올립니다. 단원 주소(각 과목 저장소)는 그대로입니다.
+- 배포 전에 정식 단원 주소에서 점검 도구를 자동으로 돌리고, 실패하면 올리지 않습니다. 자세한 것은 [site/README.md](site/README.md).
+- **되돌리기**: Settings → Pages → Source 를 *Deploy from a branch* / `main` / `(root)` 로 바꾸면 예전처럼 이 저장소 파일 그대로(옛 첫 화면 `index.html`) 보입니다.
+
 ## 내 학교에서 쓰기
 
 1. 이 저장소를 **Fork** 하거나 *Use this template* 으로 복사합니다.
-2. Settings → Pages → Branch 를 `main` / `(root)` 로 두면 몇 분 뒤 `https://<내 계정>.github.io/science-teacher-hub/` 에 열립니다.
+2. Settings → Pages → Source 를 `GitHub Actions` 로 두면(새 허브 화면), 또는 `main` / `(root)` 브랜치로 두면(옛 첫 화면) 몇 분 뒤 `https://<내 계정>.github.io/science-teacher-hub/` 에 열립니다.
 3. **우리 반 공유**를 쓰려면 `assets/share-config.js` 의 주소를 내 Apps Script 웹 앱 주소로 바꿉니다(만드는 법: science-teacher-hub 의 [GUIDE.md](https://github.com/wmfsljy-coder/science-teacher-hub/blob/main/GUIDE.md)). 바꾸지 않으면 공유 기능만 꺼지고 나머지는 그대로 됩니다.
 4. 반 목록을 고르게 하려면 `assets/share-config.js` 에 `window.STH_CLASSES = [{ v: "1-1", t: "1학년 1반" }, …]` 를 적습니다.
 

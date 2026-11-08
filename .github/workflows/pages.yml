@@ -1,0 +1,109 @@
+# 허브 사이트(https://wmfsljy-coder.github.io/science-teacher-hub/) 빌드와 배포
+# site/ 의 새 화면(첫 화면·과목·지도안/QR·자료실·QR 모음·판 구조 지도)을 만들고, 저장소의 기존 파일(assets/·class/·records/·data/·maps/·phet/)을
+# 그대로 더해 GitHub Pages(Actions)로 올린다. 배포 전에 정식 단원 주소에서 옛 점검 도구를 돌려 실패하면 올리지 않는다.
+# 되돌리기: Settings → Pages → Source 를 'Deploy from a branch / main / (root)' 로 (site/README.md 참고).
+name: 허브 사이트 빌드와 배포
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *" # 매일 새벽 3시(한국 시간): 단원 변경 반영 + 44단원 전체 점검
+  workflow_run:
+    # '활동 목록 갱신'이 data/*.tsv 를 커밋하면(봇 커밋은 push 이벤트를 만들지 않음) 다시 올린다
+    workflows: ["활동 목록 갱신"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # workflow_run 일 때는 활동 목록이 실제로 커밋됐을 때만(main 이 그 실행 시작 때와 달라졌을 때) 빌드
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.d.outputs.go }}
+    steps:
+      - id: d
+        env:
+          EVENT: ${{ github.event_name }}
+          STARTED_AT: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$EVENT" != "workflow_run" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          NOW=$(gh api "repos/$REPO/commits/main" --jq .sha)
+          if [ "$NOW" != "$STARTED_AT" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; else echo "go=false" >> "$GITHUB_OUTPUT"; echo "활동 목록 바뀐 것 없음"; fi
+
+  build:
+    needs: decide
+    if: needs.decide.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: site
+    env:
+      CONTENT_DIR: .content
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+
+      - name: 과목 저장소 받기(얕은 복제)
+        run: node scripts/fetch-content.mjs --clone
+
+      - run: npm run lint
+
+      - name: 새 화면 빌드
+        run: npm run build
+
+      - name: 기존 허브 파일 더하기(목록 비교)
+        run: node scripts/assemble-hub.mjs
+
+      - name: 브라우저 설치(Playwright)
+        if: github.event_name != 'workflow_run'
+        run: npx playwright install --with-deps chromium
+
+      # 푸시는 표본(과목마다 1단원 + 몇 개), 매일 새벽·손으로는 44단원 전부. 활동 목록 갱신 뒤에는 건너뜀(data 만 바뀜)
+      - name: 배포 전 점검(공유 끔)
+        if: github.event_name != 'workflow_run'
+        run: node scripts/check-units.mjs ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '--all' || '' }}
+
+      - name: 점검 결과 보관
+        if: always() && github.event_name != 'workflow_run'
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-report
+          path: site/check-report
+          if-no-files-found: ignore
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
