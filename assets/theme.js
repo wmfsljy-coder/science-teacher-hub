@@ -1205,8 +1205,20 @@
     var v = fsGet(); m.style.zoom = v === 1 ? "" : String(v);
     var g = document.getElementById("cp-fs"); if (!g) return;
     arr(g.querySelectorAll("button")).forEach(function (b) { var on = parseFloat(b.getAttribute("data-v")) === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    /* 오른쪽 위(휴대폰은 오른쪽 아래)에 고정된 단추들(다크 모드·로그인 등) 가운데 가장 왼쪽 것 바로 왼쪽에 놓는다 */
     var tg = document.querySelector(".theme-toggle");
-    if (tg) { var cs = getComputedStyle(tg), r = tg.getBoundingClientRect(); g.style.top = cs.top === "auto" ? "auto" : cs.top; g.style.bottom = cs.bottom === "auto" ? "auto" : cs.bottom; g.style.right = (window.innerWidth - r.left + 8) + "px"; }
+    if (tg) {
+      var cs = getComputedStyle(tg), tr = tg.getBoundingClientRect(), minL = tr.left;
+      arr(document.body.children).forEach(function (e) {
+        if (e === g) return;
+        var ps = getComputedStyle(e).position; if (ps !== "fixed" && ps !== "sticky") return;
+        var r = e.getBoundingClientRect(); if (!r.width || r.width > 260) return;
+        if (r.bottom < tr.top - 4 || r.top > tr.bottom + 4) return;
+        if (r.left > window.innerWidth / 2 && r.left < minL) minL = r.left;
+      });
+      g.style.top = cs.top === "auto" ? "auto" : cs.top; g.style.bottom = cs.bottom === "auto" ? "auto" : cs.bottom;
+      g.style.right = (window.innerWidth - minL + 8) + "px";
+    }
   }
   function fsBuild() {
     if (document.getElementById("cp-fs")) return;
