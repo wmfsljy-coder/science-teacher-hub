@@ -1030,3 +1030,201 @@
     return { now: function () { return t; } };
   };
 })();
+
+/* ---------- 짧게 보기(data-compact) — 2026-11-08 ----------
+   <html data-compact> 인 단원에서만 켠다(과목별로 차례로 켬). 페이지가 너무 길어지지 않게:
+   ① 이야기 탭: 장면 아래 늘 붙던 '처음 생각 다시 보기·궁금한 것·소단원 확인 문제'를 접이식 한 줄로 모으고,
+      결말(마지막) 장면에 오면 '지금 풀어 보세요'로 눈에 띄게 한다(펼치는 것은 학생이).
+   ② 응용 실험실: 사례를 한 번에 하나만 보이고, 위쪽 번호 단추와 아래 '이전·다음 사례'로 바꾼다.
+   ③ 수준별 문제: 고른 단계 안에서 4문제씩 쪽으로 나눈다.
+   ④ 글자 크기 가가가가(본문만, 기본 0.92배).
+   숨기기만 하므로 문제·사례 카드 수, 판정, 저장은 그대로다(검사 도구가 세는 수도 같다). */
+(function () {
+  var R = document.documentElement;
+  if (!R.hasAttribute("data-compact")) return;
+  var PER = 4, timer = 0;
+  function el(t, c, h) { var e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; }
+  function arr(x) { return Array.prototype.slice.call(x || []); }
+  if (!document.getElementById("cp-css")) {
+    var s = el("style"); s.id = "cp-css";
+    s.textContent = ".cp-hide{display:none!important}" +
+      ".cp-after{margin:18px 0 10px;border:2px solid var(--line);border-radius:18px;background:var(--card,#fff)}" +
+      ".cp-after>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:14px 18px;font-size:15px}" +
+      ".cp-after>summary::-webkit-details-marker{display:none}" +
+      ".cp-after>summary b{font-family:'Jua',sans-serif;font-weight:400;font-size:17px;color:var(--ink)}" +
+      ".cp-after>summary .cp-sum{color:var(--mist);font-weight:700;font-size:13.5px}" +
+      ".cp-after>summary::after{content:'펼치기 ▾';margin-left:auto;font-weight:800;font-size:13px;color:var(--brand-700,#0369a1)}" +
+      ".cp-after[open]>summary::after{content:'접기 ▴'}" +
+      ".cp-after.cp-ready{border-color:var(--brand,#0ea5e9);box-shadow:0 0 0 4px rgba(14,165,233,.15)}.cp-after.cp-ready>summary b::after{content:'지금 풀어 보세요';font-family:inherit;font-size:12px;font-weight:800;color:#fff;background:var(--brand,#0ea5e9);border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:2px}" +
+      ".cp-after>.cp-in{padding:0 14px 14px}.cp-after>.cp-in>*:first-child{margin-top:0}" +
+      ".cp-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0 18px;font-size:13px;color:var(--mist)}" +
+      ".cp-nav button{font:inherit;font-size:13.5px;font-weight:800;border:1px solid var(--line);border-radius:999px;background:var(--panel,#fff);color:var(--ink);padding:6px 14px;cursor:pointer;min-height:36px}" +
+      ".cp-nav button.on{background:var(--brand,#0ea5e9);border-color:var(--brand,#0ea5e9);color:#fff}" +
+      ".cp-nav button:disabled{opacity:.45;cursor:default}.cp-nav .cp-gap{flex:1}" +
+      ".lab-chip.cp-cur{outline:3px solid var(--brand,#0ea5e9);outline-offset:1px}" +
+      ".cp-fs{position:fixed;top:20px;right:150px;z-index:60;display:flex;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--panel,#fff);box-shadow:var(--shadow-card,0 2px 8px rgba(0,0,0,.08))}" +
+      ".cp-fs button{font-family:inherit;font-weight:800;line-height:1;min-width:34px;height:34px;border:0;border-radius:999px;background:transparent;color:var(--mist);cursor:pointer;padding:0 6px}" +
+      ".cp-fs button.on{background:var(--brand,#0ea5e9);color:#fff}" +
+      "@media print{.cp-fs{display:none}}" +
+      "html[data-compact] figure.hero-art{grid-template-columns:minmax(0,300px) minmax(0,1fr)!important}html[data-compact] figure.hero-art img{max-width:300px;max-height:300px;object-fit:cover}" +
+      "@media(max-width:760px){html[data-compact] figure.hero-art{grid-template-columns:1fr!important}html[data-compact] figure.hero-art img{max-width:260px;max-height:260px;margin:12px auto 0;border-radius:14px}}" +
+      ".cp-try{margin:10px 0 14px;border:2px dashed var(--teal-dim,#99f6e4);border-radius:16px;background:var(--card,#fff)}" +
+      ".cp-try>summary{cursor:pointer;list-style:none;padding:10px 16px;font-weight:800;font-size:14px;display:flex;gap:8px;align-items:center}.cp-try>summary::-webkit-details-marker{display:none}" +
+      ".cp-try>summary::after{content:'펼치기 ▾';margin-left:auto;font-size:12.5px;color:var(--brand-700,#0369a1)}.cp-try[open]>summary::after{content:'접기 ▴'}" +
+      ".cp-try>.try-box{margin:0 10px 10px;border:0}";
+    document.head.appendChild(s);
+  }
+  /* ① 이야기 탭 */
+  function story() {
+    arr(document.querySelectorAll(".tab-panel")).forEach(function (p) {
+      var eps = p.querySelectorAll(".episode"); if (!eps.length) return;
+      var box = null;
+      arr(p.children).forEach(function (c) { if (c.classList.contains("cp-after") && !c.classList.contains("cp-more")) box = c; });
+      var move = arr(p.children).filter(function (c) { return c.matches && c.matches(".pc-card.re, .qb, .sec-quiz"); });
+      if (!box) {
+        if (!move.length) return;
+        box = el("details", "cp-after", "<summary><b>이야기를 마친 뒤</b><span class='cp-sum'></span></summary><div class='cp-in'></div>");
+        var last = eps[eps.length - 1]; last.parentNode.insertBefore(box, last.nextSibling);
+      }
+      var inn = box.querySelector(".cp-in");
+      move.forEach(function (c) { inn.appendChild(c); });
+      var parts = [], nq = inn.querySelectorAll(".sec-quiz .qz-card").length;
+      if (nq) parts.push("📝 소단원 확인 문제 " + nq);
+      if (inn.querySelector(".pc-card.re")) parts.push("🔁 처음 생각 다시 보기");
+      if (inn.querySelector(".qb")) parts.push("❓ 궁금한 것");
+      var sum = box.querySelector(".cp-sum"), txt = parts.join(" · ");
+      if (sum.textContent !== txt) sum.textContent = txt;
+      more(p, eps[eps.length - 1]);
+      arr(p.querySelectorAll(".try-box")).forEach(function (tb) {
+        if (tb.classList.contains("mini") || (tb.parentNode && tb.parentNode.classList.contains("cp-try"))) return;
+        var hd = tb.querySelector("b, strong, h4, .try-h"), name = (hd ? hd.textContent : tb.textContent).replace(/\s+/g, " ").trim().slice(0, 48);
+        var d = el("details", "cp-try"), sm = el("summary"); sm.textContent = "🧪 더 해 보기 — " + name.replace(/^🧪\s*(더 해 보기\s*·?\s*)?/, "");
+        d.appendChild(sm); tb.parentNode.insertBefore(d, tb); d.appendChild(tb);
+      });      var dots = p.querySelectorAll(".ep-dot"), atEnd = dots.length && dots[dots.length - 1].classList.contains("now");
+      box.classList.toggle("cp-ready", !!atEnd);
+    });
+  }
+  /* ①-2 이야기 뒤에 붙는 덧붙임(우리 동네·궁금했다면·교과서 실험·실제 자료·한평생 살아 보기)을 '더 알아보기' 한 줄로 */
+  var MORE = [[".real-sec", "📊 실제 자료"], [".inq-sec", "📘 교과서 실험"], [".info-card", "📍 우리 동네"], [".scale-box", "❓ 이런 게 궁금했다면"], ["#lifesim", "🌍 한평생 살아 보기"]];
+  function more(p, lastEp) {
+    var box = null, after = false, move = [];
+    arr(p.children).forEach(function (c) {
+      if (c === lastEp) { after = true; return; }
+      if (c.classList.contains("cp-more")) { box = c; return; }
+      if (!after || c.classList.contains("cp-after")) return;
+      for (var i = 0; i < MORE.length; i++) if (c.matches(MORE[i][0])) { move.push(c); break; }
+    });
+    if (!box) {
+      if (!move.length) return;
+      box = el("details", "cp-after cp-more", "<summary><b>더 알아보기</b><span class='cp-sum'></span></summary><div class='cp-in'></div>");
+      var ref = arr(p.children).filter(function (c) { return c.classList.contains("cp-after") && !c.classList.contains("cp-more"); })[0] || lastEp;
+      ref.parentNode.insertBefore(box, ref.nextSibling);
+    }
+    var inn = box.querySelector(".cp-in");
+    move.forEach(function (c) { inn.appendChild(c); });
+    var parts = [];
+    MORE.forEach(function (m) { if (inn.querySelector(":scope > " + m[0])) parts.push(m[1]); });
+    var sum = box.querySelector(".cp-sum"), txt = parts.join(" · ");
+    if (sum.textContent !== txt) sum.textContent = txt;
+  }
+  /* ② 응용 실험실 */  function lab() {
+    var L = document.getElementById("lab"); if (!L) return;
+    var cases = arr(L.querySelectorAll(".lab-case")).filter(function (c) { return !c.closest(".real-one"); });
+    if (cases.length < 2) return;
+    var chips = arr(L.querySelectorAll(".lab-chip"));
+    if (L._cp == null) {
+      L._cp = 0;
+      for (var i = 0; i < chips.length; i++) if (!chips[i].classList.contains("ok")) { L._cp = i; break; }
+      L.addEventListener("click", function (e) {
+        var ch = e.target.closest && e.target.closest(".lab-chip"); if (!ch) return;
+        var k = arr(L.querySelectorAll(".lab-chip")).indexOf(ch); if (k < 0) return;
+        e.preventDefault(); e.stopPropagation(); go(k);
+      }, true);
+    }
+    if (L._cp >= cases.length) L._cp = cases.length - 1;
+    cases.forEach(function (c, i) { c.classList.toggle("cp-hide", i !== L._cp); });
+    chips.forEach(function (c, i) { c.classList.toggle("cp-cur", i === L._cp); });
+    var nav = L.querySelector(":scope > .cp-nav");
+    if (!nav) {
+      nav = el("div", "cp-nav");
+      nav.innerHTML = "<button type='button' class='cp-prev'>← 이전 사례</button><span class='cp-gap'></span><span class='cp-at'></span><span class='cp-gap'></span><button type='button' class='cp-next'>다음 사례 →</button>";
+      nav.querySelector(".cp-prev").addEventListener("click", function () { go(L._cp - 1); });
+      nav.querySelector(".cp-next").addEventListener("click", function () { go(L._cp + 1); });
+      L.appendChild(nav);
+    }
+    nav.querySelector(".cp-prev").disabled = L._cp <= 0;
+    nav.querySelector(".cp-next").disabled = L._cp >= cases.length - 1;
+    var at = "사례 " + (L._cp + 1) + " / " + cases.length;
+    if (nav.querySelector(".cp-at").textContent !== at) nav.querySelector(".cp-at").textContent = at;
+    function go(k) {
+      if (k < 0 || k >= cases.length) return;
+      L._cp = k; lab();
+      var top = L.getBoundingClientRect().top + window.pageYOffset - 70;
+      if (window.pageYOffset > top) window.scrollTo(0, top);
+    }
+  }
+  /* ③ 수준별 문제 */
+  function quiz() {
+    var Q = document.getElementById("quiz"); if (!Q) return;
+    var list = Q.querySelector(".qz-list"); if (!list) return;
+    var vis = arr(list.children).filter(function (c) { return c.classList.contains("qz-card") && !c.hidden; });
+    var key = vis.map(function (c) { return c.id; }).join(",");
+    if (Q._cpKey !== key) { Q._cpKey = key; Q._cpPage = 0; }
+    var pages = Math.ceil(vis.length / PER);
+    arr(list.children).forEach(function (c) { if (c.classList.contains("qz-card") && c.hidden) c.classList.remove("cp-hide"); });
+    vis.forEach(function (c, i) { c.classList.toggle("cp-hide", Math.floor(i / PER) !== Q._cpPage); });
+    var nav = Q.querySelector(".cp-nav");
+    if (!nav) { nav = el("div", "cp-nav cp-qnav"); list.parentNode.insertBefore(nav, list.nextSibling); }
+    if (pages < 2) { nav.hidden = true; return; }
+    nav.hidden = false;
+    if (nav._pages !== pages || nav._page !== Q._cpPage) {
+      nav._pages = pages; nav._page = Q._cpPage; nav.innerHTML = "";
+      var lab0 = el("span", "", "문제 쪽"); nav.appendChild(lab0);
+      for (var i = 0; i < pages; i++) (function (k) {
+        var a = Math.min(vis.length, k * PER + 1), b = Math.min(vis.length, (k + 1) * PER);
+        var bt = el("button", k === Q._cpPage ? "on" : "", a === b ? String(a) : a + "–" + b); bt.type = "button";
+        bt.addEventListener("click", function () { page(k); }); nav.appendChild(bt);
+      })(i);
+      nav.appendChild(el("span", "cp-gap"));
+      var nx = el("button", "", "다음 문제 →"); nx.type = "button"; nx.disabled = Q._cpPage >= pages - 1;
+      nx.addEventListener("click", function () { page(Q._cpPage + 1); }); nav.appendChild(nx);
+    }
+    function page(k) {
+      if (k < 0 || k >= pages) return;
+      Q._cpPage = k; quiz();
+      var top = list.getBoundingClientRect().top + window.pageYOffset - 90;
+      window.scrollTo(0, Math.max(0, top));
+    }
+  }
+  /* ④ 글자 크기 가가가가 — 본문(main)만 확대·축소, 기본은 조금 작게(0.92). 기기마다 기억(localStorage). */
+  var FS = [0.85, 0.92, 1, 1.12], FSK = "sth-fs";
+  function fsGet() { var v = 0.92; try { var s = parseFloat(localStorage.getItem(FSK)); if (FS.indexOf(s) >= 0) v = s; } catch (e) {} return v; }
+  function fsSet(v) { try { localStorage.setItem(FSK, String(v)); } catch (e) {} fsApply(); }
+  function fsApply() {
+    var m = document.querySelector("main"); if (!m) return;
+    var v = fsGet(); m.style.zoom = v === 1 ? "" : String(v);
+    var g = document.getElementById("cp-fs"); if (!g) return;
+    arr(g.querySelectorAll("button")).forEach(function (b) { var on = parseFloat(b.getAttribute("data-v")) === v; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    var tg = document.querySelector(".theme-toggle");
+    if (tg) { var cs = getComputedStyle(tg), r = tg.getBoundingClientRect(); g.style.top = cs.top === "auto" ? "auto" : cs.top; g.style.bottom = cs.bottom === "auto" ? "auto" : cs.bottom; g.style.right = (window.innerWidth - r.left + 8) + "px"; }
+  }
+  function fsBuild() {
+    if (document.getElementById("cp-fs")) return;
+    var g = el("div", "cp-fs"); g.id = "cp-fs"; g.setAttribute("role", "group"); g.setAttribute("aria-label", "글자 크기");
+    FS.forEach(function (v, i) {
+      var b = el("button", "", "가"); b.type = "button"; b.setAttribute("data-v", v); b.title = ["아주 작게", "작게(기본)", "보통", "크게"][i];
+      b.style.fontSize = [12, 14, 16, 18][i] + "px";
+      b.addEventListener("click", function () { fsSet(v); }); g.appendChild(b);
+    });
+    document.body.appendChild(g);
+    window.addEventListener("resize", fsApply);
+  }
+  function apply() { timer = 0; try { story(); lab(); quiz(); fsBuild(); fsApply(); } catch (e) { if (window.console) console.warn("compact", e); } }
+  function soon() { if (!timer) timer = setTimeout(apply, 80); }
+  function start() {
+    apply();
+    new MutationObserver(soon).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    document.addEventListener("click", function () { setTimeout(apply, 60); });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
