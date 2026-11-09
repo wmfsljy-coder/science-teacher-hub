@@ -1,3 +1,5 @@
+var PAGES_NAME = {"science-teacher-hub":"science-teacher-hub-qtrqwc","science-hub-next":"science-hub-next-ywarpe","integrated-science":"integrated-science-ipb5re","integrated-science-1":"integrated-science-1-m5s9xt","integrated-science-2":"integrated-science-2-yt735f","science-inquiry":"science-inquiry-g473et","science-inquiry-1":"science-inquiry-1-ha7iz5","science-inquiry-2":"science-inquiry-2-wc25wp","earth-system":"earth-system-na43uz","earth-system-1":"earth-system-1-n87d3q","earth-system-2":"earth-system-2-yd8mc7","earth-science-2":"earth-science-2-vm2vds","planet-space":"planet-space-iyd3n3","planet-space-1":"planet-space-1-89nvyr","planet-space-2":"planet-space-2-v7c45w","climate-change-ecology":"climate-change-ecology-ux3gtk","convergence-science-inquiry":"convergence-science-inquiry-t8ryq8","science-history-culture":"science-history-culture-unsp9m","ocean-circulation":"ocean-circulation-i4hn9b","seoga-template":"seoga-template-ppdn45"}; /* 2026-11-09 저장소 이름(주소) 변경 */
+function pagesPath(u) { var a = String(u).split("/"); a[0] = PAGES_NAME[a[0]] || a[0]; return a.join("/"); }
 /* 단원별 지도안(LESSON.md)과 성취기준 대응표(science-teacher-hub/STANDARDS.md)를 실제 페이지 내용에서 만든다.
      node _tools/make_lessons.js
    페이지(index.html·episodes.js·quiz-items.js·lab-cases.js·real-cases.js)를 고친 뒤 다시 돌리면 그대로 따라온다. */
@@ -71,7 +73,7 @@ function unitLesson(u) {
   var L = [];
   L.push("# 지도안 — " + label + " " + title, "");
   L.push("> 이 파일은 `_tools/make_lessons.js` 가 페이지 내용에서 만든 것입니다. 페이지를 고치면 다시 만들어 주세요. 차시·시간은 예시이니 반 상황에 맞게 바꾸세요.", "");
-  L.push("- 주소: https://wmfsljy-coder.github.io/" + u + "/  (교사 미리 보기: 끝에 `?open=1`)");
+  L.push("- 주소: https://wmfsljy-coder.github.io/" + pagesPath(u) + "/  (교사 미리 보기: 끝에 `?open=1`)");
   L.push("- 구성: 이야기 " + stories.length + "편 · 수준별 문제 " + items.length + "문항 · 응용 실험실 " + ((lab && lab.cases.length) || 0) + "사례" + (real ? " · 실제 자료 " + real.cases.length + "사례" : ""));
   L.push("- 권장: 이야기 1편 = 1차시(50분). 수준별 문제·실험실은 각 차시 뒤쪽이나 마지막 차시에 나눠 씁니다.", "");
   L.push("## 성취기준", "");
@@ -105,7 +107,7 @@ function unitLesson(u) {
   L.push("");
   if (lab && lab.cases.length) { L.push("## 응용 실험실 (처음 보는 상황에 적용)", ""); lab.cases.forEach(function (c) { L.push("- " + c.title + " — " + strip(c.task)); }); L.push(""); }
   if (real && real.cases.length) { L.push("## 실제 자료 (기관 관측값)", ""); real.cases.forEach(function (c) { L.push("- " + c.title + " — " + strip(c.task)); }); L.push(""); }
-  L.push("## 학생 정보", "", "우리 반 공유를 켠 경우 별명·결과 요약·첫 추리·진행 기록만 선생님 시트에 갑니다. 자세한 것은 [GUIDE.md](https://github.com/wmfsljy-coder/science-teacher-hub/blob/main/GUIDE.md) 5.", "");
+  L.push("## 학생 정보", "", "우리 반 공유를 켠 경우 별명·결과 요약·첫 추리·진행 기록만 선생님 시트에 갑니다. 자세한 것은 [GUIDE.md](https://github.com/wmfsljy-coder/science-teacher-hub-qtrqwc/blob/main/GUIDE.md) 5.", "");
   var lp = path.join(dir, "LESSON.md"), next = L.join("\n");
   if (CHECK) { var cur = fs.existsSync(lp) ? fs.readFileSync(lp, "utf8").replace(/\r\n/g, "\n") : ""; if (cur !== next) { STALE.push(u); } }
   else fs.writeFileSync(lp, next, "utf8");
@@ -121,7 +123,7 @@ Object.keys(bySubj).forEach(function (sj) {
   O.push("## " + sj, "", "| 성취기준 | 내용 | 다루는 이야기 | 문항 |", "| --- | --- | --- | --- |");
   bySubj[sj].forEach(function (r) {
     var k = r[0], S = r[1];
-    var where = S.units.map(function (x) { return "[" + x.label + " " + x.tab + " " + x.title + "](https://wmfsljy-coder.github.io/" + x.unit + "/)"; });
+    var where = S.units.map(function (x) { return "[" + x.label + " " + x.tab + " " + x.title + "](https://wmfsljy-coder.github.io/" + pagesPath(x.unit) + "/)"; });
     O.push("| " + k + " | " + (S.text || "").replace(/\|/g, "/") + " | " + (where.join("<br>") || "–") + " | " + S.q + " |");
   });
   O.push("");

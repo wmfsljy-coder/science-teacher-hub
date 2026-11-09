@@ -106,7 +106,7 @@
     if (!TEACHER) return;
     var a = document.createElement("a");
     a.className = "home hub";
-    a.href = "https://wmfsljy-coder.github.io/science-teacher-hub/";
+    a.href = "https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/";
     a.textContent = "← 허브";
     a.style.marginRight = "10px";
     var home = brand.querySelector("a.home");
@@ -851,7 +851,7 @@
         box.innerHTML = "<div class='sq-code'></div><div class='sq-txt'><b>📱 " + esc(subj) + " 전체 QR</b>"
           + "<span>학생이 찍으면 " + esc(subj) + "의 모든 단원 목록이 열리고, 골라서 들어갑니다. 한 단원만 열려면 단원 카드의 ‘📱 QR’을 쓰세요.</span>"
           + "<div class='sq-row'><button type='button' class='btn primary sq-big'>크게 띄우기</button>"
-          + "<a class='btn' href='https://wmfsljy-coder.github.io/science-teacher-hub/qr/?s=" + encodeURIComponent(subj) + "'>🖨 과목 QR 모음·인쇄</a></div>"
+          + "<a class='btn' href='https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/qr/?s=" + encodeURIComponent(subj) + "'>🖨 과목 QR 모음·인쇄</a></div>"
           + "<div class='sq-url'>" + esc(surl.replace(/^https?:\/\//, "")) + "</div></div>";
         hero.appendChild(box);
         box.querySelector(".sq-big").addEventListener("click", function () { window.sthQR(surl, subj + " 전체", "과목 전체 · 단원 목록"); });

@@ -1,14 +1,14 @@
 [
-  { "repo": "integrated-science-1", "name": "통합과학1", "family": "통합과학", "category": "공통과목", "grade": "1학년", "emoji": "🧪", "color": "teal", "landing": "integrated-science" },
-  { "repo": "integrated-science-2", "name": "통합과학2", "family": "통합과학", "category": "공통과목", "grade": "1학년", "emoji": "🧬", "color": "teal", "landing": "integrated-science" },
-  { "repo": "science-inquiry-1", "name": "과학탐구실험1", "family": "과학탐구실험", "category": "공통과목", "grade": "1학년", "emoji": "🔬", "color": "sky", "landing": "science-inquiry" },
-  { "repo": "science-inquiry-2", "name": "과학탐구실험2", "family": "과학탐구실험", "category": "공통과목", "grade": "1학년", "emoji": "⚗️", "color": "sky", "landing": "science-inquiry" },
-  { "repo": "earth-science-2", "name": "지구과학", "family": "지구과학", "category": "일반선택", "grade": "2·3학년", "emoji": "🌍", "color": "emerald", "landing": null },
-  { "repo": "earth-system-1", "name": "지구시스템과학1", "family": "지구시스템과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌋", "color": "amber", "landing": "earth-system" },
-  { "repo": "earth-system-2", "name": "지구시스템과학2", "family": "지구시스템과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌊", "color": "amber", "landing": "earth-system" },
-  { "repo": "planet-space-1", "name": "행성우주과학1", "family": "행성우주과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🛰️", "color": "violet", "landing": "planet-space" },
-  { "repo": "planet-space-2", "name": "행성우주과학2", "family": "행성우주과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌌", "color": "violet", "landing": "planet-space" },
-  { "repo": "science-history-culture", "name": "과학의 역사와 문화", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "📜", "color": "rose", "landing": null },
-  { "repo": "convergence-science-inquiry", "name": "융합과학 탐구", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "🧩", "color": "rose", "landing": null },
-  { "repo": "climate-change-ecology", "name": "기후변화와 환경생태", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "🌱", "color": "rose", "landing": null }
+  { "repo": "integrated-science-1", "pages": "integrated-science-1-m5s9xt", "name": "통합과학1", "family": "통합과학", "category": "공통과목", "grade": "1학년", "emoji": "🧪", "color": "teal", "landing": "integrated-science" },
+  { "repo": "integrated-science-2", "pages": "integrated-science-2-yt735f", "name": "통합과학2", "family": "통합과학", "category": "공통과목", "grade": "1학년", "emoji": "🧬", "color": "teal", "landing": "integrated-science" },
+  { "repo": "science-inquiry-1", "pages": "science-inquiry-1-ha7iz5", "name": "과학탐구실험1", "family": "과학탐구실험", "category": "공통과목", "grade": "1학년", "emoji": "🔬", "color": "sky", "landing": "science-inquiry" },
+  { "repo": "science-inquiry-2", "pages": "science-inquiry-2-wc25wp", "name": "과학탐구실험2", "family": "과학탐구실험", "category": "공통과목", "grade": "1학년", "emoji": "⚗️", "color": "sky", "landing": "science-inquiry" },
+  { "repo": "earth-science-2", "pages": "earth-science-2-vm2vds", "name": "지구과학", "family": "지구과학", "category": "일반선택", "grade": "2·3학년", "emoji": "🌍", "color": "emerald", "landing": null },
+  { "repo": "earth-system-1", "pages": "earth-system-1-n87d3q", "name": "지구시스템과학1", "family": "지구시스템과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌋", "color": "amber", "landing": "earth-system" },
+  { "repo": "earth-system-2", "pages": "earth-system-2-yd8mc7", "name": "지구시스템과학2", "family": "지구시스템과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌊", "color": "amber", "landing": "earth-system" },
+  { "repo": "planet-space-1", "pages": "planet-space-1-89nvyr", "name": "행성우주과학1", "family": "행성우주과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🛰️", "color": "violet", "landing": "planet-space" },
+  { "repo": "planet-space-2", "pages": "planet-space-2-v7c45w", "name": "행성우주과학2", "family": "행성우주과학", "category": "진로선택", "grade": "2·3학년", "emoji": "🌌", "color": "violet", "landing": "planet-space" },
+  { "repo": "science-history-culture", "pages": "science-history-culture-unsp9m", "name": "과학의 역사와 문화", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "📜", "color": "rose", "landing": null },
+  { "repo": "convergence-science-inquiry", "pages": "convergence-science-inquiry-t8ryq8", "name": "융합과학 탐구", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "🧩", "color": "rose", "landing": null },
+  { "repo": "climate-change-ecology", "pages": "climate-change-ecology-ux3gtk", "name": "기후변화와 환경생태", "family": "융합선택", "category": "융합선택", "grade": "2·3학년", "emoji": "🌱", "color": "rose", "landing": null }
 ]

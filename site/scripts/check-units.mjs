@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
- * 배포 전 자동 점검 (Playwright) — 조립한 out/(새 허브 + 옛 허브 파일)을 /science-teacher-hub/ 로, 과목 저장소 사본(CONTENT_DIR)을
+ * 배포 전 자동 점검 (Playwright) — 조립한 out/(새 허브 + 옛 허브 파일)을 /science-teacher-hub-qtrqwc/ 로, 과목 저장소 사본(CONTENT_DIR)을
  * /<저장소>/ 로 같은 로컬 서버(공유 끔)에 띄우고, 정식 단원 주소에서 옛 점검 도구를 돌립니다. 단원이 부르는
- * /science-teacher-hub/assets/(review-*.js·unit-items-all.js 등)가 out/ 에 빠짐없이 있는지도 함께 확인됩니다.
+ * /science-teacher-hub-qtrqwc/assets/(review-*.js·unit-items-all.js 등)가 out/ 에 빠짐없이 있는지도 함께 확인됩니다.
  *
  *   node scripts/check-units.mjs            표본(과목마다 1단원 + 무거운 단원 몇 개)
  *   node scripts/check-units.mjs --all      44단원 전부(매일 새벽·손으로 돌릴 때)
@@ -26,13 +26,13 @@ const CONTENT = path.resolve(ROOT, process.env.CONTENT_DIR || path.join("..", ".
 const TOOLS = path.join(path.resolve(ROOT, process.env.HUB_DIR || ".."), "_tools");
 const PORT = 4199;
 const ORIGIN = `http://localhost:${PORT}`;
-const BASE = process.env.BASE_PATH || "/science-teacher-hub";
+const BASE = process.env.BASE_PATH || "/science-teacher-hub-qtrqwc";
 const ALL = process.argv.includes("--all");
 
 const gen = JSON.parse(fs.readFileSync(path.join(ROOT, "content", "generated.json"), "utf8"));
 const allUnits = gen.courses.flatMap((c) => c.units.map((u) => `${c.repo}/${u.slug}`));
 /* 표본: 과목마다 첫 단원 + 실제 자료·선택 부품이 많은 단원 */
-const EXTRA = ["integrated-science-2/2-1", "science-inquiry-2/2-4", "earth-science-2/3-2", "planet-space-2/2-1"];
+const EXTRA = ["integrated-science-2-yt735f/2-1", "science-inquiry-2-wc25wp/2-4", "earth-science-2-vm2vds/3-2", "planet-space-2-v7c45w/2-1"];
 const units = ALL ? allUnits : [...new Set([...gen.courses.map((c) => `${c.repo}/${c.units[0].slug}`), ...EXTRA.filter((u) => allUnits.includes(u))])];
 
 for (const f of ["allcheck.js", "quizrun.js", "quizcheck.js", "labrun.js", "labcheck.js", "tabcheck.js"]) {

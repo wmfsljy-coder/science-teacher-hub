@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export const GITHUB = "https://github.com/wmfsljy-coder/science-teacher-hub";
+export const GITHUB = "https://github.com/wmfsljy-coder/science-teacher-hub-qtrqwc";
 /** basePath (일반 <a> 링크·정적 파일 주소에 붙임) */
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 

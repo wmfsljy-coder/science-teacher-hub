@@ -1,6 +1,6 @@
 # 과학 수업 허브 — 새 화면 소스 (science-teacher-hub/site)
 
-정식 주소: **https://wmfsljy-coder.github.io/science-teacher-hub/**
+정식 주소: **https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/**
 
 고등학교 과학 12과목 44단원을 찾고, 지도안을 읽고, 학생에게 QR 로 여는 교사용 허브입니다.
 단원 수업 화면은 각 과목 저장소 주소 `https://wmfsljy-coder.github.io/<저장소>/<단원>/` 가 정식이고, 이 사이트의 '수업 열기'·QR·검색 결과는 모두 그 주소로 갑니다.

@@ -3,7 +3,7 @@
  * 허브 결과물 조립 — `npm run build` 다음에 실행합니다.
  *
  * out/ (새 허브: 첫 화면·과목·지도안/QR·자료실·QR 모음·판 구조 지도) 에 science-teacher-hub 저장소의 기존 파일을
- * **그대로** 더합니다. 단원 페이지들이 /science-teacher-hub/assets/(review-*.js·account.js·unit-items-all.js·precheck-all.js …)를
+ * **그대로** 더합니다. 단원 페이지들이 /science-teacher-hub-qtrqwc/assets/(review-*.js·account.js·unit-items-all.js·precheck-all.js …)를
  * 절대 주소로 부르고, 교사 화면 class/·records/, data/*.tsv(시트가 IMPORTDATA 로 읽음), maps/plates.kml, phet/ 도 같은 주소에서 열려야 하기 때문입니다.
  *
  *   새 화면으로 바뀌는 파일(같은 주소): index.html(첫 화면), qr/index.html(QR 모음), resources/index.html(자료실)

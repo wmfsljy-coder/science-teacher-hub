@@ -1,4 +1,4 @@
-# 허브 사이트(https://wmfsljy-coder.github.io/science-teacher-hub/) 빌드와 배포
+# 허브 사이트(https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/) 빌드와 배포
 # site/ 의 새 화면(첫 화면·과목·지도안/QR·자료실·QR 모음·판 구조 지도)을 만들고, 저장소의 기존 파일(assets/·class/·records/·data/·maps/·phet/)을
 # 그대로 더해 GitHub Pages(Actions)로 올린다. 배포 전에 정식 단원 주소에서 옛 점검 도구를 돌려 실패하면 올리지 않는다.
 # 되돌리기: Settings → Pages → Source 를 'Deploy from a branch / main / (root)' 로 (site/README.md 참고).

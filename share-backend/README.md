@@ -10,7 +10,7 @@
 권한 승인까지 끝나 학생 올리기·우리 반 목록·활동 기록·선생님 화면이 모두 동작합니다.
 교사 열쇠는 시트 **설정** 탭 B1 에 있습니다. 바꾸고 싶으면 B1 을 고치면 됩니다.
 
-선생님 화면: https://wmfsljy-coder.github.io/science-teacher-hub/class/
+선생님 화면: https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/class/
 
 ### 다시 만들어야 할 때
 1. 시트를 열고 메뉴 **우리 반 공유 → 준비하기 / 교사 열쇠 보기** 를 누릅니다.

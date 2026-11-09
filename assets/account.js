@@ -363,7 +363,7 @@
   var ITEMS = null;
   function items(cb) {   /* 첫 추리 질문·보기, 문항 글 — 교사용 허브의 unit-items-all.js 를 한 번 받는다 */
     if (ITEMS) return cb(ITEMS);
-    var sc = document.createElement("script"); sc.src = "/science-teacher-hub/assets/unit-items-all.js";
+    var sc = document.createElement("script"); sc.src = "/science-teacher-hub-qtrqwc/assets/unit-items-all.js";
     sc.onload = sc.onerror = function () { ITEMS = (window.STH_UNIT_ITEMS || {}); cb(ITEMS); }; document.head.appendChild(sc);
   }
   function classPanel() {

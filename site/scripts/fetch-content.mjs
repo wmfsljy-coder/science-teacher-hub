@@ -2,7 +2,7 @@
 /*
  * 단원 내용 모으기 (빌드 전에 한 번 실행)
  *
- * 이 사이트는 science-teacher-hub 저장소의 site/ 폴더이고, 빌드 결과가 https://wmfsljy-coder.github.io/science-teacher-hub/ 에 올라갑니다.
+ * 이 사이트는 science-teacher-hub 저장소의 site/ 폴더이고, 빌드 결과가 https://wmfsljy-coder.github.io/science-teacher-hub-qtrqwc/ 에 올라갑니다.
  * 단원 수업 화면은 각 과목 저장소 주소(https://wmfsljy-coder.github.io/<저장소>/<단원>/)가 정식이고, 이 사이트는 목록·지도안·QR·자료실만 만듭니다.
  *
  * - 과목 저장소 폴더: 환경 변수 CONTENT_DIR. 없으면 허브 저장소의 상위 폴더(과학허브)를 씁니다.
@@ -22,6 +22,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OWNER = "wmfsljy-coder";
 const PAGES = `https://${OWNER}.github.io`;
 const HUB_DIR = path.resolve(ROOT, process.env.HUB_DIR || "..");
+/* 저장소 이름(=GitHub Pages 주소)은 pages, 폴더 이름은 repo (2026-11-09 주소 변경) */
+const pg = (c) => c.pages || c.repo;
 const courses = JSON.parse(fs.readFileSync(path.join(ROOT, "lib", "courses.json"), "utf8"));
 
 const contentDir = path.resolve(ROOT, process.env.CONTENT_DIR || path.join("..", ".."));
@@ -37,7 +39,7 @@ if (doClone) {
       continue;
     }
     console.log(`받는 중: ${c.repo}`);
-    execFileSync("git", ["clone", "--depth", "1", `https://github.com/${OWNER}/${c.repo}.git`, dest], { stdio: "inherit" });
+    execFileSync("git", ["clone", "--depth", "1", `https://github.com/${OWNER}/${pg(c)}.git`, dest], { stdio: "inherit" });
   }
 }
 
@@ -191,7 +193,7 @@ for (const c of courses) {
     if (im) {
       thumbAlt = strip(im[2]);
       const src = path.join(ud, im[1]);
-      const liveSrc = `${PAGES}/${c.repo}/${slug}/${im[1]}`;
+      const liveSrc = `${PAGES}/${pg(c)}/${slug}/${im[1]}`;
       thumb = liveSrc;
       if (sharp && fs.existsSync(src)) {
         const dest = path.join(thumbDir, `${id}.webp`);
@@ -214,12 +216,12 @@ for (const c of courses) {
       summary: card.summary || "",
       topics: card.topics || [],
       /* 정식 단원 주소: 학생 QR 은 절대 주소, 링크는 같은 사이트 안이라 /<저장소>/<단원>/ */
-      url: `${PAGES}/${c.repo}/${slug}/`,
-      play: `/${c.repo}/${slug}/`,
+      url: `${PAGES}/${pg(c)}/${slug}/`,
+      play: `/${pg(c)}/${slug}/`,
       thumb,
       thumbAlt,
       key,
-      sections: SECTIONS[`${c.repo}/${slug}`] || [],
+      sections: SECTIONS[`${pg(c)}/${slug}`] || [],
       counts: { ...lesson.counts, precheck: (pre.match(/\{\s*id:\s*"p/g) || []).length || null },
       standards: lesson.standards,
       periods: lesson.periods,
@@ -229,7 +231,7 @@ for (const c of courses) {
   }
   unitTotal += units.length;
   /* 과목 주소(옛 과목 첫 화면)와 과목 전체 QR(?all=1: 학생은 그 과목 단원 목록만) */
-  out.courses.push({ ...c, description: desc, url: `${PAGES}/${c.repo}/`, allUrl: `${PAGES}/${c.repo}/?all=1`, units });
+  out.courses.push({ ...c, description: desc, url: `${PAGES}/${pg(c)}/`, allUrl: `${PAGES}/${pg(c)}/?all=1`, units });
   console.log(`${c.name}: ${units.length}개 단원`);
 }
 

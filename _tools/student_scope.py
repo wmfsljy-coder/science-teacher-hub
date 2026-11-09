@@ -44,7 +44,7 @@ for r in sorted(os.listdir(ROOT)):
         continue
     if r in ("integrated-science-1", "integrated-science-2"):
         s2 = re.sub(r'<a class="back" href="https://wmfsljy-coder\.github\.io/science-teacher-hub/">[^<]*</a>',
-                    '<a class="back" href="https://wmfsljy-coder.github.io/integrated-science/">← 통합과학</a>', s)
+                    '<a class="back" href="https://wmfsljy-coder.github.io/integrated-science-ipb5re/">← 통합과학</a>', s)
     else:
         s2 = re.sub(r'(<div class="back-link"><a href="https://wmfsljy-coder\.github\.io/science-teacher-hub/">[^<]*</a></div>'
                     r'|<a class="back" href="https://wmfsljy-coder\.github\.io/science-teacher-hub/">[^<]*</a>)',

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 빌드 결과(out/)를 GitHub Pages 처럼 /science-teacher-hub/ 아래에서 보여 주는 아주 작은 서버(BASE_PATH 로 바꿀 수 있음).
+/* 빌드 결과(out/)를 GitHub Pages 처럼 /science-teacher-hub-qtrqwc/ 아래에서 보여 주는 아주 작은 서버(BASE_PATH 로 바꿀 수 있음).
  * 사용: node scripts/serve-out.mjs [포트=4173] [--no-share] [--tools <폴더>]
  *   → http://localhost:4173/science-teacher-hub/
  *   --no-share     : share-config.js 를 보낼 때 공유 주소(STH_SHARE_URL)를 빈칸으로 바꿔 보냄(검사 중 진짜 시트에 아무것도 안 감)
@@ -12,7 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "out");
-const BASE = process.env.BASE_PATH || "/science-teacher-hub";
+const BASE = process.env.BASE_PATH || "/science-teacher-hub-qtrqwc";
 const args = process.argv.slice(2);
 const flag = (n) => args.includes(n);
 const opt = (n) => (args.indexOf(n) >= 0 ? args[args.indexOf(n) + 1] : null);
