@@ -140,7 +140,7 @@ export default async function UnitPage({ params }: PageProps<"/u/[repo]/[unit]/p
                 지도안
               </h2>
               <a
-                href={`https://github.com/wmfsljy-coder/${course.repo}/blob/main/${unit.slug}/LESSON.md`}
+                href={`https://github.com/wmfsljy-coder/${course.pages ?? course.repo}/blob/main/${unit.slug}/LESSON.md`}
                 target="_blank"
                 rel="noopener"
                 className="no-print text-sm font-semibold text-slate-500 underline underline-offset-2 hover:text-teal-700 dark:text-slate-400"

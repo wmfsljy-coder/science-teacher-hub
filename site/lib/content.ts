@@ -49,6 +49,7 @@ export type Unit = {
 
 export type Course = {
   repo: string;
+  pages?: string; /* GitHub 저장소·Pages 이름(2026-11-09 주소 바꿈). 없으면 repo */
   name: string;
   family: string;
   category: string;
