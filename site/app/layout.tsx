@@ -7,6 +7,7 @@ import { BASE, GITHUB } from "@/lib/content";
 
 /* 위쪽 메뉴(늘 보이는 큰 버튼 한 줄). class/·records/ 는 옛 화면을 옮겨 담은 정적 파일이라 일반 <a> */
 const NAV: { href: string; label: string; next?: boolean }[] = [
+  { href: "/board/", label: "📺 칠판모드", next: true },
   { href: "/resources/", label: "🔎 자료실", next: true },
   { href: "/qr/", label: "📱 QR 모음", next: true },
   { href: `${BASE}/class/`, label: "📊 우리 반(교사)" },

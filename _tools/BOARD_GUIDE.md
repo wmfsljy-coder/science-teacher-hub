@@ -8,7 +8,8 @@
 - `<단원>/sheet-0N.html` : A4 개념정리 학습지. 빈칸 번호·답이 board-0N 과 1:1.
 - 단원 `index.html` 두 곳만 고친다.
   1. 그 이야기의 `<p class="teacher-note">교사용: …</p>` 줄 끝에 ` · 전자칠판용 <a href="board-0N.html">칠판 강의 화면</a> · 빈칸 번호가 같은 <a href="sheet-0N.html">개념정리 학습지</a>(<a href="sheet-0N.html?key=1">정답</a>)` (teacher-note 는 이야기마다 하나씩, 순서대로 있다).
-  2. 정리하기 탭의 `#board-wrap` 카드에 그 소단원 줄(`.board-row`)을 이야기 순서대로 넣는다. 카드가 없으면 `<div class="stage-card" style="padding:6px 0 4px"><div id="wk"></div></div>` 바로 앞에 만든다. 형식은 integrated-science-2/2-2/index.html 의 카드 그대로.
+  2. 맨 아래 **칠판모드 탭**(우리 반 다음)의 `#board-wrap` 카드에 그 소단원 줄(`.board-row`)을 이야기 순서대로 넣는다. 탭이 없으면 탭 단추(`<span class="num">` 번호는 이어서, `data-tab` 은 가장 큰 값 + 1)와 `<section class="tab-panel" data-panel="…" hidden>` 를 `</main>` 바로 앞에 만든다. 정리하기 탭에는 두지 않는다. 형식은 integrated-science-2/2-2/index.html 의 칠판모드 탭 그대로.
+  3. 허브 첫 화면 위쪽 메뉴의 **📺 칠판모드** 쪽(site/app/board)은 단원 폴더의 `board-0N.html`·`sheet-0N.html` 을 빌드 때 읽어 과목별로 저절로 보여 준다(소단원 이름은 board 파일 `<title>` 의 ‘칠판 강의 · ○○ (…)’ 에서). 따로 고칠 것 없다.
 
 ## 내용 원칙
 - **단원 화면의 이야기를 따른다.** 개념 순서·숫자·용어는 그 이야기의 장면 글, 미션 값, 결말, 과학자의 눈, LESSON.md(핵심 용어·첫 추리·오개념)에서 가져온다. 교과서마다 다른 값은 단원 화면 값으로 맞춘다. 확실하지 않은 수치는 쓰지 않는다.
@@ -32,4 +33,4 @@
 3. 허브 폴더를 로컬 서버로 띄우고(포트는 배정받은 것), 창 1440×900 에서 모든 장면을 `Board.go(i, 'end')` 로 열어 찍어 직접 본다: 글자 겹침·잘림·빈 그림·화살촉 없음. 첫 단계(0단계)도 몇 장 본다. 콘솔 오류 0.
 4. 처음부터 끝까지 → 키로 넘겨 마지막 장면에 닿는지, ← 로 처음까지 돌아오는지.
 5. `sheet-0N.html?key=1` 을 찍어 본다(학생 화면에는 교사용 정답 단추가 숨어 있어야 한다).
-6. 단원 index.html 정리하기 탭의 카드를 찍어 본다.
+6. 단원 index.html 칠판모드 탭의 카드를 찍어 본다.

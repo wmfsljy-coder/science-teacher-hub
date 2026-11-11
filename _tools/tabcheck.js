@@ -15,7 +15,8 @@
       var w = f.contentWindow, errs = [];
       w.addEventListener("error", function (e) { errs.push(e.message); });
       var tabs = Array.prototype.slice.call(w.document.querySelectorAll(".tab-btn"));
-      var last = tabs[tabs.length - 1];
+      /* '우리 반' 탭을 이름으로 찾는다 — 그 뒤에 '칠판모드' 탭이 붙은 단원도 있다. 없으면 마지막 탭 */
+      var last = tabs.filter(function (b) { return /우리 반/.test(b.textContent); }).pop() || tabs[tabs.length - 1];
       var name = last ? last.textContent.trim() : "(탭 없음)";
       if (last) last.click();
       await new Promise(function (r) { setTimeout(r, 350); });

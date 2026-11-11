@@ -118,7 +118,7 @@ function parseLesson(md) {
 }
 
 /* 단원 화면의 탭 순서 → 수업 흐름 */
-const FIXED = ["수준별 문제", "응용 실험실", "실제 자료", "정리하기", "우리 반", "교과서 실험"];
+const FIXED = ["수준별 문제", "응용 실험실", "실제 자료", "정리하기", "우리 반", "교과서 실험", "칠판모드"];
 function parseFlow(html, hasPre, hasReal) {
   const tabs = [...html.matchAll(/<button class="tab-btn[^"]*"[^>]*>([\s\S]*?)<\/button>/g)]
     .map((m) => strip(m[1]).replace(/^\d+\s*/, ""))
@@ -184,6 +184,19 @@ for (const c of courses) {
     if (!key) console.warn(`진도 열쇠(sthUnit)를 못 찾음: ${c.repo}/${slug}`);
     const hasReal = fs.existsSync(path.join(ud, "real-cases.js"));
     const flow = parseFlow(html, !!pre, hasReal);
+    /* 칠판모드: 소단원마다 전자칠판 강의 화면 board-0N.html 과, 빈칸 번호가 같은 개념정리 학습지 sheet-0N.html (BOARD_GUIDE.md) */
+    const boards = fs
+      .readdirSync(ud)
+      .map((f) => f.match(/^board-(\d+)\.html$/))
+      .filter(Boolean)
+      .sort((a, b) => Number(a[1]) - Number(b[1]))
+      .map((m) => {
+        const n = m[1];
+        const t = strip((read(path.join(ud, m[0])).match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "");
+        const name = t.replace(/^칠판 강의\s*·\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim() || `${n} 소단원`;
+        const sheet = fs.existsSync(path.join(ud, `sheet-${n}.html`)) ? `sheet-${n}.html` : null;
+        return { n, name, board: m[0], sheet };
+      });
 
     /* 대표 그림: 단원 화면에 처음 나오는 img/ 그림 */
     const im = html.match(/<img src="(img\/[^"]+)"[^>]*?alt="([^"]*)"/);
@@ -226,6 +239,7 @@ for (const c of courses) {
       standards: lesson.standards,
       periods: lesson.periods,
       flow,
+      boards,
       lesson: lesson.body,
     });
   }

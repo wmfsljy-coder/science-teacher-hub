@@ -11,6 +11,8 @@ export const GITHUB = "https://github.com/wmfsljy-coder/science-teacher-hub-qtrq
 export const BASE = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export type FlowStep = { label: string; kind: "intro" | "story" | "step" };
+/** 칠판모드 한 소단원: 번호(01…), 소단원 이름, 단원 폴더 안 파일 이름(칠판 강의 화면 · 같은 번호의 개념정리 학습지) */
+export type Board = { n: string; name: string; board: string; sheet: string | null };
 export type Standard = { code: string; text: string };
 export type Period = { n: number; title: string; topic: string; terms: string[] };
 export type Counts = {
@@ -44,6 +46,8 @@ export type Unit = {
   standards: Standard[];
   periods: Period[];
   flow: FlowStep[];
+  /** 칠판모드(board-0N.html) — 없으면 빈 목록 */
+  boards: Board[];
   lesson: string;
 };
 
