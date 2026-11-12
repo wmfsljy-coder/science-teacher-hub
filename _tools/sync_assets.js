@@ -16,7 +16,7 @@ while (!fs.existsSync(path.join(ROOT, "planet-space-2", "assets")) && path.dirna
 const SRC_REPO = "planet-space-2";
 const SRC = path.join(ROOT, SRC_REPO, "assets");
 const PER_REPO = new Set(["share-config.js", "people-data.js", "share.css"]);
-const OPTIONAL = { "life-kit.js": "integrated-science-2", "climate-life.js": "integrated-science-2", "board.js": "integrated-science-2", "board.css": "integrated-science-2" };   /* board = 칠판 강의 화면(시범: 통합과학2·지구시스템과학 Ⅱ-2) */
+const OPTIONAL = { "life-kit.js": "integrated-science-2", "climate-life.js": "integrated-science-2", "board.js": "integrated-science-2", "board.css": "integrated-science-2", "formative.js": "integrated-science-2" };   /* board = 칠판 강의 화면(시범: 통합과학2·지구시스템과학 Ⅱ-2) */
 const HUB = ["theme.js", "theme.css", "account.js", "qrcode.js"];
 const DRY = process.argv.includes("--dry");
 const SKIP = new Set(["science-teacher-hub", "science-hub-next", "earth-system", "integrated-science", "planet-space", "science-inquiry", "_base_ps2"]);
