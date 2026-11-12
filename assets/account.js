@@ -37,7 +37,7 @@
     function prof(s) { return { sid: s.sid, name: s.name, grade: s.grade, cls: s.cls, classes: s.classes, pub: pub(s.sid) }; }
     /* 공개 목록의 가린 이름(새 뒷단의 me.pub 흉내) — 학번마다 고정된 '친구 xxxx' */
     function pub(sid) { var h = 0; String(sid).split("").forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) >>> 0; }); return "친구 " + ("000" + (h % 46656).toString(36)).slice(-4); }
-    var BAD = "학번·이름·PIN 중 맞지 않는 것이 있습니다. 처음 로그인이라 PIN 이 아직 없다면, 선생님이 수업 시간에 ‘PIN 정하기’를 열어 주실 때 정할 수 있습니다.";
+    var BAD = "학번·이름·PIN 중 맞지 않는 것이 있습니다. 학번과 이름이 명단과 똑같은지 확인해 보세요. PIN 을 잊었다면 선생님께 초기화를 부탁하세요.";
     /* 'PIN 정하기' 창 — { 반 코드(또는 *): 닫히는 시각 } */
     function open(d, s) { var w = d.win || {}, now = Date.now(); if ((+w["*"] || 0) > now) return true; return [s.cls].concat(s.classes || []).some(function (c) { return c && (+w[c] || 0) > now; }); }
     function live(w) { var o = {}, now = Date.now(); Object.keys(w || {}).forEach(function (k) { if ((+w[k] || 0) > now) o[k] = +w[k]; }); return o; }
@@ -50,11 +50,11 @@
       /* 새 뒷단(보안 고침)과 같은 규칙: 처음 PIN 은 선생님이 그 반의 'PIN 정하기'(accPinWindow)를 열어 둔 동안만.
          닫혀 있으면 accCheck 는 명단에 있든 없든 늘 { ok: true, need: 'pin' }, 로그인은 늘 같은 거절 문장 */
       if (a === "accCheck") { s = find(d, b.sid); if (!String(b.sid || "").replace(/\D/g, "") || !nm(b.name)) return { ok: false, error: "학번과 이름을 적어 주세요" };
-        return { ok: true, need: s && nm(s.name) === nm(b.name) && !s.pin && open(d, s) ? "newpin" : "pin" }; }
+        return { ok: true, need: s && nm(s.name) === nm(b.name) && !s.pin ? "newpin" : "pin" }; }
       if (a === "accLogin") {
         s = find(d, b.sid); var real = !!s && nm(s.name) === nm(b.name);
         if (real && s.until > now) return { ok: false, need: "pin", error: "PIN 을 여러 번 틀려 잠겼습니다. " + Math.ceil((s.until - now) / 60000) + "분 뒤에 다시 하세요." };
-        if (real && !s.pin && open(d, s)) { if (!b.newPin) return { ok: false, need: "newpin" }; var why = bad(String(b.newPin), s.sid); if (why) return { ok: false, need: "newpin", error: why }; s.pin = "h" + b.newPin; s.fails = 0; }
+        if (real && !s.pin) { if (!b.newPin) return { ok: false, need: "newpin" }; var why = bad(String(b.newPin), s.sid); if (why) return { ok: false, need: "newpin", error: why }; s.pin = "h" + b.newPin; s.fails = 0; }
         else if (!b.pin) return { ok: false, need: "pin" };
         else if (!real || !s.pin || s.pin !== "h" + b.pin) { if (real) { s.fails++; if (s.fails >= 10) s.until = now + 6 * 36e5; else if (s.fails % 5 === 0) s.until = now + 6e5; save(d); } return { ok: false, need: "pin", error: BAD + (real ? " (" + s.fails + "번째)" : "") }; }
         s.fails = 0; s.last = now; var t = "m" + Math.random().toString(36).slice(2) + now.toString(36); d.dev[t] = s.sid; save(d); return { ok: true, t: t, me: prof(s) };

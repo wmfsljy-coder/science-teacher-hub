@@ -136,7 +136,7 @@ function accounts_(d) {
       var real = !!r && nm_(r[1]) === name, pinIn = String(d.pin || ''), newIn = String(d.newPin || '');
       var fk = failKey_(sid, name), until = real ? ms_(r[7]) : failGet_(fk).until;   /* 진짜 학생은 명단 칸, 아니면 '학번+이름' 캐시 */
       if (until && until > now.getTime()) return { ok: false, need: 'pin', error: lockMsg_(until, now.getTime()) };
-      if (real && !String(r[5]) && pinOpen_(profile_(r))) {  /* 처음 로그인 — 선생님이 이 반의 'PIN 정하기'를 열어 둔 동안만 */
+      if (real && !String(r[5])) {  /* 처음 로그인 — 명단의 학번·이름이 맞고 PIN 이 비어 있으면 바로 PIN 을 정하고 로그인(2026-11-12 선생님 요청, 'PIN 정하기' 창 없이) */
         if (!newIn) return { ok: false, need: 'newpin' };
         var why = badPin_(newIn, sid); if (why) return { ok: false, need: 'newpin', error: why };
         rs.getRange(row, 6, 1, 4).setValues([[safe_(hmac_('pin|' + sid + '|' + newIn)), 0, '', now]]);   /* 해시가 - 로 시작하면 시트가 수식으로 보므로 safe_ */
@@ -163,7 +163,7 @@ function accounts_(d) {
     if (!sid0 || !nm_(d.name)) return { ok: false, error: '학번과 이름을 적어 주세요' };
     if (!hit_('ck:' + sid0, 40, 600)) return { ok: false, error: '잠시 뒤 다시 해 보세요' };
     var rs0 = rosterSheet_(), row0 = findRow_(rs0, 1, sid0), r0 = row0 ? rs0.getRange(row0, 1, 1, 11).getValues()[0] : null;
-    var first = !!r0 && nm_(r0[1]) === nm_(d.name) && !String(r0[5]) && pinOpen_(profile_(r0));
+    var first = !!r0 && nm_(r0[1]) === nm_(d.name) && !String(r0[5]);
     return { ok: true, need: first ? 'newpin' : 'pin' };
   }
   if (a === 'accMe') { var me = whoAmI_(d.t);   /* me.pub 도 함께 */ return me ? { ok: true, me: me } : { ok: false, error: '다시 로그인해 주세요', relogin: 1 }; }

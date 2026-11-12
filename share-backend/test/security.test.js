@@ -29,48 +29,9 @@ function setup() {
 const pinCell = (env, sid) => { const v = env.rs.getDataRange().getValues(); const r = v.find((x) => String(x[0]) === sid); return String(r[5]); };
 
 console.log('첫 로그인 · 계정');
-t('PIN 정하기가 닫혀 있으면 학번+이름만으로 계정을 차지할 수 없다', () => {
+t('[2026-11-12] 처음 로그인은 선생님 창 없이 바로 PIN 을 정하고 로그인한다', () => {
   const E = setup();
-  const r = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
-  assert.strictEqual(r.ok, false); assert.ok(!r.t, '토큰이 나오면 안 됨');
-  assert.strictEqual(pinCell(E, '10301'), '', 'PIN 이 저장되면 안 됨');
-  const r2 = E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '482915' });
-  assert.strictEqual(r2.ok, false); assert.ok(!r2.t);
-  assert.strictEqual(pinCell(E, '10301'), '');
-});
-t('accCheck 답이 명단에 있든 없든, PIN 이 있든 없든 같다(닫혀 있을 때)', () => {
-  const E = setup();
-  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-5', minutes: 20 });
-  E.post({ action: 'accLogin', sid: '10501', name: '사아자', newPin: '482915' });          // 1-5 학생은 PIN 정함
-  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-5', minutes: 0 });
-  const a = E.post({ action: 'accCheck', sid: '10301', name: '가나다' });                   // 명단 O, PIN X
-  const b = E.post({ action: 'accCheck', sid: '19999', name: '없는이' });                   // 명단 X
-  const c = E.post({ action: 'accCheck', sid: '10501', name: '사아자' });                   // 명단 O, PIN O
-  const d = E.post({ action: 'accCheck', sid: '10302', name: '틀린이름' });                 // 학번 O, 이름 X
-  assert.deepStrictEqual(a, b); assert.deepStrictEqual(b, c); assert.deepStrictEqual(c, d);
-  assert.deepStrictEqual(a, { ok: true, need: 'pin' });
-});
-t('accLogin 실패 답도 명단에 있는지 알려 주지 않는다', () => {
-  const E = setup();
-  const a = E.post({ action: 'accLogin', sid: '10301', name: '가나다', pin: '482915' });   // 명단 O, PIN 없음
-  const b = E.post({ action: 'accLogin', sid: '19999', name: '없는이', pin: '482915' });   // 명단 X
-  assert.deepStrictEqual(a, b);
-  const c = E.post({ action: 'accLogin', sid: '19998', name: '없는이' });
-  const d = E.post({ action: 'accLogin', sid: '10302', name: '라마바' });
-  assert.deepStrictEqual(c, d); assert.ok(!('name' in d), '이름을 돌려주지 않음');
-});
-t('교사 열쇠가 틀리면 PIN 정하기를 열 수 없다', () => {
-  const E = setup();
-  const r = E.post({ action: 'accPinWindow', key: 'sth-nope', cls: '1-3' });
-  assert.strictEqual(r.ok, false);
-  assert.deepStrictEqual(E.post({ action: 'accCheck', sid: '10301', name: '가나다' }), { ok: true, need: 'pin' });
-});
-t('선생님이 연 반의 학생은 처음 PIN 을 정하고 로그인한다(정상 첫 로그인)', () => {
-  const E = setup();
-  const w = E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3' });
-  assert.strictEqual(w.ok, true); assert.ok(w.open['1-3'] > Date.now() + 19 * 60e3, '기본 20분');
   assert.deepStrictEqual(E.post({ action: 'accCheck', sid: '10301', name: '가나다' }), { ok: true, need: 'newpin' });
-  assert.deepStrictEqual(E.post({ action: 'accCheck', sid: '10501', name: '사아자' }), { ok: true, need: 'pin' }, '다른 반은 닫혀 있음');
   const r = E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915', ua: 'test' });
   assert.strictEqual(r.ok, true); assert.ok(r.t && r.t.length >= 40);
   assert.ok(r.me.pub && r.me.pub.indexOf('10301') < 0, '공개 이름에 학번이 없음');
@@ -82,21 +43,48 @@ t('선생님이 연 반의 학생은 처음 PIN 을 정하고 로그인한다(�
   assert.strictEqual(again.ok, true);
   assert.strictEqual(E.post({ action: 'accMe', t: again.t }).me.pub, r.me.pub);
 });
+t('accCheck: 이름이 틀리거나 명단에 없거나 이미 PIN 이 있으면 모두 같은 답(pin)', () => {
+  const E = setup();
+  E.post({ action: 'accLogin', sid: '10501', name: '사아자', newPin: '482915' });          // 1-5 학생은 PIN 정함
+  const b = E.post({ action: 'accCheck', sid: '19999', name: '없는이' });                   // 명단 X
+  const c = E.post({ action: 'accCheck', sid: '10501', name: '사아자' });                   // 명단 O, PIN O
+  const d = E.post({ action: 'accCheck', sid: '10302', name: '틀린이름' });                 // 학번 O, 이름 X
+  assert.deepStrictEqual(b, c); assert.deepStrictEqual(c, d);
+  assert.deepStrictEqual(b, { ok: true, need: 'pin' });
+});
+t('accLogin 실패 답도 명단에 있는지 알려 주지 않는다(이름 틀림 = 명단 없음)', () => {
+  const E = setup();
+  const a = E.post({ action: 'accLogin', sid: '10301', name: '틀린이름', newPin: '482915' });   // 학번 O, 이름 X → PIN 못 정함
+  const b = E.post({ action: 'accLogin', sid: '19999', name: '없는이', newPin: '482915' });     // 명단 X
+  assert.strictEqual(a.ok, false); assert.ok(!a.t); assert.strictEqual(pinCell(E, '10301'), '', '이름이 틀리면 PIN 이 저장되면 안 됨');
+  assert.deepStrictEqual(a, b);
+  const c = E.post({ action: 'accLogin', sid: '19998', name: '없는이' });
+  const d = E.post({ action: 'accLogin', sid: '10302', name: '틀린이름' });
+  assert.deepStrictEqual(c, d); assert.ok(!('name' in d), '이름을 돌려주지 않음');
+});
+t('교사 열쇠가 틀리면 PIN 정하기 창(옛 기능)을 열 수 없다', () => {
+  const E = setup();
+  const r = E.post({ action: 'accPinWindow', key: 'sth-nope', cls: '1-3' });
+  assert.strictEqual(r.ok, false);
+});
+t('PIN 을 정한 뒤에는 PIN 없이 로그인할 수 없다', () => {
+  const E = setup();
+  E.post({ action: 'accLogin', sid: '10301', name: '가나다', newPin: '482915' });
+  const r = E.post({ action: 'accLogin', sid: '10301', name: '가나다' });
+  assert.strictEqual(r.ok, false); assert.strictEqual(r.need, 'pin'); assert.ok(!r.t);
+});
 t('창이 열려 있어도 쉬운 PIN 은 받지 않는다', () => {
   const E = setup();
   E.post({ action: 'accPinWindow', key: E.tk, cls: '*', minutes: 5 });
   const r = E.post({ action: 'accLogin', sid: '10302', name: '라마바', newPin: '123456' });
   assert.strictEqual(r.ok, false); assert.strictEqual(r.need, 'newpin'); assert.strictEqual(pinCell(E, '10302'), '');
 });
-t('시간이 지나면 창이 닫힌다, 0분이면 바로 닫힌다', () => {
+t('PIN 정하기 창(옛 기능)은 최대 60분, 0분이면 닫힌다 — 이제 로그인에는 쓰이지 않음', () => {
   const E = setup();
-  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3', minutes: 20 });
-  E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3', minutes: 0 });
-  assert.deepStrictEqual(E.post({ action: 'accCheck', sid: '10301', name: '가나다' }), { ok: true, need: 'pin' });
-  E.g.pinWinWrite_({ '1-3': Date.now() - 1000 });
-  assert.deepStrictEqual(E.post({ action: 'accCheck', sid: '10301', name: '가나다' }), { ok: true, need: 'pin' });
   const m = E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3', minutes: 600 });
   assert.ok(m.open['1-3'] <= Date.now() + 60 * 60e3 + 1000, '최대 60분');
+  const z = E.post({ action: 'accPinWindow', key: E.tk, cls: '1-3', minutes: 0 });
+  assert.ok(!z.open['1-3']);
 });
 t('틀린 횟수 제한: 5번 틀리면 맞는 PIN 도 잠시 막힌다 · 명단에 없는 학번도 똑같이 잠긴다', () => {
   const E = setup();
