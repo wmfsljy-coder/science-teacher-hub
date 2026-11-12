@@ -34,3 +34,10 @@
 4. 처음부터 끝까지 → 키로 넘겨 마지막 장면에 닿는지, ← 로 처음까지 돌아오는지.
 5. `sheet-0N.html?key=1` 을 찍어 본다(학생 화면에는 교사용 정답 단추가 숨어 있어야 한다).
 6. 단원 index.html 칠판모드 탭의 카드를 찍어 본다.
+
+## 형성평가 (form-0N.html) — 2026-11-12부터 소단원마다 함께 만든다
+- 본보기: `integrated-science-2/2-1/form-03.html`, `earth-system-2/2-1/form-04.html`. 엔진 `assets/formative.js`(정본 integrated-science-2, 고치지 않는다). 사용법은 그 파일 머리말.
+- 문항 6~8개, 10분 안팎: 기본 3 · 발전 2~3 · 심화 1~2. 객관식(mc)·단답(short)·서술(essay) 섞기. 문항마다 `ref` 로 다시 볼 칠판 장면 번호, `why` 해설. 숫자는 단원 화면 값으로 검산.
+- 수준별 문제(quiz-items.js)·소단원 확인 문제와 같은 문장을 그대로 쓰지 않는다. 오개념(LESSON.md)을 겨냥한 보기를 하나 이상.
+- index.html: 그 이야기 teacher-note 줄 끝에 ` · <a href="form-0N.html">형성평가</a>(<a href="form-0N.html?key=1">정답</a> · <a href="form-0N.html?show=1">칠판에 띄우기</a>)`, 칠판모드 탭의 그 소단원 줄에도 형성평가 단추(형식은 integrated-science-2/2-1/index.html 칠판모드 탭 그대로).
+- 확인: 기본 주소에서 모두 답하고 채점 → 결과·해설이 나오는지, `?key=1` 정답, `?show=1` 에서 Space 로 넘기기, 인쇄 미리보기(종이 시험지) 한 번, 콘솔 오류 0.

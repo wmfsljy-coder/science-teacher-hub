@@ -8,6 +8,7 @@
    문제가 없으면 「문제 없음」을 찍는다. */
 const fs = require("fs"), path = require("path");
 let ROOT = path.resolve(__dirname, "..");
+while (!fs.existsSync(path.join(ROOT, "integrated-science-2")) && path.dirname(ROOT) !== ROOT) ROOT = path.dirname(ROOT);   /* 허브 _tools 에서 돌려도 과목 저장소들이 모인 폴더를 찾는다 */
 const files = [];
 for (const r of fs.readdirSync(ROOT)) {
   const rp = path.join(ROOT, r); if (!fs.statSync(rp).isDirectory() || r.startsWith(".") || r === "_tools") continue;
