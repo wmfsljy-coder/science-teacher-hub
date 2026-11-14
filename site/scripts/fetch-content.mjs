@@ -195,7 +195,9 @@ for (const c of courses) {
         const t = strip((read(path.join(ud, m[0])).match(/<title>([\s\S]*?)<\/title>/) || [])[1] || "");
         const name = t.replace(/^칠판 강의\s*·\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim() || `${n} 소단원`;
         const sheet = fs.existsSync(path.join(ud, `sheet-${n}.html`)) ? `sheet-${n}.html` : null;
-        return { n, name, board: m[0], sheet };
+        /* 형성평가 form-0N.html (BOARD_GUIDE.md 형성평가) */
+        const form = fs.existsSync(path.join(ud, `form-${n}.html`)) ? `form-${n}.html` : null;
+        return { n, name, board: m[0], sheet, form };
       });
 
     /* 대표 그림: 단원 화면에 처음 나오는 img/ 그림 */
